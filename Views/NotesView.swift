@@ -1,39 +1,84 @@
 
 import SwiftUI
 
-
  // ==========================================
- // NOTES VIEW
+ // NOTES VIEW (UI LAYER)
  // ==========================================
 
-  // ** PURPOSE:
- // - Shows list of saved notes
- // - First data-driven screen
- // - Prepares for CRUD features later
+// PURPOSE:
+// - Show list of notes
+// - Add new notes
+// - Delete notes
 // ============================================
 
 struct NotesView: View {
 
-    // === SAMPLE DATA (for now) ===
-    @State private var notes: [Note] = [
+    // ===== ViewModel handles logic =====
+    @StateObject private var viewModel = NotesViewModel()
 
-        Note(title: "Welcome Note", content: "This is your first note in RecallQ")
-    ]
+    // ==== Input fields ======
+    @State private var title: String = ""
+    @State private var content: String = ""
 
     var body: some View {
 
-        List(notes) { note in
+        NavigationStack {
 
-            VStack(alignment: .leading, spacing: 5) {
+            VStack {
 
-                Text(note.title)
-                    .font(.headline)
+                // =====================================================
+                // INPUT SECTION
+                // =====================================================
 
-                Text(note.content)
-                    .font(.subheadline)
-                    .foregroundColor(.gray)
+                TextField("Enter title", text: $title)
+                    .textFieldStyle(.roundedBorder)
+                    .padding(.horizontal)
+
+                TextField("Enter content", text: $content)
+                    .textFieldStyle(.roundedBorder)
+                    .padding(.horizontal)
+
+                Button(action: {
+
+                    // ======= Add note ===========
+                    viewModel.addNote(title: title, content: content)
+
+                    // ====== Clear fields ========
+                    title = ""
+                    content = ""
+
+                }) {
+                    Text("Add Note")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                }
+                .padding()
+
+                // =====================================================
+                // LIST SECTION
+                // =====================================================
+
+                List {
+
+                    ForEach(viewModel.notes) { note in
+
+                        VStack(alignment: .leading, spacing: 5) {
+
+                            Text(note.title)
+                                .font(.headline)
+
+                            Text(note.content)
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                        }
+                    }
+                    .onDelete(perform: viewModel.deleteNote)
+                }
             }
+            .navigationTitle("Notes")
         }
-        .navigationTitle("Notes")
     }
 }
