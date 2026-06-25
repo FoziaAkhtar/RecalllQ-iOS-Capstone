@@ -1,24 +1,43 @@
 
 import Foundation
 
-// ==========================================
-// Note.swift
-// ==========================================
+// =====================================================
+// MODEL: Note
+// =====================================================
+// PURPOSE:
+// - Represents a single note in the app
+// - Supports SwiftUI List (Identifiable)
+// - Supports saving/loading (Codable)
+// - Includes timestamp + UI helper (preview)
+// =====================================================
 
-// Purpose:
-// - Represents a single note object
-// - Used in NotesView
-// - Helps structure app data cleanly
-// ==========================================
+struct Note: Identifiable, Codable {
 
-struct Note: Identifiable {
+    // MARK: - Identity
+    let id: UUID
 
-    // === Unique ID for each note ===
-    let id = UUID()
-
-    // === Title of note ===
+    // MARK: - Content
     var title: String
-
-    // === Content inside note ===
     var content: String
+
+    // MARK: - Metadata
+    var dateCreated: Date
+
+    // MARK: - INIT
+    init(
+        id: UUID = UUID(),
+        title: String,
+        content: String,
+        dateCreated: Date = Date()
+    ) {
+        self.id = id
+        self.title = title
+        self.content = content
+        self.dateCreated = dateCreated
+    }
+
+    // MARK: - UI HELPER (for cleaner list display)
+    var preview: String {
+        String(content.prefix(80))
+    }
 }
