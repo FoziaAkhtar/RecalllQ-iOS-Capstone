@@ -6,16 +6,9 @@ import SwiftUI
 // =====================================================
 // PURPOSE:
 // - UI layer for Notes feature
-// - Displays notes list
-// - Handles user input (title/content)
-// - Sends actions to ViewModel only
-//
-// RESPONSIBILITIES:
-// ✔ Show notes
-// ✔ Add notes
-// ✔ Delete notes
-// ✔ Search notes
-// ❌ NO business logic (kept in ViewModel)
+// - Displays list of notes
+// - Handles user input (title, content)
+// - Sends all logic to ViewModel (MVVM)
 // =====================================================
 
 struct NotesView: View {
@@ -26,13 +19,13 @@ struct NotesView: View {
     @StateObject private var viewModel = NotesViewModel()
 
     // =====================================================
-    // UI STATE (temporary input only)
+    // LOCAL UI STATE (temporary input only)
     // =====================================================
     @State private var title: String = ""
     @State private var content: String = ""
 
     // =====================================================
-    // MAIN VIEW BODY
+    // MAIN VIEW
     // =====================================================
     var body: some View {
 
@@ -42,7 +35,7 @@ struct NotesView: View {
 
                 // =====================================================
                 // SEARCH BAR
-                // - Binds directly to ViewModel
+                // - Binds directly to ViewModel searchText
                 // - Enables live filtering
                 // =====================================================
                 TextField("Search notes...", text: $viewModel.searchText)
@@ -50,7 +43,7 @@ struct NotesView: View {
                     .padding(.horizontal)
 
                 // =====================================================
-                // INPUT SECTION (CREATE NOTE)
+                // INPUT SECTION (TITLE + CONTENT)
                 // =====================================================
                 VStack(spacing: 10) {
 
@@ -63,7 +56,7 @@ struct NotesView: View {
                 .padding(.horizontal)
 
                 // =====================================================
-                // ADD BUTTON
+                // ADD NOTE BUTTON
                 // =====================================================
                 Button {
 
@@ -73,7 +66,7 @@ struct NotesView: View {
                     // Send data to ViewModel
                     viewModel.addNote(title: title, content: content)
 
-                    // Clear input fields after saving
+                    // Clear inputs after saving
                     title = ""
                     content = ""
 
@@ -93,7 +86,7 @@ struct NotesView: View {
                 // =====================================================
                 List {
 
-                    // Show filtered notes from ViewModel
+                    // Show filtered notes (search enabled)
                     ForEach(viewModel.filteredNotes) { note in
 
                         VStack(alignment: .leading, spacing: 6) {
@@ -110,8 +103,17 @@ struct NotesView: View {
                         .padding(.vertical, 4)
                     }
 
-                    // Swipe to delete
-                    .onDelete(perform: viewModel.deleteNote)
+                    // =====================================================
+                    // DELETE NOTE (SWIPE ACTION)
+                    // =====================================================
+                    .onDelete { indexSet in
+
+                        // Convert index → note → UUID
+                        indexSet.forEach { index in
+                            let note = viewModel.filteredNotes[index]
+                            viewModel.deleteNote(id: note.id)
+                        }
+                    }
                 }
             }
             .navigationTitle("Notes")
