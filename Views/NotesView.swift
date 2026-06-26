@@ -3,35 +3,40 @@ import SwiftUI
 
 // =====================================================
 // VIEW: NotesView
-// ✔ Add notes
-// ✔ Delete notes (safe)
-// ✔ Search notes
-// ✔ Edit notes (new screen)
-// ✔ Persistent storage
-//✔ MVVM architecture
 // =====================================================
-
+// PURPOSE:
+// Main screen of the Notes app.
+// Handles input, list display, search, and swipe actions.
+// =====================================================
 
 struct NotesView: View {
 
     // =====================================================
     // VIEWMODEL
+    // PURPOSE:
+    // Single source of truth for notes data.
     // =====================================================
     @StateObject private var viewModel = NotesViewModel()
 
     // =====================================================
     // INPUT STATE
+    // PURPOSE:
+    // Temporary values before creating a note.
     // =====================================================
     @State private var title: String = ""
     @State private var content: String = ""
 
     // =====================================================
     // KEYBOARD CONTROL
+    // PURPOSE:
+    // Used to dismiss keyboard after adding note.
     // =====================================================
     @FocusState private var isInputFocused: Bool
 
     // =====================================================
-    // UNDO UI STATE
+    // UNDO STATE
+    // PURPOSE:
+    // Shows undo bar after deletion.
     // =====================================================
     @State private var showUndo: Bool = false
 
@@ -43,6 +48,8 @@ struct NotesView: View {
 
                 // =====================================================
                 // SEARCH BAR
+                // PURPOSE:
+                // Filters notes in real-time.
                 // =====================================================
                 TextField("Search notes...", text: $viewModel.searchText)
                     .textFieldStyle(.roundedBorder)
@@ -50,6 +57,8 @@ struct NotesView: View {
 
                 // =====================================================
                 // INPUT SECTION
+                // PURPOSE:
+                // User creates new notes here.
                 // =====================================================
                 VStack(spacing: 10) {
 
@@ -65,10 +74,17 @@ struct NotesView: View {
 
                 // =====================================================
                 // ADD BUTTON
+                // PURPOSE:
+                // Sends new note to ViewModel after validation.
                 // =====================================================
                 Button {
 
-                    viewModel.addNote(title: title, content: content)
+                    let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let trimmedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
+
+                    guard !trimmedTitle.isEmpty || !trimmedContent.isEmpty else { return }
+
+                    viewModel.addNote(title: trimmedTitle, content: trimmedContent)
 
                     title = ""
                     content = ""
@@ -86,10 +102,33 @@ struct NotesView: View {
                 }
 
                 // =====================================================
-                // NOTES LIST
+                // LIST
+                // PURPOSE:
+                // Displays filtered + sorted notes.
                 // =====================================================
                 List {
 
+                    // =====================================================
+                    // EMPTY STATE
+                    // PURPOSE:
+                    // Shows when no notes exist or match search.
+                    // =====================================================
+                    if viewModel.filteredNotes.isEmpty {
+
+                        VStack(spacing: 10) {
+
+                            Text("No Notes Found")
+                                .font(.headline)
+
+                            Text("Add your first note to get started")
+                                .foregroundColor(.gray)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+
+                    // =====================================================
+                    // NOTE ITEMS
+                    // =====================================================
                     ForEach(viewModel.filteredNotes) { note in
 
                         NavigationLink {
@@ -120,10 +159,11 @@ struct NotesView: View {
 
                         // =====================================================
                         // SWIPE ACTIONS
+                        // PURPOSE:
+                        // Quick actions (delete/pin/edit)
                         // =====================================================
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
 
-                            // DELETE
                             Button(role: .destructive) {
 
                                 viewModel.deleteNote(id: note.id)
@@ -133,22 +173,12 @@ struct NotesView: View {
                                 Label("Delete", systemImage: "trash")
                             }
 
-                            // EDIT
-                            NavigationLink {
-
-                                EditNoteView(viewModel: viewModel, note: note)
-
-                            } label: {
-                                Label("Edit", systemImage: "pencil")
-                            }
-
-                            // PIN
                             Button {
 
                                 viewModel.togglePin(id: note.id)
 
                             } label: {
-                                Label(note.isPinned ? "Unpin" : "Pin", systemImage: "pin")
+                                Label("Pin", systemImage: "pin")
                             }
                             .tint(.orange)
                         }
@@ -157,6 +187,8 @@ struct NotesView: View {
 
                 // =====================================================
                 // UNDO BAR
+                // PURPOSE:
+                // Allows user to restore deleted note.
                 // =====================================================
                 if showUndo {
 

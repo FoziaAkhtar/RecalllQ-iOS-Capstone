@@ -5,30 +5,38 @@ import SwiftUI
 // VIEW: EditNoteView
 // =====================================================
 // PURPOSE:
-// - Edit existing note
+// Allows user to modify existing note.
+// Changes are sent back to ViewModel.
 // =====================================================
-
 
 struct EditNoteView: View {
 
     // =====================================================
     // VIEWMODEL
+    // PURPOSE:
+    // Shared so updates reflect immediately in main list.
     // =====================================================
     @ObservedObject var viewModel: NotesViewModel
 
     // =====================================================
     // NOTE
+    // PURPOSE:
+    // The note being edited.
     // =====================================================
     let note: Note
 
     // =====================================================
     // LOCAL STATE
+    // PURPOSE:
+    // Holds editable values before saving.
     // =====================================================
     @State private var title: String
     @State private var content: String
 
     // =====================================================
     // INIT
+    // PURPOSE:
+    // Pre-fill fields with existing note data.
     // =====================================================
     init(viewModel: NotesViewModel, note: Note) {
 

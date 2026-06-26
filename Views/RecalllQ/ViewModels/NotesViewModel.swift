@@ -6,32 +6,38 @@ import Combine
 // VIEWMODEL: NotesViewModel
 // =====================================================
 // PURPOSE:
-// - Handles all note logic (MVVM)
-// - No UI framework dependency
-// - Save/load using UserDefaults
+// Handles ALL business logic for Notes app.
+// View should NOT contain logic — only UI.
 // =====================================================
-
 
 final class NotesViewModel: ObservableObject {
 
     // =====================================================
     // STATE
+    // PURPOSE:
+    // @Published ensures UI updates automatically.
     // =====================================================
     @Published var notes: [Note] = []
     @Published var searchText: String = ""
 
     // =====================================================
     // UNDO SUPPORT
+    // PURPOSE:
+    // Stores last deleted note so user can restore it.
     // =====================================================
     private var lastDeletedNote: Note?
 
     // =====================================================
     // STORAGE KEY
+    // PURPOSE:
+    // Used for saving notes in UserDefaults.
     // =====================================================
     private let storageKey = "saved_notes"
 
     // =====================================================
     // INIT
+    // PURPOSE:
+    // Loads saved notes when app starts.
     // =====================================================
     init() {
         loadNotes()
@@ -39,6 +45,8 @@ final class NotesViewModel: ObservableObject {
 
     // =====================================================
     // ADD NOTE
+    // PURPOSE:
+    // Creates a new note and saves it permanently.
     // =====================================================
     func addNote(title: String, content: String) {
 
@@ -49,7 +57,9 @@ final class NotesViewModel: ObservableObject {
     }
 
     // =====================================================
-    // DELETE NOTE (WITH UNDO SUPPORT)
+    // DELETE NOTE
+    // PURPOSE:
+    // Removes note and stores it for UNDO feature.
     // =====================================================
     func deleteNote(id: UUID) {
 
@@ -64,6 +74,8 @@ final class NotesViewModel: ObservableObject {
 
     // =====================================================
     // UNDO DELETE
+    // PURPOSE:
+    // Restores last deleted note.
     // =====================================================
     func undoDelete() {
 
@@ -77,6 +89,8 @@ final class NotesViewModel: ObservableObject {
 
     // =====================================================
     // UPDATE NOTE
+    // PURPOSE:
+    // Allows editing existing note content.
     // =====================================================
     func updateNote(id: UUID, newTitle: String, newContent: String) {
 
@@ -90,6 +104,9 @@ final class NotesViewModel: ObservableObject {
 
     // =====================================================
     // TOGGLE PIN
+    // PURPOSE:
+    // Marks/unmarks a note as important.
+    // Pinned notes appear at the top.
     // =====================================================
     func togglePin(id: UUID) {
 
@@ -102,6 +119,9 @@ final class NotesViewModel: ObservableObject {
 
     // =====================================================
     // FILTER + SORT NOTES
+    // PURPOSE:
+    // - Filters notes based on search text
+    // - Sorts pinned notes to top
     // =====================================================
     var filteredNotes: [Note] {
 
@@ -116,7 +136,6 @@ final class NotesViewModel: ObservableObject {
             }
         }
 
-        // pinned notes on top
         return result.sorted { a, b in
             if a.isPinned == b.isPinned {
                 return false
@@ -126,7 +145,9 @@ final class NotesViewModel: ObservableObject {
     }
 
     // =====================================================
-    // SAVE
+    // SAVE NOTES
+    // PURPOSE:
+    // Converts notes into JSON and stores in device memory.
     // =====================================================
     private func saveNotes() {
 
@@ -136,7 +157,9 @@ final class NotesViewModel: ObservableObject {
     }
 
     // =====================================================
-    // LOAD
+    // LOAD NOTES
+    // PURPOSE:
+    // Restores saved notes when app launches.
     // =====================================================
     private func loadNotes() {
 
