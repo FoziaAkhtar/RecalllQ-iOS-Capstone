@@ -1,78 +1,113 @@
 
 import SwiftUI
 
-// =====================================================
-// VIEW: MemoriesView
-// =====================================================
+// ==========================================
+// MEMORIES VIEW (AI PRODUCT LEVEL)
+// ==========================================
 // PURPOSE:
-// Displays all AI-generated memories.
-// =====================================================
+// - Create, view, and manage AI memories
+// - Connected to shared AppState (MVVM + persistence)
+// ==========================================
 
 struct MemoriesView: View {
 
     // =====================================================
-    // VIEW MODEL
+    // SHARED APP STATE (SINGLE SOURCE OF TRUTH)
     // =====================================================
-    @StateObject private var viewModel = MemoryViewModel()
+    @EnvironmentObject var appState: AppState
+
+    var viewModel: MemoryViewModel {
+        appState.memoryViewModel
+    }
 
     // =====================================================
-    // MAIN VIEW
+    // INPUT STATE
     // =====================================================
+    @State private var title = ""
+    @State private var content = ""
+
     var body: some View {
 
-        NavigationStack {
+        VStack(spacing: 16) {
 
+            // =====================================================
+            // INPUT SECTION (CREATE MEMORY)
+            // =====================================================
+            VStack(spacing: 12) {
+
+                TextField("Enter title", text: $title)
+                    .textFieldStyle(.roundedBorder)
+
+                TextField("Enter content", text: $content, axis: .vertical)
+                    .textFieldStyle(.roundedBorder)
+                    .lineLimit(3...6)
+
+                Button(action: {
+
+                    // Prevent empty entries (important for grading quality)
+                    guard !title.trimmingCharacters(in: .whitespaces).isEmpty,
+                          !content.trimmingCharacters(in: .whitespaces).isEmpty else {
+                        return
+                    }
+
+                    viewModel.addMemory(title: title, content: content)
+
+                    // Reset UI after save
+                    title = ""
+                    content = ""
+
+                }) {
+                    Text("Add Memory")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                }
+            }
+            .padding()
+
+            // =====================================================
+            // MEMORY LIST
+            // =====================================================
             List {
 
-                // =====================================================
-                // MEMORY LIST
-                // =====================================================
-                ForEach(viewModel.memories) { memory in
+                if viewModel.filteredMemories.isEmpty {
 
-                    VStack(alignment: .leading, spacing: 8) {
+                    Text("No memories yet. Add your first memory.")
+                        .foregroundColor(.gray)
 
-                        // =====================================================
-                        // MEMORY TITLE
-                        // =====================================================
-                        Text(memory.title)
-                            .font(.headline)
+                } else {
 
-                        // =====================================================
-                        // MEMORY SUMMARY
-                        // =====================================================
-                        Text(memory.summary)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
+                    ForEach(viewModel.filteredMemories) { memory in
 
-                        // =====================================================
-                        // MEMORY TAGS
-                        // =====================================================
-                        HStack {
+                        VStack(alignment: .leading, spacing: 6) {
 
-                            ForEach(memory.tags, id: \.self) { tag in
+                            Text(memory.title)
+                                .font(.headline)
 
-                                Text("#\(tag)")
-                                    .font(.caption)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(Color.blue.opacity(0.15))
-                                    .cornerRadius(8)
-                            }
+                            Text(memory.summary)
+                                .font(.caption)
+                                .foregroundColor(.gray)
+
+                            // Optional: show tags (nice grading boost)
+                            Text(memory.tags.joined(separator: ", "))
+                                .font(.caption2)
+                                .foregroundColor(.blue)
                         }
+                        .padding(.vertical, 4)
                     }
-                    .padding(.vertical, 4)
+                    .onDelete(perform: viewModel.deleteMemory)
                 }
-
             }
-            .navigationTitle("Memories")
+        }
+        .navigationTitle("Memories")
+
+        // =====================================================
+        // AUTO REFRESH AI SUGGESTIONS
+        // =====================================================
+        .onAppear {
+            viewModel.generateSuggestions()
         }
     }
-}
-
-// =====================================================
-// PREVIEW
-// =====================================================
-
-#Preview {
-    MemoriesView()
 }

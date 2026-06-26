@@ -14,9 +14,9 @@ import Foundation
 struct Note: Identifiable, Codable {
 
     // =====================================================
-    // ID (Codable SAFE)
+    // ID (CODABLE SAFE + IMMUTABLE)
     // =====================================================
-    var id: UUID
+    let id: UUID
 
     // =====================================================
     // CONTENT
@@ -31,8 +31,15 @@ struct Note: Identifiable, Codable {
 
     // =====================================================
     // INIT (for new notes)
+    // PURPOSE:
+    // Creates a new note with optional custom values
     // =====================================================
-    init(id: UUID = UUID(), title: String, content: String, isPinned: Bool = false) {
+    init(
+        id: UUID = UUID(),
+        title: String,
+        content: String,
+        isPinned: Bool = false
+    ) {
         self.id = id
         self.title = title
         self.content = content

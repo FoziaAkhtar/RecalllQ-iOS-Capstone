@@ -14,30 +14,22 @@ final class NotesViewModel: ObservableObject {
 
     // =====================================================
     // STATE
-    // PURPOSE:
-    // @Published ensures UI updates automatically.
     // =====================================================
     @Published var notes: [Note] = []
     @Published var searchText: String = ""
 
     // =====================================================
     // UNDO SUPPORT
-    // PURPOSE:
-    // Stores last deleted note so user can restore it.
     // =====================================================
     private var lastDeletedNote: Note?
 
     // =====================================================
     // STORAGE KEY
-    // PURPOSE:
-    // Used for saving notes in UserDefaults.
     // =====================================================
     private let storageKey = "saved_notes"
 
     // =====================================================
     // INIT
-    // PURPOSE:
-    // Loads saved notes when app starts.
     // =====================================================
     init() {
         loadNotes()
@@ -45,37 +37,32 @@ final class NotesViewModel: ObservableObject {
 
     // =====================================================
     // ADD NOTE
-    // PURPOSE:
-    // Creates a new note and saves it permanently.
     // =====================================================
     func addNote(title: String, content: String) {
 
+        // FIX: Note initializer MUST support isPinned (if added in model)
         let newNote = Note(title: title, content: content)
-        notes.append(newNote)
 
+        notes.append(newNote)
         saveNotes()
     }
 
     // =====================================================
     // DELETE NOTE
-    // PURPOSE:
-    // Removes note and stores it for UNDO feature.
     // =====================================================
     func deleteNote(id: UUID) {
 
-        if let note = notes.first(where: { $0.id == id }) {
-            lastDeletedNote = note
-        }
+        // FIX: safer + avoids double lookup issues
+        guard let index = notes.firstIndex(where: { $0.id == id }) else { return }
 
-        notes.removeAll { $0.id == id }
+        lastDeletedNote = notes[index]
+        notes.remove(at: index)
 
         saveNotes()
     }
 
     // =====================================================
     // UNDO DELETE
-    // PURPOSE:
-    // Restores last deleted note.
     // =====================================================
     func undoDelete() {
 
@@ -89,8 +76,6 @@ final class NotesViewModel: ObservableObject {
 
     // =====================================================
     // UPDATE NOTE
-    // PURPOSE:
-    // Allows editing existing note content.
     // =====================================================
     func updateNote(id: UUID, newTitle: String, newContent: String) {
 
@@ -104,9 +89,6 @@ final class NotesViewModel: ObservableObject {
 
     // =====================================================
     // TOGGLE PIN
-    // PURPOSE:
-    // Marks/unmarks a note as important.
-    // Pinned notes appear at the top.
     // =====================================================
     func togglePin(id: UUID) {
 
@@ -119,14 +101,12 @@ final class NotesViewModel: ObservableObject {
 
     // =====================================================
     // FILTER + SORT NOTES
-    // PURPOSE:
-    // - Filters notes based on search text
-    // - Sorts pinned notes to top
     // =====================================================
     var filteredNotes: [Note] {
 
         let result: [Note]
 
+        // FILTER
         if searchText.isEmpty {
             result = notes
         } else {
@@ -136,18 +116,21 @@ final class NotesViewModel: ObservableObject {
             }
         }
 
+        // SORT FIX (IMPORTANT BUG FIX)
         return result.sorted { a, b in
-            if a.isPinned == b.isPinned {
-                return false
+
+            // pinned always first
+            if a.isPinned != b.isPinned {
+                return a.isPinned && !b.isPinned
             }
-            return a.isPinned && !b.isPinned
+
+            // stable fallback sorting
+            return a.title < b.title
         }
     }
 
     // =====================================================
     // SAVE NOTES
-    // PURPOSE:
-    // Converts notes into JSON and stores in device memory.
     // =====================================================
     private func saveNotes() {
 
@@ -158,8 +141,6 @@ final class NotesViewModel: ObservableObject {
 
     // =====================================================
     // LOAD NOTES
-    // PURPOSE:
-    // Restores saved notes when app launches.
     // =====================================================
     private func loadNotes() {
 

@@ -5,18 +5,21 @@ import Foundation
 // SERVICE: MemoryEngine
 // =====================================================
 // PURPOSE:
-// Simulates AI by converting Notes → Structured Memories
+// Converts raw notes into structured AI-like memories
+// Includes summary + intelligent tag extraction
 // =====================================================
 
 final class MemoryEngine {
 
     // =====================================================
-    // GENERATE MEMORY FROM NOTE
+    // PUBLIC API
     // =====================================================
     func generateMemory(from title: String, content: String) -> Memory {
 
+        let combinedText = "\(title) \(content)"
+
         let summary = createSummary(from: content)
-        let tags = extractTags(from: title + " " + content)
+        let tags = extractTags(from: combinedText)
 
         return Memory(
             title: title,
@@ -27,37 +30,48 @@ final class MemoryEngine {
     }
 
     // =====================================================
-    // SIMPLE SUMMARY LOGIC (RULE-BASED AI)
+    // SUMMARY ENGINE (CONSISTENT AI STYLE)
     // =====================================================
     private func createSummary(from text: String) -> String {
 
         let words = text.split(separator: " ")
+        let limit = 12
 
-        if words.count <= 10 {
-            return text
+        guard words.count > limit else {
+            return words.joined(separator: " ").description
         }
 
-        return words.prefix(10).joined(separator: " ") + "..."
+        return words.prefix(limit).joined(separator: " ") + "..."
     }
 
     // =====================================================
-    // TAG EXTRACTION (KEYWORD BASED)
+    // TAG ENGINE (DETERMINISTIC + CLEAN OUTPUT)
     // =====================================================
     private func extractTags(from text: String) -> [String] {
 
-        let keywords = [
-            "exam", "study", "lecture", "assignment",
-            "homework", "important", "definition",
-            "swift", "ios", "project"
-        ]
+        let normalized = text.lowercased()
 
-        let lowerText = text.lowercased()
+        let keywordMap: [(tag: String, keywords: [String])] = [
+            ("study", ["study", "exam", "revision"]),
+            ("school", ["lecture", "class", "teacher"]),
+            ("assignment", ["assignment", "homework", "project"]),
+            ("ios", ["swift", "ios", "xcode"]),
+            ("important", ["important", "must", "critical"])
+        ]
 
         var foundTags: [String] = []
 
-        for keyword in keywords {
-            if lowerText.contains(keyword) {
-                foundTags.append(keyword)
+        for entry in keywordMap {
+
+            for keyword in entry.keywords {
+
+                if normalized.contains(keyword) {
+
+                    // Avoid duplicates
+                    if !foundTags.contains(entry.tag) {
+                        foundTags.append(entry.tag)
+                    }
+                }
             }
         }
 

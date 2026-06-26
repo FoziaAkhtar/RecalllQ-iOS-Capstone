@@ -4,50 +4,48 @@ import SwiftUI
 // ==========================================
 // WELCOME SCREEN
 // ==========================================
-
- // PURPOSE:
- //  - First UI screen
- // - App branding
- //  - Entry point into app features
- // ============================================
+// PURPOSE:
+// - First UI screen
+// - App branding
+// - Entry point into app features
+// ==========================================
 
 struct WelcomeView: View {
 
     var body: some View {
 
-        VStack(spacing: 25) {
+        NavigationStack {
 
-            Spacer()
+            VStack(spacing: 25) {
 
-            // ====== APP NAME ==========
-            Text("RecallQ")
-                .font(.largeTitle)
-                .bold()
+                Spacer()
 
-            // ===== SUBTITLE ============
-            Text("Focus. Track. Improve.")
-                .foregroundColor(.gray)
+                // APP NAME
+                Text("RecallQ")
+                    .font(.largeTitle)
+                    .bold()
 
-            Spacer()
+                // SUBTITLE
+                Text("Focus. Track. Improve.")
+                    .foregroundColor(.gray)
 
-            // ===========================
-            // NAVIGATION BUTTON
-           // Takes user to DashboardView
-           // ============================
+                Spacer()
 
-            NavigationLink(destination: DashboardView()) {
+                // NAVIGATION BUTTON
+                NavigationLink(destination: DashboardView()) {
 
-                Text("Get Started")
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(12)
+                    Text("Get Started")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                }
+                .padding(.horizontal)
+
+                Spacer()
             }
-            .padding(.horizontal)
-
-            Spacer()
+            .padding()
         }
-        .padding()
     }
 }

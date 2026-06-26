@@ -1,40 +1,36 @@
 
 import SwiftUI
 
-
- // ==========================================
- // RECALLQ APP ENTRY POINT
-//  ==========================================
-
-//  PURPOSE:
-//  - This file launches the entire app
-// - It controls the root navigation
-// - Everything starts here
-// ============================================
-
-//  FLOW:
-//  WelcomeView → DashboardView → Other Screens
-// =============================================
+// =====================================================
+// RECALLQ APP ENTRY POINT
+// =====================================================
+// PURPOSE:
+// - Starts the app
+// - Creates global AppState
+// - Injects it into entire environment
+// =====================================================
 
 @main
 struct RecalllQApp: App {
+
+    // =====================================================
+    // SINGLE GLOBAL STATE OBJECT
+    // =====================================================
+    @StateObject private var appState = AppState()
 
     var body: some Scene {
 
         WindowGroup {
 
-            // **
-            // NavigationStack is used to enable:
-            // - Push navigation
-            // - Back button support
-            // - Smooth screen transitions
-            // **
-
+            // =================================================
+            // ROOT NAVIGATION
+            // =================================================
             NavigationStack {
 
-                // FIRST SCREEN OF APP
+                // FIRST SCREEN
                 WelcomeView()
             }
+            .environmentObject(appState)
         }
     }
 }
