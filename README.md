@@ -329,6 +329,45 @@ Instructor: Doug Jasper
 *"RecalllQ aims to redefine learning by becoming an AI-powered academic memory companion that transforms information overload into intelligent, personalized, and meaningful learning experiences."*
 
 ---
+RecalllQ
+
+Views
+│
+├── Welcome
+│   └── WelcomeView.swift
+│
+├── Dashboard
+│   └── DashboardView.swift
+│
+├── Notes
+│   ├── NotesView.swift
+│   ├── AddNoteView.swift
+│   └── EditNoteView.swift
+│
+├── Memories
+│   └── MemoriesView.swift
+│
+├── Search
+│   └── SearchView.swift
+│
+└── Settings
+    └── SettingsView.swift
+
+Models
+│
+└── Note.swift
+
+ViewModels
+│
+└── NotesViewModel.swift
+
+Services
+│
+└── PersistenceService.swift
+
+Assets
+
+RecalllQApp.swift
 
 # ⚡ Recall Less. Learn More. Think Smarter.
 
