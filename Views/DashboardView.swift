@@ -7,13 +7,13 @@ import SwiftUI
 // PURPOSE:
 // - Central intelligence dashboard
 // - Shows live memory analytics + AI suggestions
-// - Feels like a real AI product UI
+// - Clean capstone UI structure (Refined UX)
 // =====================================================
 
 struct DashboardView: View {
 
     // =====================================================
-    // SHARED APP STATE
+    // SHARED APP STATE (SINGLE SOURCE OF TRUTH)
     // =====================================================
     @EnvironmentObject var appState: AppState
 
@@ -25,10 +25,10 @@ struct DashboardView: View {
 
         ScrollView {
 
-            VStack(spacing: 22) {
+            VStack(spacing: 18) {
 
                 // =====================================================
-                // HEADER
+                // HEADER SECTION
                 // =====================================================
                 VStack(spacing: 6) {
 
@@ -36,10 +36,11 @@ struct DashboardView: View {
                         .font(.largeTitle)
                         .bold()
 
-                    Text("RecallQ Intelligent Memory System")
+                    Text("RecalllQ Intelligent Memory System")
                         .font(.subheadline)
                         .foregroundColor(.gray)
                 }
+                .padding(.top)
 
                 // =====================================================
                 // AI INSIGHT CARD
@@ -55,46 +56,53 @@ struct DashboardView: View {
                         : "System analyzing \(viewModel.memories.count) memories across \(viewModel.allTags.count) categories."
                     )
                     .font(.body)
-                    .foregroundColor(.gray)
+                    .foregroundColor(.secondary)
                 }
                 .padding()
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.blue.opacity(0.1))
-                .cornerRadius(14)
+                .background(Color.gray.opacity(0.1))
+                .cornerRadius(12)
 
                 // =====================================================
-                // STATS GRID
+                // STATS SECTION
                 // =====================================================
-                HStack(spacing: 12) {
+                VStack(spacing: 12) {
 
-                    StatCard(
-                        title: "Memories",
-                        value: "\(viewModel.memories.count)"
-                    )
+                    Text("📊 Overview")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
-                    StatCard(
-                        title: "Tags",
-                        value: "\(viewModel.allTags.count)"
-                    )
+                    HStack(spacing: 12) {
+
+                        StatCard(
+                            title: "Memories",
+                            value: "\(viewModel.memories.count)"
+                        )
+
+                        StatCard(
+                            title: "Tags",
+                            value: "\(viewModel.allTags.count)"
+                        )
+                    }
+
+                    HStack(spacing: 12) {
+
+                        StatCard(
+                            title: "Suggestions",
+                            value: "\(viewModel.suggestedMemories.count)"
+                        )
+
+                        StatCard(
+                            title: "Status",
+                            value: viewModel.memories.isEmpty ? "Idle" : "Active"
+                        )
+                    }
                 }
 
-                HStack(spacing: 12) {
-
-                    StatCard(
-                        title: "Suggestions",
-                        value: "\(viewModel.suggestedMemories.count)"
-                    )
-
-                    StatCard(
-                        title: "Status",
-                        value: viewModel.memories.isEmpty ? "Idle" : "Active"
-                    )
-                }
-
                 // =====================================================
-                // SMART SUGGESTIONS
+                // SMART SUGGESTIONS SECTION
                 // =====================================================
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 10) {
 
                     Text("🔮 Smart Suggestions")
                         .font(.headline)
@@ -127,39 +135,42 @@ struct DashboardView: View {
                 }
 
                 // =====================================================
-                // NAVIGATION BUTTONS
+                // NAVIGATION ACTIONS
                 // =====================================================
                 VStack(spacing: 12) {
 
                     NavigationLink {
+
                         MemoriesView()
+
                     } label: {
+
                         Text("Open Memories")
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(Color.blue)
                             .foregroundColor(.white)
-                            .cornerRadius(12)
+                            .cornerRadius(10)
                     }
 
                     NavigationLink {
+
                         NotesView()
+
                     } label: {
+
                         Text("Open Notes")
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(Color.green)
                             .foregroundColor(.white)
-                            .cornerRadius(12)
+                            .cornerRadius(10)
                     }
                 }
             }
             .padding()
         }
         .navigationTitle("Dashboard")
-        .navigationBarTitleDisplayMode(.large)
-
-        // IMPORTANT: ensures suggestions always refresh correctly
         .onAppear {
             viewModel.generateSuggestions()
         }

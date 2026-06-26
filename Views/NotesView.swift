@@ -28,7 +28,7 @@ struct NotesView: View {
     @FocusState private var isInputFocused: Bool
 
     // =====================================================
-    // UNDO UI STATE
+    // UNDO STATE
     // =====================================================
     @State private var showUndo: Bool = false
 
@@ -38,16 +38,16 @@ struct NotesView: View {
 
             VStack(spacing: 16) {
 
-                // =================================================
-                // SEARCH FIELD
-                // =================================================
-                TextField("Search notes...", text: $viewModel.searchText)
+                // =====================================================
+                // SEARCH FIELD (APPSTATE BINDING)
+                // =====================================================
+                TextField("Search notes...", text: $appState.notesViewModel.searchText)
                     .textFieldStyle(.roundedBorder)
                     .padding(.horizontal)
 
-                // =================================================
-                // INPUT FIELDS
-                // =================================================
+                // =====================================================
+                // INPUT SECTION
+                // =====================================================
                 VStack(spacing: 10) {
 
                     TextField("Enter title", text: $title)
@@ -60,9 +60,9 @@ struct NotesView: View {
                 }
                 .padding(.horizontal)
 
-                // =================================================
-                // ADD BUTTON
-                // =================================================
+                // =====================================================
+                // ADD NOTE BUTTON
+                // =====================================================
                 Button {
 
                     let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -87,23 +87,29 @@ struct NotesView: View {
                         .padding(.horizontal)
                 }
 
-                // =================================================
-                // LIST
-                // =================================================
+                // =====================================================
+                // NOTES LIST
+                // =====================================================
                 List {
 
                     if viewModel.filteredNotes.isEmpty {
+
                         Text("No Notes Found")
                             .foregroundColor(.gray)
                     }
 
+                    // =====================================================
+                    // NOTE ITEM ROW
+                    // =====================================================
                     ForEach(viewModel.filteredNotes) { note in
 
                         VStack(alignment: .leading, spacing: 6) {
 
                             HStack {
                                 Text(note.title).bold()
+
                                 Spacer()
+
                                 Image(systemName: note.isPinned ? "pin.fill" : "pin")
                                     .foregroundColor(.orange)
                             }
@@ -112,20 +118,24 @@ struct NotesView: View {
                                 .foregroundColor(.gray)
                         }
 
-                        // =================================================
-                        // SWIPE ACTIONS (FIXED LOCATION)
-                        // =================================================
+                        // =====================================================
+                        // SWIPE ACTIONS (FIXED: NO $0)
+                        // =====================================================
                         .swipeActions {
 
                             Button(role: .destructive) {
+
                                 viewModel.deleteNote(id: note.id)
                                 showUndo = true
+
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
 
                             Button {
+
                                 viewModel.togglePin(id: note.id)
+
                             } label: {
                                 Label("Pin", systemImage: "pin")
                             }
@@ -134,9 +144,9 @@ struct NotesView: View {
                     }
                 }
 
-                // =================================================
+                // =====================================================
                 // UNDO BAR
-                // =================================================
+                // =====================================================
                 if showUndo {
 
                     HStack {

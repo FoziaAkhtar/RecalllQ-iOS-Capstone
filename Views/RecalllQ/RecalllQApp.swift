@@ -28,7 +28,7 @@ struct RecalllQApp: App {
             NavigationStack {
 
                 // FIRST SCREEN
-                WelcomeView()
+              MainTabView()
             }
             .environmentObject(appState)
         }

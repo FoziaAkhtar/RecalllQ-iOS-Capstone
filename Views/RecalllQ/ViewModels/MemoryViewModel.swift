@@ -1,9 +1,14 @@
 
 import Foundation
+import SwiftUI
 import Combine
 
 // =====================================================
 // VIEWMODEL: MemoryViewModel (FINAL CLEAN VERSION)
+// =====================================================
+// PURPOSE:
+// Core AI memory system (CRUD + search + AI suggestions)
+// Works with AppState + Storage + Dashboard
 // =====================================================
 
 final class MemoryViewModel: ObservableObject {
@@ -25,7 +30,7 @@ final class MemoryViewModel: ObservableObject {
     @Published var suggestedMemories: [Memory] = []
 
     // =====================================================
-    // STORAGE
+    // STORAGE LAYER
     // =====================================================
     private let storage = MemoryStorageService()
 
@@ -72,19 +77,19 @@ final class MemoryViewModel: ObservableObject {
 
         let searched = searchMemories(searchText)
 
-        if selectedTag.lowercased() == "all" {
+        guard selectedTag.lowercased() != "all" else {
             return searched
         }
 
         return searched.filter { memory in
-            memory.tags.contains {
-                $0.lowercased() == selectedTag.lowercased()
+            memory.tags.contains { tag in
+                tag.lowercased() == selectedTag.lowercased()
             }
         }
     }
 
     // =====================================================
-    // SEARCH
+    // SMART SEARCH (IMPROVED RANKING SYSTEM)
     // =====================================================
     func searchMemories(_ query: String) -> [Memory] {
 
@@ -96,15 +101,41 @@ final class MemoryViewModel: ObservableObject {
             return memories
         }
 
-        return memories.filter {
-            $0.title.lowercased().contains(trimmed) ||
-            $0.content.lowercased().contains(trimmed) ||
-            $0.summary.lowercased().contains(trimmed)
+        let scored = memories.map { memory -> (Memory, Int) in
+
+            var score = 0
+
+            let title = memory.title.lowercased()
+            let content = memory.content.lowercased()
+            let summary = memory.summary.lowercased()
+
+            // Title match = highest priority
+            if title.contains(trimmed) {
+                score += 5
+            }
+
+            // Summary match
+            if summary.contains(trimmed) {
+                score += 3
+            }
+
+            // Content match
+            if content.contains(trimmed) {
+                score += 1
+            }
+
+            return (memory, score)
         }
+
+        let filtered = scored.filter { $0.1 > 0 }
+
+        let sorted = filtered.sorted { $0.1 > $1.1 }
+
+        return sorted.map { $0.0 }
     }
 
     // =====================================================
-    // TAGS
+    // ALL TAGS
     // =====================================================
     var allTags: [String] {
         let tags = memories.flatMap { $0.tags }
@@ -112,7 +143,7 @@ final class MemoryViewModel: ObservableObject {
     }
 
     // =====================================================
-    // AI SUGGESTIONS
+    // AI SUGGESTIONS ENGINE
     // =====================================================
     func generateSuggestions() {
 
@@ -121,9 +152,9 @@ final class MemoryViewModel: ObservableObject {
             return
         }
 
-        let allTags = memories.flatMap { $0.tags }
+        let allTagsFlat = memories.flatMap { $0.tags }
 
-        let frequency = Dictionary(grouping: allTags, by: { $0 })
+        let frequency = Dictionary(grouping: allTagsFlat, by: { $0 })
             .mapValues { $0.count }
 
         let topTags = frequency
@@ -164,14 +195,14 @@ final class MemoryViewModel: ObservableObject {
     }
 
     // =====================================================
-    // SUMMARY
+    // AI SUMMARY
     // =====================================================
     private func createSummary(_ text: String) -> String {
 
         let words = text.split(separator: " ")
         let limit = 12
 
-        if words.count <= limit {
+        guard words.count > limit else {
             return text
         }
 
@@ -179,7 +210,7 @@ final class MemoryViewModel: ObservableObject {
     }
 
     // =====================================================
-    // TAG EXTRACTION
+    // AI TAGS
     // =====================================================
     private func extractTags(_ text: String) -> [String] {
 
