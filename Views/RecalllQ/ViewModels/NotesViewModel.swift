@@ -7,23 +7,23 @@ import Combine
 // =====================================================
 // PURPOSE:
 // - Handles all note logic (MVVM)
-// - No UI framework dependency (clean architecture)
-// - Safe for testing + future SwiftData upgrade
-//
-// RESPONSIBILITIES:
-// ✔ Add notes
-// ✔ Delete notes (by ID)
-// ✔ Search notes
-// ✔ Save/load notes
+// - No UI framework dependency
+// - Save/load using UserDefaults
 // =====================================================
+
 
 final class NotesViewModel: ObservableObject {
 
     // =====================================================
-    // STATE (UI automatically updates when changed)
+    // STATE
     // =====================================================
     @Published var notes: [Note] = []
     @Published var searchText: String = ""
+
+    // =====================================================
+    // UNDO SUPPORT
+    // =====================================================
+    private var lastDeletedNote: Note?
 
     // =====================================================
     // STORAGE KEY
@@ -31,7 +31,7 @@ final class NotesViewModel: ObservableObject {
     private let storageKey = "saved_notes"
 
     // =====================================================
-    // INIT (LOAD SAVED DATA)
+    // INIT
     // =====================================================
     init() {
         loadNotes()
@@ -41,43 +41,105 @@ final class NotesViewModel: ObservableObject {
     // ADD NOTE
     // =====================================================
     func addNote(title: String, content: String) {
+
         let newNote = Note(title: title, content: content)
         notes.append(newNote)
+
         saveNotes()
     }
 
     // =====================================================
-    // DELETE NOTE (CLEAN VERSION - NO SWIFTUI REQUIRED)
+    // DELETE NOTE (WITH UNDO SUPPORT)
     // =====================================================
     func deleteNote(id: UUID) {
+
+        if let note = notes.first(where: { $0.id == id }) {
+            lastDeletedNote = note
+        }
+
         notes.removeAll { $0.id == id }
+
         saveNotes()
     }
 
     // =====================================================
-    // FILTERED NOTES (SEARCH LOGIC)
+    // UNDO DELETE
+    // =====================================================
+    func undoDelete() {
+
+        guard let note = lastDeletedNote else { return }
+
+        notes.append(note)
+        lastDeletedNote = nil
+
+        saveNotes()
+    }
+
+    // =====================================================
+    // UPDATE NOTE
+    // =====================================================
+    func updateNote(id: UUID, newTitle: String, newContent: String) {
+
+        guard let index = notes.firstIndex(where: { $0.id == id }) else { return }
+
+        notes[index].title = newTitle
+        notes[index].content = newContent
+
+        saveNotes()
+    }
+
+    // =====================================================
+    // TOGGLE PIN
+    // =====================================================
+    func togglePin(id: UUID) {
+
+        guard let index = notes.firstIndex(where: { $0.id == id }) else { return }
+
+        notes[index].isPinned.toggle()
+
+        saveNotes()
+    }
+
+    // =====================================================
+    // FILTER + SORT NOTES
     // =====================================================
     var filteredNotes: [Note] {
-        guard !searchText.isEmpty else { return notes }
 
-        return notes.filter {
-            $0.title.localizedCaseInsensitiveContains(searchText) ||
-            $0.content.localizedCaseInsensitiveContains(searchText)
+        let result: [Note]
+
+        if searchText.isEmpty {
+            result = notes
+        } else {
+            result = notes.filter {
+                $0.title.localizedCaseInsensitiveContains(searchText) ||
+                $0.content.localizedCaseInsensitiveContains(searchText)
+            }
+        }
+
+        // pinned notes on top
+        return result.sorted { a, b in
+            if a.isPinned == b.isPinned {
+                return false
+            }
+            return a.isPinned && !b.isPinned
         }
     }
 
     // =====================================================
-    // SAVE NOTES (UserDefaults)
+    // SAVE
     // =====================================================
     private func saveNotes() {
+
         guard let encoded = try? JSONEncoder().encode(notes) else { return }
+
         UserDefaults.standard.set(encoded, forKey: storageKey)
     }
 
     // =====================================================
-    // LOAD NOTES (UserDefaults)
+    // LOAD
     // =====================================================
     private func loadNotes() {
+
         guard
             let data = UserDefaults.standard.data(forKey: storageKey),
             let decoded = try? JSONDecoder().decode([Note].self, from: data)

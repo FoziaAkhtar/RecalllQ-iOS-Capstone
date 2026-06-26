@@ -3,30 +3,38 @@ import SwiftUI
 
 // =====================================================
 // VIEW: NotesView
+// ✔ Add notes
+// ✔ Delete notes (safe)
+// ✔ Search notes
+// ✔ Edit notes (new screen)
+// ✔ Persistent storage
+//✔ MVVM architecture
 // =====================================================
-// PURPOSE:
-// - UI layer for Notes feature
-// - Displays list of notes
-// - Handles user input (title, content)
-// - Sends all logic to ViewModel (MVVM)
-// =====================================================
+
 
 struct NotesView: View {
 
     // =====================================================
-    // VIEWMODEL (Source of Truth)
+    // VIEWMODEL
     // =====================================================
     @StateObject private var viewModel = NotesViewModel()
 
     // =====================================================
-    // LOCAL UI STATE (temporary input only)
+    // INPUT STATE
     // =====================================================
     @State private var title: String = ""
     @State private var content: String = ""
 
     // =====================================================
-    // MAIN VIEW
+    // KEYBOARD CONTROL
     // =====================================================
+    @FocusState private var isInputFocused: Bool
+
+    // =====================================================
+    // UNDO UI STATE
+    // =====================================================
+    @State private var showUndo: Bool = false
+
     var body: some View {
 
         NavigationStack {
@@ -35,40 +43,36 @@ struct NotesView: View {
 
                 // =====================================================
                 // SEARCH BAR
-                // - Binds directly to ViewModel searchText
-                // - Enables live filtering
                 // =====================================================
                 TextField("Search notes...", text: $viewModel.searchText)
                     .textFieldStyle(.roundedBorder)
                     .padding(.horizontal)
 
                 // =====================================================
-                // INPUT SECTION (TITLE + CONTENT)
+                // INPUT SECTION
                 // =====================================================
                 VStack(spacing: 10) {
 
                     TextField("Enter title", text: $title)
                         .textFieldStyle(.roundedBorder)
+                        .focused($isInputFocused)
 
                     TextField("Enter content", text: $content)
                         .textFieldStyle(.roundedBorder)
+                        .focused($isInputFocused)
                 }
                 .padding(.horizontal)
 
                 // =====================================================
-                // ADD NOTE BUTTON
+                // ADD BUTTON
                 // =====================================================
                 Button {
 
-                    // Prevent empty notes
-                    guard !title.isEmpty, !content.isEmpty else { return }
-
-                    // Send data to ViewModel
                     viewModel.addNote(title: title, content: content)
 
-                    // Clear inputs after saving
                     title = ""
                     content = ""
+                    isInputFocused = false
 
                 } label: {
 
@@ -86,34 +90,93 @@ struct NotesView: View {
                 // =====================================================
                 List {
 
-                    // Show filtered notes (search enabled)
                     ForEach(viewModel.filteredNotes) { note in
 
-                        VStack(alignment: .leading, spacing: 6) {
+                        NavigationLink {
 
-                            // Note title
-                            Text(note.title)
-                                .font(.headline)
+                            EditNoteView(viewModel: viewModel, note: note)
 
-                            // Note content preview
-                            Text(note.content)
-                                .font(.subheadline)
-                                .foregroundColor(.gray)
+                        } label: {
+
+                            VStack(alignment: .leading, spacing: 6) {
+
+                                HStack {
+
+                                    Text(note.title)
+                                        .font(.headline)
+
+                                    Spacer()
+
+                                    Image(systemName: note.isPinned ? "pin.fill" : "pin")
+                                        .foregroundColor(.orange)
+                                }
+
+                                Text(note.content)
+                                    .font(.subheadline)
+                                    .foregroundColor(.gray)
+                            }
+                            .padding(.vertical, 4)
                         }
-                        .padding(.vertical, 4)
-                    }
 
-                    // =====================================================
-                    // DELETE NOTE (SWIPE ACTION)
-                    // =====================================================
-                    .onDelete { indexSet in
+                        // =====================================================
+                        // SWIPE ACTIONS
+                        // =====================================================
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
 
-                        // Convert index → note → UUID
-                        indexSet.forEach { index in
-                            let note = viewModel.filteredNotes[index]
-                            viewModel.deleteNote(id: note.id)
+                            // DELETE
+                            Button(role: .destructive) {
+
+                                viewModel.deleteNote(id: note.id)
+                                showUndo = true
+
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+
+                            // EDIT
+                            NavigationLink {
+
+                                EditNoteView(viewModel: viewModel, note: note)
+
+                            } label: {
+                                Label("Edit", systemImage: "pencil")
+                            }
+
+                            // PIN
+                            Button {
+
+                                viewModel.togglePin(id: note.id)
+
+                            } label: {
+                                Label(note.isPinned ? "Unpin" : "Pin", systemImage: "pin")
+                            }
+                            .tint(.orange)
                         }
                     }
+                }
+
+                // =====================================================
+                // UNDO BAR
+                // =====================================================
+                if showUndo {
+
+                    HStack {
+
+                        Text("Note deleted")
+
+                        Spacer()
+
+                        Button("Undo") {
+
+                            viewModel.undoDelete()
+                            showUndo = false
+                        }
+                        .bold()
+                    }
+                    .padding()
+                    .background(Color.gray.opacity(0.2))
+                    .cornerRadius(10)
+                    .padding()
                 }
             }
             .navigationTitle("Notes")

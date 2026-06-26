@@ -13,31 +13,29 @@ import Foundation
 
 struct Note: Identifiable, Codable {
 
-    // MARK: - Identity
-    let id: UUID
+    // =====================================================
+    // ID (Codable SAFE)
+    // =====================================================
+    var id: UUID
 
-    // MARK: - Content
+    // =====================================================
+    // CONTENT
+    // =====================================================
     var title: String
     var content: String
 
-    // MARK: - Metadata
-    var dateCreated: Date
+    // =====================================================
+    // PIN STATUS
+    // =====================================================
+    var isPinned: Bool
 
-    // MARK: - INIT
-    init(
-        id: UUID = UUID(),
-        title: String,
-        content: String,
-        dateCreated: Date = Date()
-    ) {
+    // =====================================================
+    // INIT (for new notes)
+    // =====================================================
+    init(id: UUID = UUID(), title: String, content: String, isPinned: Bool = false) {
         self.id = id
         self.title = title
         self.content = content
-        self.dateCreated = dateCreated
-    }
-
-    // MARK: - UI HELPER (for cleaner list display)
-    var preview: String {
-        String(content.prefix(80))
+        self.isPinned = isPinned
     }
 }
