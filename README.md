@@ -369,6 +369,29 @@ Assets
 
 RecalllQApp.swift
 
+Welcome Screen
+        │
+        ▼
+Dashboard
+        │
+ ┌──────┼───────────────┐
+ ▼      ▼               ▼
+Notes  Memories      Settings
+ │
+ ▼
+Add Note
+ │
+ ▼
+Edit Note
+ │
+ ▼
+Save Note
+ │
+ ▼
+Search Notes
+ │
+ ▼
+Generate AI Memory
 # ⚡ Recall Less. Learn More. Think Smarter.
 
 ## RecalllQ
