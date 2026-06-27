@@ -2,53 +2,52 @@
 import SwiftUI
 
 // =====================================================
-// MAIN TAB VIEW (CAPSTONE STRUCTURE)
+// MAIN TAB VIEW
 // =====================================================
 // PURPOSE:
-// - Central navigation system for RecalllQ
-// - Replaces scattered NavigationLinks
-// - Scalable architecture for future features
+// - Navigation system for entire app
+// - Uses shared AppState from root
 // =====================================================
 
 struct MainTabView: View {
 
+    // =====================================================
+    // GLOBAL STATE (INJECTED FROM APP ROOT)
+    // =====================================================
     @EnvironmentObject var appState: AppState
 
     var body: some View {
 
         TabView {
 
-            // =====================================================
+            // =================================================
             // DASHBOARD TAB
-            // =====================================================
+            // =================================================
             NavigationStack {
                 DashboardView()
             }
             .tabItem {
-                Image(systemName: "brain")
-                Text("Dashboard")
+                Label("Dashboard", systemImage: "brain.head.profile")
             }
 
-            // =====================================================
+            // =================================================
             // NOTES TAB
-            // =====================================================
+            // =================================================
             NavigationStack {
                 NotesView()
             }
             .tabItem {
-                Image(systemName: "note.text")
-                Text("Notes")
+                Label("Notes", systemImage: "note.text")
             }
 
-            // =====================================================
+            // =================================================
             // MEMORIES TAB
-            // =====================================================
+            // =================================================
             NavigationStack {
                 MemoriesView()
             }
             .tabItem {
-                Image(systemName: "sparkles")
-                Text("Memories")
+                Label("Memories", systemImage: "sparkles")
             }
         }
     }

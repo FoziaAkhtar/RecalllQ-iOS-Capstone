@@ -4,11 +4,11 @@ import SwiftUI
 import Combine
 
 // =====================================================
-// VIEWMODEL: MemoryViewModel (FINAL CLEAN VERSION)
+// VIEWMODEL: MemoryViewModel (FINAL FIXED)
 // =====================================================
 // PURPOSE:
-// Core AI memory system (CRUD + search + AI suggestions)
-// Works with AppState + Storage + Dashboard
+// Core AI memory system (CRUD + search + suggestions)
+// Sends global events to entire app
 // =====================================================
 
 final class MemoryViewModel: ObservableObject {
@@ -30,7 +30,7 @@ final class MemoryViewModel: ObservableObject {
     @Published var suggestedMemories: [Memory] = []
 
     // =====================================================
-    // STORAGE LAYER
+    // STORAGE
     // =====================================================
     private let storage = MemoryStorageService()
 
@@ -57,139 +57,72 @@ final class MemoryViewModel: ObservableObject {
 
         save()
         generateSuggestions()
+
+        // =====================================================
+        // GLOBAL EVENT (used by other screens if needed)
+        // =====================================================
+        NotificationCenter.default.post(
+            name: .newMemoryCreated,
+            object: memory
+        )
     }
 
     // =====================================================
-    // DELETE MEMORY
+    // DELETE MEMORY (SAFE UUID VERSION)
     // =====================================================
-    func deleteMemory(at offsets: IndexSet) {
-
-        memories.remove(atOffsets: offsets)
-
+    func deleteMemory(id: UUID) {
+        memories.removeAll { $0.id == id }
         save()
         generateSuggestions()
     }
 
     // =====================================================
-    // FILTERED MEMORIES
+    // FILTERED MEMORIES (SEARCH + TAGS)
     // =====================================================
     var filteredMemories: [Memory] {
 
-        let searched = searchMemories(searchText)
+        var result = memories
 
-        guard selectedTag.lowercased() != "all" else {
-            return searched
-        }
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        return searched.filter { memory in
-            memory.tags.contains { tag in
-                tag.lowercased() == selectedTag.lowercased()
+        if !query.isEmpty {
+            result = result.filter {
+                $0.title.localizedCaseInsensitiveContains(query) ||
+                $0.content.localizedCaseInsensitiveContains(query)
             }
         }
+
+        if selectedTag.lowercased() != "all" {
+            result = result.filter {
+                $0.tags.contains { $0.lowercased() == selectedTag.lowercased() }
+            }
+        }
+
+        return result
     }
 
     // =====================================================
-    // SMART SEARCH (IMPROVED RANKING SYSTEM)
-    // =====================================================
-    func searchMemories(_ query: String) -> [Memory] {
-
-        let trimmed = query
-            .lowercased()
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !trimmed.isEmpty else {
-            return memories
-        }
-
-        let scored = memories.map { memory -> (Memory, Int) in
-
-            var score = 0
-
-            let title = memory.title.lowercased()
-            let content = memory.content.lowercased()
-            let summary = memory.summary.lowercased()
-
-            // Title match = highest priority
-            if title.contains(trimmed) {
-                score += 5
-            }
-
-            // Summary match
-            if summary.contains(trimmed) {
-                score += 3
-            }
-
-            // Content match
-            if content.contains(trimmed) {
-                score += 1
-            }
-
-            return (memory, score)
-        }
-
-        let filtered = scored.filter { $0.1 > 0 }
-
-        let sorted = filtered.sorted { $0.1 > $1.1 }
-
-        return sorted.map { $0.0 }
-    }
-
-    // =====================================================
-    // ALL TAGS
+    // TAG LIST
     // =====================================================
     var allTags: [String] {
-        let tags = memories.flatMap { $0.tags }
-        return Array(Set(tags)).sorted()
+        Array(Set(memories.flatMap { $0.tags })).sorted()
     }
 
     // =====================================================
-    // AI SUGGESTIONS ENGINE
+    // SUGGESTIONS
     // =====================================================
     func generateSuggestions() {
-
-        guard !memories.isEmpty else {
-            suggestedMemories = []
-            return
-        }
-
-        let allTagsFlat = memories.flatMap { $0.tags }
-
-        let frequency = Dictionary(grouping: allTagsFlat, by: { $0 })
-            .mapValues { $0.count }
-
-        let topTags = frequency
-            .sorted { $0.value > $1.value }
-            .map { $0.key }
-            .prefix(2)
-
-        let topTagsSet = Set(topTags.map { $0.lowercased() })
-
-        let tagBased = memories.filter { memory in
-            !Set(memory.tags.map { $0.lowercased() })
-                .isDisjoint(with: topTagsSet)
-        }
-
-        let recent = Array(memories.prefix(3))
-
-        let combined = tagBased + recent
-
-        let unique = Dictionary(grouping: combined, by: { $0.id })
-            .compactMap { $0.value.first }
-
-        suggestedMemories = Array(unique.prefix(5))
+        suggestedMemories = Array(memories.prefix(3))
     }
 
     // =====================================================
-    // LOAD
+    // STORAGE
     // =====================================================
     func loadMemories() {
         memories = storage.load()
         generateSuggestions()
     }
 
-    // =====================================================
-    // SAVE
-    // =====================================================
     func save() {
         storage.save(memories)
     }
@@ -200,34 +133,24 @@ final class MemoryViewModel: ObservableObject {
     private func createSummary(_ text: String) -> String {
 
         let words = text.split(separator: " ")
-        let limit = 12
 
-        guard words.count > limit else {
+        if words.count <= 12 {
             return text
         }
 
-        return words.prefix(limit).joined(separator: " ") + "..."
+        return words.prefix(12).joined(separator: " ") + "..."
     }
 
     // =====================================================
-    // AI TAGS
+    // AI TAG EXTRACTION
     // =====================================================
     private func extractTags(_ text: String) -> [String] {
 
-        let keywords = [
-            "study",
-            "exam",
-            "swift",
-            "ios",
-            "lecture",
-            "assignment",
-            "homework"
-        ]
-
         let lower = text.lowercased()
 
-        let found = keywords.filter { lower.contains($0) }
+        if lower.contains("swift") { return ["ios"] }
+        if lower.contains("study") { return ["study"] }
 
-        return found.isEmpty ? ["general"] : found
+        return ["general"]
     }
 }

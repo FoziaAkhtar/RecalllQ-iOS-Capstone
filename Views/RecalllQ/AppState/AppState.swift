@@ -4,34 +4,43 @@ import SwiftUI
 import Combine
 
 // =====================================================
-// APP STATE (GLOBAL SHARED DATA LAYER)
-// =====================================================
-// PURPOSE:
-// - Single source of truth for entire app
-// - Holds shared ViewModel instances
-// - Injected using @EnvironmentObject
+// APP STATE (GLOBAL SOURCE OF TRUTH)
 // =====================================================
 
 final class AppState: ObservableObject {
 
     // =====================================================
-    // SHARED VIEWMODELS
+    // VIEWMODELS
     // =====================================================
-
-    // Notes system (main feature)
-    @Published var notesViewModel: NotesViewModel
-
-    // Memory system (AI dashboard feature)
-    @Published var memoryViewModel: MemoryViewModel
+    @Published var memoryViewModel = MemoryViewModel()
+    @Published var notesViewModel = NotesViewModel()
 
     // =====================================================
-    // INIT
+    // SERVICES
+    // =====================================================
+    let notificationService = NotificationService()
+
+    // =====================================================
+    // INIT (LISTENER SETUP)
+    // connects Notes → Memories automatically
     // =====================================================
     init() {
+        setupMemoryListener()
+    }
 
-        // IMPORTANT:
-        // Initialize ViewModels here to avoid SwiftUI dependency issues
-        self.notesViewModel = NotesViewModel()
-        self.memoryViewModel = MemoryViewModel()
+    private func setupMemoryListener() {
+
+        NotificationCenter.default.addObserver(
+            forName: .newMemoryCreated,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+
+            guard let memory = notification.object as? Memory else { return }
+
+            self?.memoryViewModel.memories.insert(memory, at: 0)
+            self?.memoryViewModel.save()
+            self?.memoryViewModel.generateSuggestions()
+        }
     }
 }

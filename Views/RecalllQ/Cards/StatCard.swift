@@ -6,6 +6,7 @@ import SwiftUI
 // =====================================================
 // PURPOSE:
 // Reusable dashboard analytics card
+// Displays key metrics in a clean, consistent format
 // =====================================================
 
 struct StatCard: View {
@@ -20,15 +21,23 @@ struct StatCard: View {
 
         VStack(spacing: 6) {
 
+            // =====================================================
             // TITLE
+            // =====================================================
             Text(title)
                 .font(.caption)
-                .foregroundColor(.gray)
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
 
+            // =====================================================
             // VALUE
+            // =====================================================
             Text(value)
                 .font(.headline)
                 .bold()
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
         }
         .frame(maxWidth: .infinity)
         .padding()

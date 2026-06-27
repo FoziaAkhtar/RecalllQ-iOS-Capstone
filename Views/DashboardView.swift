@@ -2,19 +2,18 @@
 import SwiftUI
 
 // =====================================================
-// DASHBOARD VIEW (AI PRODUCT LEVEL)
+// VIEW: DashboardView
 // =====================================================
 // PURPOSE:
-// - Central intelligence dashboard
-// - Shows live memory analytics + AI suggestions
-// - Clean capstone UI structure (Refined UX)
+// - Central dashboard for RecalllQ
+// - Displays AI insights
+// - Shows analytics
+// - Provides quick navigation
+// - Displays smart recommendations
 // =====================================================
 
 struct DashboardView: View {
 
-    // =====================================================
-    // SHARED APP STATE (SINGLE SOURCE OF TRUTH)
-    // =====================================================
     @EnvironmentObject var appState: AppState
 
     var viewModel: MemoryViewModel {
@@ -25,25 +24,23 @@ struct DashboardView: View {
 
         ScrollView {
 
-            VStack(spacing: 18) {
+            VStack(spacing: 20) {
 
                 // =====================================================
-                // HEADER SECTION
+                // HEADER
                 // =====================================================
-                VStack(spacing: 6) {
+                VStack(spacing: 8) {
 
-                    Text("AI Dashboard")
+                    Text("RecalllQ Dashboard")
                         .font(.largeTitle)
                         .bold()
 
-                    Text("RecalllQ Intelligent Memory System")
-                        .font(.subheadline)
-                        .foregroundColor(.gray)
+                    Text("Your Intelligent Academic Memory Assistant")
+                        .foregroundColor(.secondary)
                 }
-                .padding(.top)
 
                 // =====================================================
-                // AI INSIGHT CARD
+                // AI INSIGHT
                 // =====================================================
                 VStack(alignment: .leading, spacing: 8) {
 
@@ -52,25 +49,20 @@ struct DashboardView: View {
 
                     Text(
                         viewModel.memories.isEmpty
-                        ? "No data available. Start adding memories to activate AI analysis."
-                        : "System analyzing \(viewModel.memories.count) memories across \(viewModel.allTags.count) categories."
+                        ? "No memories available yet. Start by creating notes and memories."
+                        : "Currently tracking \(viewModel.memories.count) memories across \(viewModel.allTags.count) categories."
                     )
                     .font(.body)
-                    .foregroundColor(.secondary)
                 }
-                .padding()
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.gray.opacity(0.1))
+                .padding()
+                .background(Color.gray.opacity(0.12))
                 .cornerRadius(12)
 
                 // =====================================================
-                // STATS SECTION
+                // DASHBOARD STATISTICS
                 // =====================================================
                 VStack(spacing: 12) {
-
-                    Text("📊 Overview")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity, alignment: .leading)
 
                     HStack(spacing: 12) {
 
@@ -100,58 +92,64 @@ struct DashboardView: View {
                 }
 
                 // =====================================================
-                // SMART SUGGESTIONS SECTION
+                // PROGRESS SECTION (SAFE)
+                // =====================================================
+                VStack(alignment: .leading, spacing: 8) {
+
+                    Text("📈 Progress")
+                        .font(.headline)
+
+                    ProgressView(
+                        value: Double(min(viewModel.memories.count, 20)),
+                        total: 20
+                    )
+
+                    Text("\(viewModel.memories.count) of 20 memories added")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding()
+                .background(Color.blue.opacity(0.08))
+                .cornerRadius(12)
+
+                // =====================================================
+                // SMART SUGGESTIONS
                 // =====================================================
                 VStack(alignment: .leading, spacing: 10) {
 
-                    Text("🔮 Smart Suggestions")
+                    Text("💡 Smart Suggestions")
                         .font(.headline)
 
                     if viewModel.suggestedMemories.isEmpty {
 
-                        Text("Add memories to activate AI recommendation engine.")
+                        Text("No recommendations yet.")
                             .foregroundColor(.gray)
-                            .font(.subheadline)
 
                     } else {
 
                         ForEach(viewModel.suggestedMemories) { memory in
 
-                            VStack(alignment: .leading, spacing: 4) {
+                            VStack(alignment: .leading, spacing: 5) {
 
                                 Text(memory.title)
                                     .font(.headline)
 
                                 Text(memory.summary)
                                     .font(.caption)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(.secondary)
                             }
-                            .padding(10)
+                            .padding()
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color.gray.opacity(0.12))
+                            .background(Color.gray.opacity(0.10))
                             .cornerRadius(10)
                         }
                     }
                 }
 
                 // =====================================================
-                // NAVIGATION ACTIONS
+                // QUICK NAVIGATION
                 // =====================================================
                 VStack(spacing: 12) {
-
-                    NavigationLink {
-
-                        MemoriesView()
-
-                    } label: {
-
-                        Text("Open Memories")
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                    }
 
                     NavigationLink {
 
@@ -159,12 +157,26 @@ struct DashboardView: View {
 
                     } label: {
 
-                        Text("Open Notes")
+                        Text("📝 Open Notes")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                    }
+
+                    NavigationLink {
+
+                        MemoriesView()
+
+                    } label: {
+
+                        Text("🧠 Open Memories")
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(Color.green)
                             .foregroundColor(.white)
-                            .cornerRadius(10)
+                            .cornerRadius(12)
                     }
                 }
             }
@@ -175,4 +187,8 @@ struct DashboardView: View {
             viewModel.generateSuggestions()
         }
     }
+}
+#Preview {
+    DashboardView()
+        .environmentObject(AppState())
 }

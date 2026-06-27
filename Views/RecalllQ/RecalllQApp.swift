@@ -2,19 +2,18 @@
 import SwiftUI
 
 // =====================================================
-// RECALLQ APP ENTRY POINT
+// APP ENTRY POINT
 // =====================================================
 // PURPOSE:
-// - Starts the app
-// - Creates global AppState
-// - Injects it into entire environment
+// - Creates global AppState (single source of truth)
+// - Injects it into ALL views in the app
 // =====================================================
 
 @main
 struct RecalllQApp: App {
 
     // =====================================================
-    // SINGLE GLOBAL STATE OBJECT
+    // GLOBAL APP STATE
     // =====================================================
     @StateObject private var appState = AppState()
 
@@ -23,14 +22,11 @@ struct RecalllQApp: App {
         WindowGroup {
 
             // =================================================
-            // ROOT NAVIGATION
+            // ROOT VIEW
+            // IMPORTANT: EVERYTHING MUST BE INSIDE THIS
             // =================================================
-            NavigationStack {
-
-                // FIRST SCREEN
-              MainTabView()
-            }
-            .environmentObject(appState)
+            MainTabView()
+                .environmentObject(appState)
         }
     }
 }

@@ -1,51 +1,72 @@
 
 import SwiftUI
 
-// ==========================================
-// WELCOME SCREEN
-// ==========================================
+// =====================================================
+// VIEW: WelcomeView
+// =====================================================
 // PURPOSE:
-// - First UI screen
-// - App branding
-// - Entry point into app features
-// ==========================================
+// - First screen displayed when the app launches
+// - Displays RecalllQ branding
+// - Entry point into MainTabView (NOT single screen)
+// - Keeps navigation architecture clean and scalable
+// =====================================================
 
 struct WelcomeView: View {
 
     var body: some View {
 
-        NavigationStack {
+        VStack(spacing: 25) {
 
-            VStack(spacing: 25) {
+            Spacer()
 
-                Spacer()
+            // =====================================================
+            // APP TITLE
+            // =====================================================
+            Text("RecalllQ")
+                .font(.largeTitle)
+                .bold()
 
-                // APP NAME
-                Text("RecallQ")
-                    .font(.largeTitle)
-                    .bold()
+            // =====================================================
+            // APP SUBTITLE
+            // =====================================================
+            Text("Focus. Track. Improve.")
+                .font(.headline)
+                .foregroundColor(.gray)
 
-                // SUBTITLE
-                Text("Focus. Track. Improve.")
-                    .foregroundColor(.gray)
+            Spacer()
 
-                Spacer()
+            // =====================================================
+            // NAVIGATION BUTTON
+            // =====================================================
+            NavigationLink {
 
-                // NAVIGATION BUTTON
-                NavigationLink(destination: DashboardView()) {
+                MainTabView()
 
-                    Text("Get Started")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
-                }
-                .padding(.horizontal)
+            } label: {
 
-                Spacer()
+                Text("Get Started")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
             }
-            .padding()
+            .padding(.horizontal)
+
+            Spacer()
         }
+        .padding()
+        .navigationBarBackButtonHidden(true)
+    }
+}
+
+// =====================================================
+// PREVIEW
+// =====================================================
+
+#Preview {
+    NavigationStack {
+        WelcomeView()
     }
 }

@@ -18,19 +18,16 @@ final class MemoryEngine {
 
         let combinedText = "\(title) \(content)"
 
-        let summary = createSummary(from: content)
-        let tags = extractTags(from: combinedText)
-
         return Memory(
             title: title,
             content: content,
-            summary: summary,
-            tags: tags
+            summary: createSummary(from: content),
+            tags: extractTags(from: combinedText)
         )
     }
 
     // =====================================================
-    // SUMMARY ENGINE (CONSISTENT AI STYLE)
+    // SUMMARY ENGINE (CLEAN + CONSISTENT)
     // =====================================================
     private func createSummary(from text: String) -> String {
 
@@ -38,14 +35,14 @@ final class MemoryEngine {
         let limit = 12
 
         guard words.count > limit else {
-            return words.joined(separator: " ").description
+            return text
         }
 
         return words.prefix(limit).joined(separator: " ") + "..."
     }
 
     // =====================================================
-    // TAG ENGINE (DETERMINISTIC + CLEAN OUTPUT)
+    // TAG ENGINE (AI-LIKE DETECTION)
     // =====================================================
     private func extractTags(from text: String) -> [String] {
 
@@ -59,22 +56,15 @@ final class MemoryEngine {
             ("important", ["important", "must", "critical"])
         ]
 
-        var foundTags: [String] = []
+        var foundTags: Set<String> = []
 
         for entry in keywordMap {
 
-            for keyword in entry.keywords {
-
-                if normalized.contains(keyword) {
-
-                    // Avoid duplicates
-                    if !foundTags.contains(entry.tag) {
-                        foundTags.append(entry.tag)
-                    }
-                }
+            if entry.keywords.contains(where: { normalized.contains($0) }) {
+                foundTags.insert(entry.tag)
             }
         }
 
-        return foundTags.isEmpty ? ["general"] : foundTags
+        return foundTags.isEmpty ? ["general"] : Array(foundTags)
     }
 }

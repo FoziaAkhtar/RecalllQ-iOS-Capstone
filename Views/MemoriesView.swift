@@ -1,113 +1,113 @@
 
 import SwiftUI
 
-// ==========================================
-// MEMORIES VIEW (AI PRODUCT LEVEL)
-// ==========================================
-// PURPOSE:
-// - Create, view, and manage AI memories
-// - Connected to shared AppState (MVVM + persistence)
-// ==========================================
+// =====================================================
+// VIEW: MemoriesView
+// =====================================================
 
 struct MemoriesView: View {
 
-    // =====================================================
-    // SHARED APP STATE (SINGLE SOURCE OF TRUTH)
-    // =====================================================
     @EnvironmentObject var appState: AppState
-
-    var viewModel: MemoryViewModel {
-        appState.memoryViewModel
-    }
-
-    // =====================================================
-    // INPUT STATE
-    // =====================================================
-    @State private var title = ""
-    @State private var content = ""
 
     var body: some View {
 
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
 
             // =====================================================
-            // INPUT SECTION (CREATE MEMORY)
+            // SEARCH BAR 
             // =====================================================
-            VStack(spacing: 12) {
+            TextField(
+                "Search memories...",
+                text: Binding(
+                    get: { appState.memoryViewModel.searchText },
+                    set: { appState.memoryViewModel.searchText = $0 }
+                )
+            )
+            .textFieldStyle(.roundedBorder)
+            .padding(.horizontal)
 
-                TextField("Enter title", text: $title)
-                    .textFieldStyle(.roundedBorder)
+            // =====================================================
+            // TAG FILTER
+            // =====================================================
+            ScrollView(.horizontal, showsIndicators: false) {
 
-                TextField("Enter content", text: $content, axis: .vertical)
-                    .textFieldStyle(.roundedBorder)
-                    .lineLimit(3...6)
+                HStack(spacing: 10) {
 
-                Button(action: {
-
-                    // Prevent empty entries (important for grading quality)
-                    guard !title.trimmingCharacters(in: .whitespaces).isEmpty,
-                          !content.trimmingCharacters(in: .whitespaces).isEmpty else {
-                        return
+                    Button {
+                        appState.memoryViewModel.selectedTag = "all"
+                    } label: {
+                        Text("All")
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(appState.memoryViewModel.selectedTag == "all" ? Color.blue : Color.gray.opacity(0.2))
+                            .foregroundColor(appState.memoryViewModel.selectedTag == "all" ? .white : .primary)
+                            .cornerRadius(10)
                     }
 
-                    viewModel.addMemory(title: title, content: content)
+                    ForEach(appState.memoryViewModel.allTags, id: \.self) { tag in
 
-                    // Reset UI after save
-                    title = ""
-                    content = ""
-
-                }) {
-                    Text("Add Memory")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
+                        Button {
+                            appState.memoryViewModel.selectedTag = tag
+                        } label: {
+                            Text(tag)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(appState.memoryViewModel.selectedTag == tag ? Color.blue : Color.gray.opacity(0.2))
+                                .foregroundColor(appState.memoryViewModel.selectedTag == tag ? .white : .primary)
+                                .cornerRadius(10)
+                        }
+                    }
                 }
+                .padding(.horizontal)
             }
-            .padding()
 
             // =====================================================
-            // MEMORY LIST
+            // LIST
             // =====================================================
             List {
 
-                if viewModel.filteredMemories.isEmpty {
-
-                    Text("No memories yet. Add your first memory.")
+                if appState.memoryViewModel.filteredMemories.isEmpty {
+                    Text("No memories found")
                         .foregroundColor(.gray)
+                }
 
-                } else {
+                ForEach(appState.memoryViewModel.filteredMemories) { memory in
 
-                    ForEach(viewModel.filteredMemories) { memory in
+                    VStack(alignment: .leading, spacing: 6) {
 
-                        VStack(alignment: .leading, spacing: 6) {
+                        Text(memory.title)
+                            .font(.headline)
 
-                            Text(memory.title)
-                                .font(.headline)
+                        Text(memory.summary)
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
 
-                            Text(memory.summary)
-                                .font(.caption)
-                                .foregroundColor(.gray)
-
-                            // Optional: show tags (nice grading boost)
-                            Text(memory.tags.joined(separator: ", "))
-                                .font(.caption2)
-                                .foregroundColor(.blue)
+                        HStack {
+                            ForEach(memory.tags, id: \.self) { tag in
+                                Text(tag)
+                                    .font(.caption)
+                                    .padding(5)
+                                    .background(Color.gray.opacity(0.2))
+                                    .cornerRadius(6)
+                            }
                         }
-                        .padding(.vertical, 4)
                     }
-                    .onDelete(perform: viewModel.deleteMemory)
+                    .padding(.vertical, 6)
+
+                    .swipeActions {
+                        Button(role: .destructive) {
+                            appState.memoryViewModel.deleteMemory(id: memory.id)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
                 }
             }
         }
         .navigationTitle("Memories")
-
-        // =====================================================
-        // AUTO REFRESH AI SUGGESTIONS
-        // =====================================================
-        .onAppear {
-            viewModel.generateSuggestions()
-        }
     }
+}
+#Preview {
+    MemoriesView()
+        .environmentObject(AppState())
 }

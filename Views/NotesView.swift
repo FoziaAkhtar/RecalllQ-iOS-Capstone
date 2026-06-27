@@ -2,51 +2,45 @@
 import SwiftUI
 
 // =====================================================
-// VIEW: NotesView (FIXED FOR APPSTATE ARCHITECTURE)
+// VIEW: NotesView 
 // =====================================================
 
 struct NotesView: View {
 
     // =====================================================
-    // SHARED APP STATE
+    // GLOBAL STATE (ONLY SOURCE OF TRUTH)
     // =====================================================
     @EnvironmentObject var appState: AppState
 
-    var viewModel: NotesViewModel {
-        appState.notesViewModel
-    }
-
     // =====================================================
-    // INPUT STATE
+    // LOCAL UI STATE
     // =====================================================
-    @State private var title: String = ""
-    @State private var content: String = ""
-
-    // =====================================================
-    // KEYBOARD CONTROL
-    // =====================================================
+    @State private var title = ""
+    @State private var content = ""
     @FocusState private var isInputFocused: Bool
-
-    // =====================================================
-    // UNDO STATE
-    // =====================================================
-    @State private var showUndo: Bool = false
+    @State private var showUndo = false
 
     var body: some View {
 
         NavigationStack {
 
-            VStack(spacing: 16) {
+            VStack(spacing: 12) {
 
                 // =====================================================
-                // SEARCH FIELD (APPSTATE BINDING)
+                // SEARCH (SAFE DIRECT BINDING)
                 // =====================================================
-                TextField("Search notes...", text: $appState.notesViewModel.searchText)
-                    .textFieldStyle(.roundedBorder)
-                    .padding(.horizontal)
+                TextField(
+                    "Search notes...",
+                    text: Binding(
+                        get: { appState.notesViewModel.searchText },
+                        set: { appState.notesViewModel.searchText = $0 }
+                    )
+                )
+                .textFieldStyle(.roundedBorder)
+                .padding(.horizontal)
 
                 // =====================================================
-                // INPUT SECTION
+                // INPUT
                 // =====================================================
                 VStack(spacing: 10) {
 
@@ -61,16 +55,19 @@ struct NotesView: View {
                 .padding(.horizontal)
 
                 // =====================================================
-                // ADD NOTE BUTTON
+                // ADD BUTTON
                 // =====================================================
                 Button {
 
-                    let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-                    let trimmedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let cleanTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let cleanContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
 
-                    guard !trimmedTitle.isEmpty || !trimmedContent.isEmpty else { return }
+                    guard !cleanTitle.isEmpty || !cleanContent.isEmpty else { return }
 
-                    viewModel.addNote(title: trimmedTitle, content: trimmedContent)
+                    appState.notesViewModel.addNote(
+                        title: cleanTitle,
+                        content: cleanContent
+                    )
 
                     title = ""
                     content = ""
@@ -88,28 +85,17 @@ struct NotesView: View {
                 }
 
                 // =====================================================
-                // NOTES LIST
+                // LIST
                 // =====================================================
                 List {
 
-                    if viewModel.filteredNotes.isEmpty {
-
-                        Text("No Notes Found")
-                            .foregroundColor(.gray)
-                    }
-
-                    // =====================================================
-                    // NOTE ITEM ROW
-                    // =====================================================
-                    ForEach(viewModel.filteredNotes) { note in
+                    ForEach(appState.notesViewModel.filteredNotes) { note in
 
                         VStack(alignment: .leading, spacing: 6) {
 
                             HStack {
                                 Text(note.title).bold()
-
                                 Spacer()
-
                                 Image(systemName: note.isPinned ? "pin.fill" : "pin")
                                     .foregroundColor(.orange)
                             }
@@ -117,25 +103,17 @@ struct NotesView: View {
                             Text(note.content)
                                 .foregroundColor(.gray)
                         }
-
-                        // =====================================================
-                        // SWIPE ACTIONS (FIXED: NO $0)
-                        // =====================================================
                         .swipeActions {
 
                             Button(role: .destructive) {
-
-                                viewModel.deleteNote(id: note.id)
+                                appState.notesViewModel.deleteNote(id: note.id)
                                 showUndo = true
-
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
 
                             Button {
-
-                                viewModel.togglePin(id: note.id)
-
+                                appState.notesViewModel.togglePin(id: note.id)
                             } label: {
                                 Label("Pin", systemImage: "pin")
                             }
@@ -154,17 +132,18 @@ struct NotesView: View {
                         Spacer()
 
                         Button("Undo") {
-                            viewModel.undoDelete()
+                            appState.notesViewModel.undoDelete()
                             showUndo = false
                         }
                     }
                     .padding()
-                    .background(Color.gray.opacity(0.2))
-                    .cornerRadius(10)
-                    .padding(.horizontal)
                 }
             }
             .navigationTitle("Notes")
         }
     }
+}
+#Preview {
+    NotesView()
+        .environmentObject(AppState())
 }

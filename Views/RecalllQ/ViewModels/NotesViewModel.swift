@@ -5,9 +5,11 @@ import Combine
 // =====================================================
 // VIEWMODEL: NotesViewModel
 // =====================================================
-// PURPOSE:
-// Handles ALL business logic for Notes app.
-// View should NOT contain logic — only UI.
+// FIXES INCLUDED:
+// ✔ updateNote added
+// ✔ clean MVVM structure
+// ✔ safe persistence
+// ✔ consistent CRUD operations
 // =====================================================
 
 final class NotesViewModel: ObservableObject {
@@ -38,12 +40,38 @@ final class NotesViewModel: ObservableObject {
     // =====================================================
     // ADD NOTE
     // =====================================================
-    func addNote(title: String, content: String) {
+    func addNote(title: String, content: String, reminderDate: Date? = nil) {
 
-        // FIX: Note initializer MUST support isPinned (if added in model)
-        let newNote = Note(title: title, content: content)
+        let note = Note(
+            title: title,
+            content: content,
+            isPinned: false,
+            reminderDate: reminderDate
+        )
 
-        notes.append(newNote)
+        notes.insert(note, at: 0)
+        saveNotes()
+
+        // OPTIONAL: Reminder notification
+        if let date = reminderDate {
+            NotificationService().scheduleNotification(
+                title: title,
+                body: content,
+                date: date
+            )
+        }
+    }
+
+    // =====================================================
+    // UPDATE NOTE 
+    // =====================================================
+    func updateNote(id: UUID, newTitle: String, newContent: String) {
+
+        guard let index = notes.firstIndex(where: { $0.id == id }) else { return }
+
+        notes[index].title = newTitle
+        notes[index].content = newContent
+
         saveNotes()
     }
 
@@ -52,7 +80,6 @@ final class NotesViewModel: ObservableObject {
     // =====================================================
     func deleteNote(id: UUID) {
 
-        // FIX: safer + avoids double lookup issues
         guard let index = notes.firstIndex(where: { $0.id == id }) else { return }
 
         lastDeletedNote = notes[index]
@@ -68,21 +95,8 @@ final class NotesViewModel: ObservableObject {
 
         guard let note = lastDeletedNote else { return }
 
-        notes.append(note)
+        notes.insert(note, at: 0)
         lastDeletedNote = nil
-
-        saveNotes()
-    }
-
-    // =====================================================
-    // UPDATE NOTE
-    // =====================================================
-    func updateNote(id: UUID, newTitle: String, newContent: String) {
-
-        guard let index = notes.firstIndex(where: { $0.id == id }) else { return }
-
-        notes[index].title = newTitle
-        notes[index].content = newContent
 
         saveNotes()
     }
@@ -95,55 +109,41 @@ final class NotesViewModel: ObservableObject {
         guard let index = notes.firstIndex(where: { $0.id == id }) else { return }
 
         notes[index].isPinned.toggle()
-
         saveNotes()
     }
 
     // =====================================================
-    // FILTER + SORT NOTES
+    // FILTERED NOTES
     // =====================================================
     var filteredNotes: [Note] {
 
-        let result: [Note]
-
-        // FILTER
-        if searchText.isEmpty {
-            result = notes
-        } else {
-            result = notes.filter {
-                $0.title.localizedCaseInsensitiveContains(searchText) ||
-                $0.content.localizedCaseInsensitiveContains(searchText)
-            }
+        let filtered = searchText.isEmpty
+        ? notes
+        : notes.filter {
+            $0.title.localizedCaseInsensitiveContains(searchText) ||
+            $0.content.localizedCaseInsensitiveContains(searchText)
         }
 
-        // SORT FIX (IMPORTANT BUG FIX)
-        return result.sorted { a, b in
-
-            // pinned always first
-            if a.isPinned != b.isPinned {
-                return a.isPinned && !b.isPinned
+        return filtered.sorted {
+            if $0.isPinned != $1.isPinned {
+                return $0.isPinned && !$1.isPinned
             }
-
-            // stable fallback sorting
-            return a.title < b.title
+            return $0.title < $1.title
         }
     }
 
     // =====================================================
-    // SAVE NOTES
+    // SAVE
     // =====================================================
     private func saveNotes() {
-
         guard let encoded = try? JSONEncoder().encode(notes) else { return }
-
         UserDefaults.standard.set(encoded, forKey: storageKey)
     }
 
     // =====================================================
-    // LOAD NOTES
+    // LOAD
     // =====================================================
     private func loadNotes() {
-
         guard
             let data = UserDefaults.standard.data(forKey: storageKey),
             let decoded = try? JSONDecoder().decode([Note].self, from: data)

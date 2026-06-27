@@ -5,41 +5,37 @@ import SwiftUI
 // VIEW: EditNoteView
 // =====================================================
 // PURPOSE:
-// Allows user to modify existing note.
-// Changes are sent back to ViewModel.
+// - Edit existing note safely
+// - Uses MVVM correctly
 // =====================================================
 
 struct EditNoteView: View {
 
     // =====================================================
-    // VIEWMODEL
-    // PURPOSE:
-    // Shared so updates reflect immediately in main list.
+    // VIEWMODEL (MUST BE ObservedObject — NOT Binding)
     // =====================================================
     @ObservedObject var viewModel: NotesViewModel
 
     // =====================================================
     // NOTE
-    // PURPOSE:
-    // The note being edited.
     // =====================================================
     let note: Note
 
     // =====================================================
     // LOCAL STATE
-    // PURPOSE:
-    // Holds editable values before saving.
     // =====================================================
     @State private var title: String
     @State private var content: String
 
     // =====================================================
+    // DISMISS
+    // =====================================================
+    @Environment(\.dismiss) private var dismiss
+
+    // =====================================================
     // INIT
-    // PURPOSE:
-    // Pre-fill fields with existing note data.
     // =====================================================
     init(viewModel: NotesViewModel, note: Note) {
-
         self.viewModel = viewModel
         self.note = note
 
@@ -51,22 +47,32 @@ struct EditNoteView: View {
 
         VStack(spacing: 16) {
 
+            // TITLE
             TextField("Title", text: $title)
                 .textFieldStyle(.roundedBorder)
 
+            // CONTENT
             TextField("Content", text: $content)
                 .textFieldStyle(.roundedBorder)
 
+            // SAVE BUTTON
             Button {
 
+                let cleanTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+                let cleanContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
+
+                guard !cleanTitle.isEmpty || !cleanContent.isEmpty else { return }
+
+             
                 viewModel.updateNote(
                     id: note.id,
-                    newTitle: title,
-                    newContent: content
+                    newTitle: cleanTitle,
+                    newContent: cleanContent
                 )
 
-            } label: {
+                dismiss()
 
+            } label: {
                 Text("Save Changes")
                     .frame(maxWidth: .infinity)
                     .padding()

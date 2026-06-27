@@ -6,13 +6,13 @@ import Foundation
 // =====================================================
 // PURPOSE:
 // Represents a structured AI-style memory
-// created from a note (title + content).
+// created from user notes and enhanced with AI metadata
 // =====================================================
 
 struct Memory: Identifiable, Codable, Equatable {
 
     // =====================================================
-    // ID (SwiftUI IDENTIFIABLE REQUIREMENT)
+    // IDENTITY
     // =====================================================
     var id: UUID
 
@@ -29,12 +29,12 @@ struct Memory: Identifiable, Codable, Equatable {
     var tags: [String]
 
     // =====================================================
-    // METADATA (USED FOR ANALYTICS / DASHBOARD)
+    // METADATA
     // =====================================================
     var dateCreated: Date
 
     // =====================================================
-    // INIT (SAFE DEFAULTS INCLUDED)
+    // INIT (SAFE DEFAULTS)
     // =====================================================
     init(
         id: UUID = UUID(),
@@ -53,21 +53,38 @@ struct Memory: Identifiable, Codable, Equatable {
     }
 
     // =====================================================
-    // UI HELPER: SHORT PREVIEW (VERY USEFUL FOR LISTS)
+    // EQUATABLE (SAFE ID-BASED COMPARISON)
     // =====================================================
-    var preview: String {
-        if !summary.isEmpty {
-            return summary
-        }
-        return String(content.prefix(40)) + "..."
+    static func == (lhs: Memory, rhs: Memory) -> Bool {
+        lhs.id == rhs.id
     }
 
     // =====================================================
-    // UI HELPER: FORMATTED DATE (FOR DASHBOARD)
+    // UI HELPER: PREVIEW TEXT
     // =====================================================
-    var formattedDate: String {
+    var preview: String {
+
+        let baseText = !summary.isEmpty ? summary : content
+
+        let trimmed = baseText.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard trimmed.count > 40 else {
+            return trimmed
+        }
+
+        return String(trimmed.prefix(40)) + "..."
+    }
+
+    // =====================================================
+    // UI HELPER: FORMATTED DATE (OPTIMIZED)
+    // =====================================================
+    private static let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
-        return formatter.string(from: dateCreated)
+        return formatter
+    }()
+
+    var formattedDate: String {
+        Self.dateFormatter.string(from: dateCreated)
     }
 }
