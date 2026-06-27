@@ -3,44 +3,39 @@ import Foundation
 import SwiftUI
 import Combine
 
-// =====================================================
-// APP STATE (GLOBAL SOURCE OF TRUTH)
-// =====================================================
-
 final class AppState: ObservableObject {
 
     // =====================================================
-    // VIEWMODELS
+    // SINGLE SOURCE OF TRUTH
     // =====================================================
     @Published var memoryViewModel = MemoryViewModel()
     @Published var notesViewModel = NotesViewModel()
 
     // =====================================================
-    // SERVICES
+    // MEMORY ENGINE (AI LOGIC LAYER)
     // =====================================================
-    let notificationService = NotificationService()
+    let memoryEngine = MemoryEngine()
 
     // =====================================================
-    // INIT (LISTENER SETUP)
-    // connects Notes → Memories automatically
+    // INIT
     // =====================================================
     init() {
-        setupMemoryListener()
+        // No NotificationCenter needed anymore
     }
 
-    private func setupMemoryListener() {
+    // =====================================================
+    // CENTRALIZED MEMORY CREATION PIPELINE
+    // =====================================================
+    func createMemoryFromNote(title: String, content: String) {
 
-        NotificationCenter.default.addObserver(
-            forName: .newMemoryCreated,
-            object: nil,
-            queue: .main
-        ) { [weak self] notification in
+        let memory = memoryEngine.generateMemory(
+            from: title,
+            content: content
+        )
 
-            guard let memory = notification.object as? Memory else { return }
+        memoryViewModel.memories.insert(memory, at: 0)
 
-            self?.memoryViewModel.memories.insert(memory, at: 0)
-            self?.memoryViewModel.save()
-            self?.memoryViewModel.generateSuggestions()
-        }
+        memoryViewModel.save()
+        memoryViewModel.generateSuggestions()
     }
 }

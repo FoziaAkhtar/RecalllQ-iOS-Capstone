@@ -6,7 +6,8 @@ import SwiftUI
 // =====================================================
 // PURPOSE:
 // - Creates global AppState (single source of truth)
-// - Injects it into ALL views in the app
+// - Injects it into ALL views
+// - Wires ViewModels together (IMPORTANT FIX)
 // =====================================================
 
 @main
@@ -23,7 +24,7 @@ struct RecalllQApp: App {
 
             // =================================================
             // ROOT VIEW
-            // IMPORTANT: EVERYTHING MUST BE INSIDE THIS
+            // EVERYTHING IN THE APP STARTS HERE
             // =================================================
             MainTabView()
                 .environmentObject(appState)

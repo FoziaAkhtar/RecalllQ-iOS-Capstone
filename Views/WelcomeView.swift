@@ -5,13 +5,13 @@ import SwiftUI
 // VIEW: WelcomeView
 // =====================================================
 // PURPOSE:
-// - First screen displayed when the app launches
-// - Displays RecalllQ branding
-// - Entry point into MainTabView (NOT single screen)
-// - Keeps navigation architecture clean and scalable
+// - Entry screen of app
+// - Routes safely into MainTabView
 // =====================================================
 
 struct WelcomeView: View {
+
+    @EnvironmentObject var appState: AppState
 
     var body: some View {
 
@@ -36,11 +36,12 @@ struct WelcomeView: View {
             Spacer()
 
             // =====================================================
-            // NAVIGATION BUTTON
+            // NAVIGATION BUTTON (SAFE ROUTING)
             // =====================================================
             NavigationLink {
 
                 MainTabView()
+                    .environmentObject(appState)
 
             } label: {
 
@@ -58,15 +59,5 @@ struct WelcomeView: View {
         }
         .padding()
         .navigationBarBackButtonHidden(true)
-    }
-}
-
-// =====================================================
-// PREVIEW
-// =====================================================
-
-#Preview {
-    NavigationStack {
-        WelcomeView()
     }
 }

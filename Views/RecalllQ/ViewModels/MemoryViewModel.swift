@@ -4,11 +4,11 @@ import SwiftUI
 import Combine
 
 // =====================================================
-// VIEWMODEL: MemoryViewModel (FINAL FIXED)
+// VIEWMODEL: MemoryViewModel
 // =====================================================
 // PURPOSE:
-// Core AI memory system (CRUD + search + suggestions)
-// Sends global events to entire app
+// Handles state + persistence only
+// AI logic moved to MemoryEngine
 // =====================================================
 
 final class MemoryViewModel: ObservableObject {
@@ -30,9 +30,10 @@ final class MemoryViewModel: ObservableObject {
     @Published var suggestedMemories: [Memory] = []
 
     // =====================================================
-    // STORAGE
+    // DEPENDENCIES
     // =====================================================
     private let storage = MemoryStorageService()
+    private let engine = MemoryEngine()
 
     // =====================================================
     // INIT
@@ -42,42 +43,34 @@ final class MemoryViewModel: ObservableObject {
     }
 
     // =====================================================
-    // ADD MEMORY
+    // ADD MEMORY (USES MEMORY ENGINE)
     // =====================================================
     func addMemory(title: String, content: String) {
 
-        let memory = Memory(
-            title: title,
-            content: content,
-            summary: createSummary(content),
-            tags: extractTags(content)
+        let memory = engine.generateMemory(
+            from: title,
+            content: content
         )
 
         memories.insert(memory, at: 0)
 
         save()
         generateSuggestions()
-
-        // =====================================================
-        // GLOBAL EVENT (used by other screens if needed)
-        // =====================================================
-        NotificationCenter.default.post(
-            name: .newMemoryCreated,
-            object: memory
-        )
     }
 
     // =====================================================
-    // DELETE MEMORY (SAFE UUID VERSION)
+    // DELETE MEMORY
     // =====================================================
     func deleteMemory(id: UUID) {
+
         memories.removeAll { $0.id == id }
+
         save()
         generateSuggestions()
     }
 
     // =====================================================
-    // FILTERED MEMORIES (SEARCH + TAGS)
+    // FILTERED MEMORIES
     // =====================================================
     var filteredMemories: [Memory] {
 
@@ -92,9 +85,9 @@ final class MemoryViewModel: ObservableObject {
             }
         }
 
-        if selectedTag.lowercased() != "all" {
+        if selectedTag != "all" {
             result = result.filter {
-                $0.tags.contains { $0.lowercased() == selectedTag.lowercased() }
+                $0.tags.contains(selectedTag)
             }
         }
 
@@ -109,10 +102,14 @@ final class MemoryViewModel: ObservableObject {
     }
 
     // =====================================================
-    // SUGGESTIONS
+    // SUGGESTIONS 
     // =====================================================
     func generateSuggestions() {
-        suggestedMemories = Array(memories.prefix(3))
+
+        suggestedMemories = memories
+            .sorted { $0.dateCreated > $1.dateCreated }
+            .prefix(3)
+            .map { $0 }
     }
 
     // =====================================================
@@ -125,32 +122,5 @@ final class MemoryViewModel: ObservableObject {
 
     func save() {
         storage.save(memories)
-    }
-
-    // =====================================================
-    // AI SUMMARY
-    // =====================================================
-    private func createSummary(_ text: String) -> String {
-
-        let words = text.split(separator: " ")
-
-        if words.count <= 12 {
-            return text
-        }
-
-        return words.prefix(12).joined(separator: " ") + "..."
-    }
-
-    // =====================================================
-    // AI TAG EXTRACTION
-    // =====================================================
-    private func extractTags(_ text: String) -> [String] {
-
-        let lower = text.lowercased()
-
-        if lower.contains("swift") { return ["ios"] }
-        if lower.contains("study") { return ["study"] }
-
-        return ["general"]
     }
 }

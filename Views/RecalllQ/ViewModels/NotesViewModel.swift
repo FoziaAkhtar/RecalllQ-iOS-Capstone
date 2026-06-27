@@ -2,16 +2,6 @@
 import Foundation
 import Combine
 
-// =====================================================
-// VIEWMODEL: NotesViewModel
-// =====================================================
-// FIXES INCLUDED:
-// ✔ updateNote added
-// ✔ clean MVVM structure
-// ✔ safe persistence
-// ✔ consistent CRUD operations
-// =====================================================
-
 final class NotesViewModel: ObservableObject {
 
     // =====================================================
@@ -21,14 +11,15 @@ final class NotesViewModel: ObservableObject {
     @Published var searchText: String = ""
 
     // =====================================================
-    // UNDO SUPPORT
+    // STORAGE
     // =====================================================
     private var lastDeletedNote: Note?
+    private let storageKey = "saved_notes"
 
     // =====================================================
-    // STORAGE KEY
+    // DEPENDENCY 
     // =====================================================
-    private let storageKey = "saved_notes"
+    weak var appState: AppState?
 
     // =====================================================
     // INIT
@@ -52,7 +43,17 @@ final class NotesViewModel: ObservableObject {
         notes.insert(note, at: 0)
         saveNotes()
 
-        // OPTIONAL: Reminder notification
+        // =====================================================
+        // CREATE MEMORY VIA APPSTATE
+        // =====================================================
+        appState?.createMemoryFromNote(
+            title: title,
+            content: content
+        )
+
+        // =====================================================
+        // REMINDER NOTIFICATION
+        // =====================================================
         if let date = reminderDate {
             NotificationService().scheduleNotification(
                 title: title,
@@ -63,7 +64,7 @@ final class NotesViewModel: ObservableObject {
     }
 
     // =====================================================
-    // UPDATE NOTE 
+    // UPDATE NOTE
     // =====================================================
     func updateNote(id: UUID, newTitle: String, newContent: String) {
 
@@ -102,7 +103,7 @@ final class NotesViewModel: ObservableObject {
     }
 
     // =====================================================
-    // TOGGLE PIN
+    // PIN TOGGLE
     // =====================================================
     func togglePin(id: UUID) {
 

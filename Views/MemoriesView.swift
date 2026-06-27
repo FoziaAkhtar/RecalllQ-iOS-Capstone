@@ -9,18 +9,23 @@ struct MemoriesView: View {
 
     @EnvironmentObject var appState: AppState
 
+    // Shortcut (cleaner + safer)
+    private var vm: MemoryViewModel {
+        appState.memoryViewModel
+    }
+
     var body: some View {
 
         VStack(spacing: 12) {
 
             // =====================================================
-            // SEARCH BAR 
+            // SEARCH BAR
             // =====================================================
             TextField(
                 "Search memories...",
                 text: Binding(
-                    get: { appState.memoryViewModel.searchText },
-                    set: { appState.memoryViewModel.searchText = $0 }
+                    get: { vm.searchText },
+                    set: { vm.searchText = $0 }
                 )
             )
             .textFieldStyle(.roundedBorder)
@@ -34,26 +39,26 @@ struct MemoriesView: View {
                 HStack(spacing: 10) {
 
                     Button {
-                        appState.memoryViewModel.selectedTag = "all"
+                        vm.selectedTag = "all"
                     } label: {
                         Text("All")
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
-                            .background(appState.memoryViewModel.selectedTag == "all" ? Color.blue : Color.gray.opacity(0.2))
-                            .foregroundColor(appState.memoryViewModel.selectedTag == "all" ? .white : .primary)
+                            .background(vm.selectedTag == "all" ? Color.blue : Color.gray.opacity(0.2))
+                            .foregroundColor(vm.selectedTag == "all" ? .white : .primary)
                             .cornerRadius(10)
                     }
 
-                    ForEach(appState.memoryViewModel.allTags, id: \.self) { tag in
+                    ForEach(vm.allTags, id: \.self) { tag in
 
                         Button {
-                            appState.memoryViewModel.selectedTag = tag
+                            vm.selectedTag = tag
                         } label: {
                             Text(tag)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
-                                .background(appState.memoryViewModel.selectedTag == tag ? Color.blue : Color.gray.opacity(0.2))
-                                .foregroundColor(appState.memoryViewModel.selectedTag == tag ? .white : .primary)
+                                .background(vm.selectedTag == tag ? Color.blue : Color.gray.opacity(0.2))
+                                .foregroundColor(vm.selectedTag == tag ? .white : .primary)
                                 .cornerRadius(10)
                         }
                     }
@@ -66,29 +71,33 @@ struct MemoriesView: View {
             // =====================================================
             List {
 
-                if appState.memoryViewModel.filteredMemories.isEmpty {
+                // EMPTY STATE (FIXED UX)
+                if vm.filteredMemories.isEmpty {
                     Text("No memories found")
                         .foregroundColor(.gray)
+                        .frame(maxWidth: .infinity)
                 }
 
-                ForEach(appState.memoryViewModel.filteredMemories) { memory in
+                ForEach(vm.filteredMemories) { memory in
 
                     VStack(alignment: .leading, spacing: 6) {
 
                         Text(memory.title)
                             .font(.headline)
 
-                        Text(memory.summary)
+                        Text(memory.summary.isEmpty ? memory.content : memory.summary)
                             .font(.subheadline)
                             .foregroundColor(.gray)
 
-                        HStack {
-                            ForEach(memory.tags, id: \.self) { tag in
-                                Text(tag)
-                                    .font(.caption)
-                                    .padding(5)
-                                    .background(Color.gray.opacity(0.2))
-                                    .cornerRadius(6)
+                        if !memory.tags.isEmpty {
+                            HStack {
+                                ForEach(memory.tags, id: \.self) { tag in
+                                    Text(tag)
+                                        .font(.caption)
+                                        .padding(5)
+                                        .background(Color.gray.opacity(0.2))
+                                        .cornerRadius(6)
+                                }
                             }
                         }
                     }
@@ -96,7 +105,7 @@ struct MemoriesView: View {
 
                     .swipeActions {
                         Button(role: .destructive) {
-                            appState.memoryViewModel.deleteMemory(id: memory.id)
+                            vm.deleteMemory(id: memory.id)
                         } label: {
                             Label("Delete", systemImage: "trash")
                         }
@@ -106,8 +115,4 @@ struct MemoriesView: View {
         }
         .navigationTitle("Memories")
     }
-}
-#Preview {
-    MemoriesView()
-        .environmentObject(AppState())
 }

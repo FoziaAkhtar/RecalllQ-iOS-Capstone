@@ -5,8 +5,8 @@ import Foundation
 // SERVICE: MemoryEngine
 // =====================================================
 // PURPOSE:
-// Converts raw notes into structured AI-like memories
-// Includes summary + intelligent tag extraction
+// Converts notes → structured AI-like memories
+// Adds improved summary + smarter tag detection
 // =====================================================
 
 final class MemoryEngine {
@@ -16,21 +16,42 @@ final class MemoryEngine {
     // =====================================================
     func generateMemory(from title: String, content: String) -> Memory {
 
-        let combinedText = "\(title) \(content)"
+        let cleanedTitle = cleanText(title)
+        let cleanedContent = cleanText(content)
+
+        let combinedText = "\(cleanedTitle) \(cleanedContent)"
 
         return Memory(
-            title: title,
-            content: content,
-            summary: createSummary(from: content),
+            title: cleanedTitle,
+            content: cleanedContent,
+            summary: createSummary(from: cleanedContent),
             tags: extractTags(from: combinedText)
         )
     }
 
     // =====================================================
-    // SUMMARY ENGINE (CLEAN + CONSISTENT)
+    // TEXT CLEANING (IMPORTANT FOR CONSISTENCY)
+    // =====================================================
+    private func cleanText(_ text: String) -> String {
+
+        text
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "  ", with: " ")
+    }
+
+    // =====================================================
+    // SUMMARY ENGINE (IMPROVED QUALITY)
     // =====================================================
     private func createSummary(from text: String) -> String {
 
+        let sentences = text.split(separator: ".")
+        let firstSentence = sentences.first?.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if let sentence = firstSentence, sentence.count > 0 {
+            return String(sentence)
+        }
+
+        // fallback: word-based summary
         let words = text.split(separator: " ")
         let limit = 12
 
@@ -42,26 +63,29 @@ final class MemoryEngine {
     }
 
     // =====================================================
-    // TAG ENGINE (AI-LIKE DETECTION)
+    // TAG ENGINE (IMPROVED AI LOGIC)
     // =====================================================
     private func extractTags(from text: String) -> [String] {
 
         let normalized = text.lowercased()
 
         let keywordMap: [(tag: String, keywords: [String])] = [
-            ("study", ["study", "exam", "revision"]),
-            ("school", ["lecture", "class", "teacher"]),
-            ("assignment", ["assignment", "homework", "project"]),
-            ("ios", ["swift", "ios", "xcode"]),
-            ("important", ["important", "must", "critical"])
+            ("study", ["study", "studying", "exam", "revision", "revise"]),
+            ("school", ["lecture", "class", "teacher", "lesson"]),
+            ("assignment", ["assignment", "homework", "project", "task"]),
+            ("ios", ["swift", "ios", "xcode", "apple"]),
+            ("important", ["important", "must", "critical", "urgent"])
         ]
 
         var foundTags: Set<String> = []
 
         for entry in keywordMap {
 
-            if entry.keywords.contains(where: { normalized.contains($0) }) {
-                foundTags.insert(entry.tag)
+            for keyword in entry.keywords {
+                if normalized.contains(keyword) {
+                    foundTags.insert(entry.tag)
+                    break
+                }
             }
         }
 

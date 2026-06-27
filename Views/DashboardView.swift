@@ -16,9 +16,12 @@ struct DashboardView: View {
 
     @EnvironmentObject var appState: AppState
 
-    var viewModel: MemoryViewModel {
+    // Direct reference (safe + stable)
+    private var viewModel: MemoryViewModel {
         appState.memoryViewModel
     }
+
+    private let memoryGoal = 20
 
     var body: some View {
 
@@ -60,7 +63,7 @@ struct DashboardView: View {
                 .cornerRadius(12)
 
                 // =====================================================
-                // DASHBOARD STATISTICS
+                // STATS
                 // =====================================================
                 VStack(spacing: 12) {
 
@@ -92,7 +95,7 @@ struct DashboardView: View {
                 }
 
                 // =====================================================
-                // PROGRESS SECTION (SAFE)
+                // PROGRESS
                 // =====================================================
                 VStack(alignment: .leading, spacing: 8) {
 
@@ -100,11 +103,11 @@ struct DashboardView: View {
                         .font(.headline)
 
                     ProgressView(
-                        value: Double(min(viewModel.memories.count, 20)),
-                        total: 20
+                        value: Double(min(viewModel.memories.count, memoryGoal)),
+                        total: Double(memoryGoal)
                     )
 
-                    Text("\(viewModel.memories.count) of 20 memories added")
+                    Text("\(viewModel.memories.count) of \(memoryGoal) memories added")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -113,7 +116,7 @@ struct DashboardView: View {
                 .cornerRadius(12)
 
                 // =====================================================
-                // SMART SUGGESTIONS
+                // SUGGESTIONS
                 // =====================================================
                 VStack(alignment: .leading, spacing: 10) {
 
@@ -147,13 +150,14 @@ struct DashboardView: View {
                 }
 
                 // =====================================================
-                // QUICK NAVIGATION
+                // NAVIGATION
                 // =====================================================
                 VStack(spacing: 12) {
 
                     NavigationLink {
 
                         NotesView()
+                            .environmentObject(appState) // ✅ FIX
 
                     } label: {
 
@@ -168,6 +172,7 @@ struct DashboardView: View {
                     NavigationLink {
 
                         MemoriesView()
+                            .environmentObject(appState) 
 
                     } label: {
 
@@ -187,8 +192,4 @@ struct DashboardView: View {
             viewModel.generateSuggestions()
         }
     }
-}
-#Preview {
-    DashboardView()
-        .environmentObject(AppState())
 }

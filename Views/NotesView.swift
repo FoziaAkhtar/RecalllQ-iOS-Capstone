@@ -2,21 +2,16 @@
 import SwiftUI
 
 // =====================================================
-// VIEW: NotesView 
+// VIEW: NotesView
 // =====================================================
 
 struct NotesView: View {
 
-    // =====================================================
-    // GLOBAL STATE (ONLY SOURCE OF TRUTH)
-    // =====================================================
     @EnvironmentObject var appState: AppState
 
-    // =====================================================
-    // LOCAL UI STATE
-    // =====================================================
     @State private var title = ""
     @State private var content = ""
+
     @FocusState private var isInputFocused: Bool
     @State private var showUndo = false
 
@@ -27,14 +22,11 @@ struct NotesView: View {
             VStack(spacing: 12) {
 
                 // =====================================================
-                // SEARCH (SAFE DIRECT BINDING)
+                // SEARCH BAR (SIMPLIFIED)
                 // =====================================================
                 TextField(
                     "Search notes...",
-                    text: Binding(
-                        get: { appState.notesViewModel.searchText },
-                        set: { appState.notesViewModel.searchText = $0 }
-                    )
+                    text: $appState.notesViewModel.searchText
                 )
                 .textFieldStyle(.roundedBorder)
                 .padding(.horizontal)
@@ -71,6 +63,8 @@ struct NotesView: View {
 
                     title = ""
                     content = ""
+
+                    // Better keyboard handling
                     isInputFocused = false
 
                 } label: {
@@ -107,7 +101,15 @@ struct NotesView: View {
 
                             Button(role: .destructive) {
                                 appState.notesViewModel.deleteNote(id: note.id)
+
+                                // SHOW TEMPORARY UNDO
                                 showUndo = true
+
+                                // AUTO-HIDE AFTER 3 SECONDS
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                                    showUndo = false
+                                }
+
                             } label: {
                                 Label("Delete", systemImage: "trash")
                             }
@@ -123,27 +125,29 @@ struct NotesView: View {
                 }
 
                 // =====================================================
-                // UNDO BAR
+                // UNDO BAR 
                 // =====================================================
                 if showUndo {
 
                     HStack {
+
                         Text("Note deleted")
+
                         Spacer()
 
                         Button("Undo") {
                             appState.notesViewModel.undoDelete()
                             showUndo = false
                         }
+                        .bold()
                     }
                     .padding()
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(10)
+                    .padding(.horizontal)
                 }
             }
             .navigationTitle("Notes")
         }
     }
-}
-#Preview {
-    NotesView()
-        .environmentObject(AppState())
 }

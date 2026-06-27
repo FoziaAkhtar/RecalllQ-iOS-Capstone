@@ -6,12 +6,16 @@ import SwiftUI
 // ========================================
 // PURPOSE:
 // - App settings screen
-// - Displays app info
-// - Placeholder for future user preferences
-// - Matches capstone UI consistency
+// - Future-ready for user preferences
+// - Clean MVVM-compatible structure
 // ========================================
 
 struct SettingsView: View {
+
+    // =====================================================
+    // GLOBAL STATE (READY FOR FUTURE SETTINGS)
+    // =====================================================
+    @EnvironmentObject var appState: AppState
 
     var body: some View {
 
@@ -27,14 +31,14 @@ struct SettingsView: View {
                     HStack {
                         Text("App Name")
                         Spacer()
-                        Text("RecalllQ")
+                        Text(appName)
                             .foregroundColor(.gray)
                     }
 
                     HStack {
                         Text("Version")
                         Spacer()
-                        Text("1.0")
+                        Text(appVersion)
                             .foregroundColor(.gray)
                     }
                 }
@@ -49,7 +53,7 @@ struct SettingsView: View {
                 }
 
                 // ========================================
-                // FUTURE FEATURES SECTION
+                // FEATURES SECTION
                 // ========================================
                 Section(header: Text("Features")) {
 
@@ -57,8 +61,40 @@ struct SettingsView: View {
                     Text("• Smart Notes")
                     Text("• Reminder System")
                 }
+
+                // ========================================
+                // DEBUG SECTION (OPTIONAL BUT USEFUL)
+                // ========================================
+                Section(header: Text("Debug")) {
+
+                    Button("Reset App Data") {
+                        resetAppData()
+                    }
+                    .foregroundColor(.red)
+                }
             }
             .navigationTitle("Settings")
         }
+    }
+
+    // =====================================================
+    // APP INFO (CENTRALIZED)
+    // =====================================================
+    private var appName: String {
+        "RecalllQ"
+    }
+
+    private var appVersion: String {
+        "1.0"
+    }
+
+    // =====================================================
+    // RESET FUNCTION (FUTURE USE)
+    // =====================================================
+    private func resetAppData() {
+        appState.notesViewModel.notes.removeAll()
+        appState.memoryViewModel.memories.removeAll()
+
+        UserDefaults.standard.removeObject(forKey: "saved_notes")
     }
 }

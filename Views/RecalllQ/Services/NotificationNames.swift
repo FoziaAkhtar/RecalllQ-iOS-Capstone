@@ -2,11 +2,20 @@
 import Foundation
 
 // =====================================================
-// NOTIFICATION EXTENSIONS (GLOBAL EVENT DEFINITIONS)
+// NOTIFICATION NAMES (GLOBAL EVENT DEFINITIONS)
+// =====================================================
+// PURPOSE:
+// Lightweight event system for app-wide communication
+// NOTE:
+// Prefer direct AppState calls in MVVM where possible
 // =====================================================
 
 extension Notification.Name {
 
-    /// Fired whenever a new Memory is created
-    static let newMemoryCreated = Notification.Name("newMemoryCreated")
+    // =====================================================
+    // MEMORY EVENTS
+    // =====================================================
+
+    /// Fired when a new Memory is created from a Note
+    static let memoryCreatedFromNote = Notification.Name("memoryCreatedFromNote")
 }

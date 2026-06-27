@@ -6,37 +6,28 @@ import SwiftUI
 // =====================================================
 // PURPOSE:
 // - Edit existing note safely
-// - Uses MVVM correctly
+// - Uses AppState (single source of truth)
 // =====================================================
 
 struct EditNoteView: View {
 
     // =====================================================
-    // VIEWMODEL (MUST BE ObservedObject — NOT Binding)
+    // GLOBAL APP STATE 
     // =====================================================
-    @ObservedObject var viewModel: NotesViewModel
+    @EnvironmentObject var appState: AppState
 
-    // =====================================================
     // NOTE
-    // =====================================================
     let note: Note
 
-    // =====================================================
     // LOCAL STATE
-    // =====================================================
     @State private var title: String
     @State private var content: String
 
-    // =====================================================
     // DISMISS
-    // =====================================================
     @Environment(\.dismiss) private var dismiss
 
-    // =====================================================
     // INIT
-    // =====================================================
-    init(viewModel: NotesViewModel, note: Note) {
-        self.viewModel = viewModel
+    init(note: Note) {
         self.note = note
 
         _title = State(initialValue: note.title)
@@ -63,8 +54,10 @@ struct EditNoteView: View {
 
                 guard !cleanTitle.isEmpty || !cleanContent.isEmpty else { return }
 
-             
-                viewModel.updateNote(
+                // =====================================================
+                // UPDATE THROUGH GLOBAL VIEWMODEL
+                // =====================================================
+                appState.notesViewModel.updateNote(
                     id: note.id,
                     newTitle: cleanTitle,
                     newContent: cleanContent

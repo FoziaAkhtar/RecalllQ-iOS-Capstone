@@ -5,10 +5,7 @@ import Foundation
 // MODEL: Note
 // =====================================================
 // PURPOSE:
-// - Represents a single note in the app
-// - Supports SwiftUI List (Identifiable)
-// - Supports saving/loading (Codable)
-// - Includes reminder + UI helpers
+// Core user note model used for input + AI conversion
 // =====================================================
 
 struct Note: Identifiable, Codable, Equatable {
@@ -16,7 +13,7 @@ struct Note: Identifiable, Codable, Equatable {
     // =====================================================
     // IDENTITY
     // =====================================================
-    var id: UUID
+    var id: UUID = UUID()
 
     // =====================================================
     // CORE CONTENT
@@ -27,61 +24,61 @@ struct Note: Identifiable, Codable, Equatable {
     // =====================================================
     // STATE FLAGS
     // =====================================================
-    var isPinned: Bool
+    var isPinned: Bool = false
 
     // =====================================================
     // REMINDER SUPPORT
-    // Optional = user may not set reminder
     // =====================================================
     var reminderDate: Date?
 
     // =====================================================
-    // INIT
+    // METADATA (FUTURE AI USE)
     // =====================================================
-    init(
-        id: UUID = UUID(),
-        title: String,
-        content: String,
-        isPinned: Bool = false,
-        reminderDate: Date? = nil
-    ) {
-        self.id = id
-        self.title = title
-        self.content = content
-        self.isPinned = isPinned
-        self.reminderDate = reminderDate
-    }
+    var createdAt: Date = Date()
+    var updatedAt: Date = Date()
 
     // =====================================================
-    // EQUATABLE (SAFE ID-BASED COMPARISON)
-    // =====================================================
-    static func == (lhs: Note, rhs: Note) -> Bool {
-        lhs.id == rhs.id
-    }
-
-    // =====================================================
-    // UI HELPER: PREVIEW TEXT
+    // PREVIEW TEXT (
     // =====================================================
     var preview: String {
-        let base = content.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        guard base.count > 40 else {
-            return base
+        let combined = "\(title) \(content)"
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "  ", with: " ")
+
+        // Prefer sentence-based preview
+        if let sentence = combined.split(separator: ".").first {
+            return String(sentence).trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
-        return String(base.prefix(40)) + "..."
+        // Fallback word-based preview
+        let words = combined.split(separator: " ")
+        let limit = 40
+
+        guard words.count > limit else {
+            return combined
+        }
+
+        return words.prefix(limit).joined(separator: " ") + "..."
     }
 
     // =====================================================
-    // UI HELPER: FORMATTED REMINDER DATE
+    // FORMATTED REMINDER DATE (OPTIMIZED)
     // =====================================================
     var formattedReminder: String? {
+
         guard let date = reminderDate else { return nil }
 
+        return Note.dateFormatter.string(from: date)
+    }
+
+    // =====================================================
+    // SHARED DATE FORMATTER (PERFORMANCE SAFE)
+    // =====================================================
+    private static let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
-
-        return formatter.string(from: date)
-    }
+        return formatter
+    }()
 }

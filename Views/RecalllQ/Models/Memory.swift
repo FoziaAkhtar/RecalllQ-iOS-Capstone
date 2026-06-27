@@ -5,8 +5,8 @@ import Foundation
 // MODEL: Memory
 // =====================================================
 // PURPOSE:
-// Represents a structured AI-style memory
-// created from user notes and enhanced with AI metadata
+// AI-enhanced structured memory model
+// Used for Notes → Memory transformation system
 // =====================================================
 
 struct Memory: Identifiable, Codable, Equatable {
@@ -14,7 +14,7 @@ struct Memory: Identifiable, Codable, Equatable {
     // =====================================================
     // IDENTITY
     // =====================================================
-    var id: UUID
+    var id: UUID = UUID()
 
     // =====================================================
     // CORE DATA
@@ -29,62 +29,52 @@ struct Memory: Identifiable, Codable, Equatable {
     var tags: [String]
 
     // =====================================================
-    // METADATA
+    // AI METADATA (FUTURE-PROOFING)
     // =====================================================
-    var dateCreated: Date
+    var confidence: Double = 1.0   // AI confidence score
+    var importance: Int = 1        // ranking priority
+    var source: String = "note"    // note | ai | system
 
     // =====================================================
-    // INIT (SAFE DEFAULTS)
+    // TIMESTAMP
     // =====================================================
-    init(
-        id: UUID = UUID(),
-        title: String,
-        content: String,
-        summary: String = "",
-        tags: [String] = [],
-        dateCreated: Date = Date()
-    ) {
-        self.id = id
-        self.title = title
-        self.content = content
-        self.summary = summary
-        self.tags = tags
-        self.dateCreated = dateCreated
-    }
+    var dateCreated: Date = Date()
 
     // =====================================================
-    // EQUATABLE (SAFE ID-BASED COMPARISON)
-    // =====================================================
-    static func == (lhs: Memory, rhs: Memory) -> Bool {
-        lhs.id == rhs.id
-    }
-
-    // =====================================================
-    // UI HELPER: PREVIEW TEXT
+    // PREVIEW TEXT
     // =====================================================
     var preview: String {
 
-        let baseText = !summary.isEmpty ? summary : content
+        let baseText = summary.isEmpty ? content : summary
 
-        let trimmed = baseText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleaned = baseText
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "  ", with: " ")
 
-        guard trimmed.count > 40 else {
-            return trimmed
+        // Prefer sentence-based preview
+        if let sentence = cleaned.split(separator: ".").first {
+            return String(sentence).trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
-        return String(trimmed.prefix(40)) + "..."
+        // Fallback word limit
+        let words = cleaned.split(separator: " ")
+        let limit = 40
+
+        guard words.count > limit else {
+            return cleaned
+        }
+
+        return words.prefix(limit).joined(separator: " ") + "..."
     }
 
     // =====================================================
-    // UI HELPER: FORMATTED DATE (OPTIMIZED)
+    // FORMATTED DATE 
     // =====================================================
-    private static let dateFormatter: DateFormatter = {
+    var formattedDate: String {
+
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
-        return formatter
-    }()
 
-    var formattedDate: String {
-        Self.dateFormatter.string(from: dateCreated)
+        return formatter.string(from: dateCreated)
     }
 }

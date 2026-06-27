@@ -5,15 +5,12 @@ import SwiftUI
 // MAIN TAB VIEW
 // =====================================================
 // PURPOSE:
-// - Navigation system for entire app
-// - Uses shared AppState from root
+// - Central navigation hub
+// - Ensures AppState is always available
 // =====================================================
 
 struct MainTabView: View {
 
-    // =====================================================
-    // GLOBAL STATE (INJECTED FROM APP ROOT)
-    // =====================================================
     @EnvironmentObject var appState: AppState
 
     var body: some View {
@@ -25,6 +22,7 @@ struct MainTabView: View {
             // =================================================
             NavigationStack {
                 DashboardView()
+                    .environmentObject(appState) 
             }
             .tabItem {
                 Label("Dashboard", systemImage: "brain.head.profile")
@@ -35,6 +33,7 @@ struct MainTabView: View {
             // =================================================
             NavigationStack {
                 NotesView()
+                    .environmentObject(appState)
             }
             .tabItem {
                 Label("Notes", systemImage: "note.text")
@@ -45,6 +44,7 @@ struct MainTabView: View {
             // =================================================
             NavigationStack {
                 MemoriesView()
+                    .environmentObject(appState)
             }
             .tabItem {
                 Label("Memories", systemImage: "sparkles")

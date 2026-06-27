@@ -6,7 +6,7 @@ import SwiftUI
 // =====================================================
 // PURPOSE:
 // Reusable dashboard analytics card
-// Displays key metrics in a clean, consistent format
+// Displays key metrics in a clean, scalable format
 // =====================================================
 
 struct StatCard: View {
@@ -16,6 +16,9 @@ struct StatCard: View {
     // =====================================================
     let title: String
     let value: String
+
+    // Optional enhancement (future-proofing)
+    var valueColor: Color = .primary
 
     var body: some View {
 
@@ -36,12 +39,22 @@ struct StatCard: View {
             Text(value)
                 .font(.headline)
                 .bold()
+                .foregroundColor(valueColor)
+                .contentTransition(.numericText()) // smooth updates
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }
         .frame(maxWidth: .infinity)
         .padding()
-        .background(Color.gray.opacity(0.12))
-        .cornerRadius(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.gray.opacity(0.12))
+        )
+
+        // =====================================================
+        // ACCESSIBILITY
+        // =====================================================
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(title): \(value)")
     }
 }

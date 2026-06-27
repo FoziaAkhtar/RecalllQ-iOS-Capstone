@@ -2,7 +2,7 @@
 import SwiftUI
 
 // =====================================================
-// VIEW: ReminderView 
+// VIEW: ReminderView
 // =====================================================
 // PURPOSE:
 // Shows all notes with active reminders
@@ -13,12 +13,13 @@ struct ReminderView: View {
 
     @EnvironmentObject var appState: AppState
 
-    // =====================================================
-    // FILTERED + SORTED NOTES
-    // =====================================================
-    private var notes: [Note] {
+    var body: some View {
 
-        appState.notesViewModel.notes
+        // =====================================================
+        // FILTER + SORT DIRECTLY IN BODY (IMPORTANT FIX)
+        // Ensures SwiftUI tracks updates properly
+        // =====================================================
+        let reminderNotes = appState.notesViewModel.notes
             .filter { $0.reminderDate != nil }
             .sorted { lhs, rhs in
 
@@ -27,11 +28,8 @@ struct ReminderView: View {
 
                 return left < right
             }
-    }
 
-    var body: some View {
-
-        NavigationStack {
+        return NavigationStack {
 
             VStack(spacing: 0) {
 
@@ -46,7 +44,7 @@ struct ReminderView: View {
                 // =====================================================
                 // EMPTY STATE
                 // =====================================================
-                if notes.isEmpty {
+                if reminderNotes.isEmpty {
 
                     Spacer()
 
@@ -58,9 +56,9 @@ struct ReminderView: View {
                 } else {
 
                     // =====================================================
-                    // LIST (FIXED STRUCTURE)
+                    // LIST
                     // =====================================================
-                    List(notes) { note in
+                    List(reminderNotes) { note in
 
                         VStack(alignment: .leading, spacing: 6) {
 
