@@ -470,5 +470,45 @@ Services
       ▼
 SwiftData/Core Data
 
+## Final Structure
+
+RecalllQ
+│
+├── Models
+│   ├── Note.swift
+│   ├── Memory.swift
+│   ├── Assignment.swift
+│   ├── StudySession.swift
+│   └── Course.swift
+│
+├── ViewModels
+│   ├── DashboardViewModel.swift
+│   ├── NotesViewModel.swift
+│   ├── MemoryViewModel.swift
+│   ├── SearchViewModel.swift
+│   ├── ReminderViewModel.swift
+│   └── ProductivityViewModel.swift
+│
+├── Services
+│   ├── MemoryEngine.swift
+│   ├── SearchService.swift
+│   ├── TaggingService.swift
+│   ├── NotificationService.swift
+│   └── PersistenceService.swift
+│
+├── Views
+│   ├── Welcome
+│   ├── Dashboard
+│   ├── Notes
+│   ├── Memories
+│   ├── Search
+│   ├── Productivity
+│   ├── Settings
+│   └── Components
+│
+├── Assets
+│
+└── RecalllQApp.swift
+
 
 ## RecalllQ
