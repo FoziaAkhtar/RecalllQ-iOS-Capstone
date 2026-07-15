@@ -395,3 +395,80 @@ Generate AI Memory
 # ⚡ Recall Less. Learn More. Think Smarter.
 
 ## RecalllQ
+│
+├── Models
+│   ├── Note.swift
+│   ├── Memory.swift
+│   ├── Course.swift
+│   ├── Reminder.swift
+│   └── StudySession.swift
+│
+├── ViewModels
+│   ├── NotesViewModel.swift
+│   ├── MemoryViewModel.swift
+│   ├── DashboardViewModel.swift
+│   ├── SearchViewModel.swift
+│   └── ReminderViewModel.swift
+│
+├── Views
+│   ├── Welcome
+│   ├── Dashboard
+│   ├── Notes
+│   ├── Memories
+│   ├── Search
+│   ├── Productivity
+│   ├── Settings
+│   └── Components
+│
+├── Services
+│   ├── PersistenceService.swift
+│   ├── NotificationService.swift
+│   ├── SearchService.swift
+│   ├── MemoryEngine.swift
+│   └── TaggingService.swift
+│
+├── Utilities
+│   ├── Constants.swift
+│   ├── DateHelper.swift
+│   └── Extensions.swift
+│
+└── Assets
+
+## Navigation Flow
+
+Welcome Screen
+      │
+      ▼
+Dashboard
+      │
+ ┌────┼───────────────┐
+ ▼    ▼        ▼      ▼
+Notes Memories Search Settings
+ │
+ ▼
+Add Note
+ │
+ ▼
+Save Note
+ │
+ ▼
+Memory Generated
+ │
+ ▼
+Dashboard Updates
+
+## Artitecture
+
+SwiftUI Views
+      │
+      ▼
+ViewModels
+      │
+      ▼
+Services
+      │
+      ▼
+SwiftData/Core Data
+
+
+## RecalllQ
