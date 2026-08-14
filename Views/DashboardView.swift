@@ -1,5 +1,4 @@
 
-
 import SwiftUI
 
 // =====================================================
@@ -11,15 +10,12 @@ import SwiftUI
 // FEATURES:
 // - Welcome section
 // - AI Memory Assistant
-// - Learning statistics
+// - Live learning statistics
 // - Memory progress
+// - Flashcard progress
+// - Quiz progress
 // - Smart suggestions
 // - Quick learning actions
-//
-// COLOR STYLE:
-// - Blue = primary learning/action color
-// - Orange = important learning/highlight color
-// - Green = success/progress status
 // =====================================================
 
 struct DashboardView: View {
@@ -31,11 +27,19 @@ struct DashboardView: View {
     @EnvironmentObject var appState: AppState
 
     // =====================================================
-    // MEMORY VIEW MODEL
+    // VIEW MODELS
     // =====================================================
 
-    private var viewModel: MemoryViewModel {
+    private var memoryVM: MemoryViewModel {
         appState.memoryViewModel
+    }
+
+    private var flashcardVM: FlashcardViewModel {
+        appState.flashcardViewModel
+    }
+
+    private var quizVM: QuizViewModel {
+        appState.quizViewModel
     }
 
     // =====================================================
@@ -103,10 +107,6 @@ struct DashboardView: View {
 
                     HStack {
 
-                        // -------------------------------------------------
-                        // AI ICON
-                        // -------------------------------------------------
-
                         ZStack {
 
                             Circle()
@@ -128,10 +128,6 @@ struct DashboardView: View {
                                 RecalllQTheme.primary
                             )
                         }
-
-                        // -------------------------------------------------
-                        // AI STATUS
-                        // -------------------------------------------------
 
                         VStack(
                             alignment: .leading,
@@ -165,14 +161,10 @@ struct DashboardView: View {
                         Spacer()
                     }
 
-                    // -------------------------------------------------
-                    // AI DESCRIPTION
-                    // -------------------------------------------------
-
                     Text(
-                        viewModel.memories.isEmpty
+                        memoryVM.memories.isEmpty
                         ? "Create your first note and RecalllQ will organize it into a structured memory."
-                        : "RecalllQ is tracking \(viewModel.memories.count) memories across \(viewModel.allTags.count) study categories."
+                        : "RecalllQ is tracking \(memoryVM.memories.count) memories across \(memoryVM.allTags.count) study categories."
                     )
                     .font(.subheadline)
                     .foregroundColor(
@@ -212,52 +204,214 @@ struct DashboardView: View {
                     )
 
                 // =====================================================
-                // STAT CARDS - ROW 1
+                // MEMORY + FLASHCARD
                 // =====================================================
 
                 HStack(spacing: 12) {
 
-                    StatCard(
+                    dashboardStatCard(
                         title: "Memories",
                         value:
-                            "\(viewModel.memories.count)",
-                        valueColor:
+                            "\(memoryVM.memories.count)",
+                        icon:
+                            "brain.head.profile",
+                        color:
                             RecalllQTheme.primary
                     )
 
-                    StatCard(
-                        title: "Categories",
+                    dashboardStatCard(
+                        title: "Flashcards",
                         value:
-                            "\(viewModel.allTags.count)",
-                        valueColor:
+                            "\(flashcardVM.totalFlashcards)",
+                        icon:
+                            "rectangle.on.rectangle",
+                        color:
                             RecalllQTheme.studyOrange
                     )
                 }
 
                 // =====================================================
-                // STAT CARDS - ROW 2
+                // MASTERED + QUIZZES
                 // =====================================================
 
                 HStack(spacing: 12) {
 
-                    StatCard(
-                        title: "Suggestions",
+                    dashboardStatCard(
+                        title: "Mastered",
                         value:
-                            "\(viewModel.suggestedMemories.count)",
-                        valueColor:
-                            RecalllQTheme.studyOrange
-                    )
-
-                    StatCard(
-                        title: "Status",
-                        value:
-                            viewModel.memories.isEmpty
-                            ? "Ready"
-                            : "Active",
-                        valueColor:
+                            "\(flashcardVM.masteredFlashcards)",
+                        icon:
+                            "checkmark.circle.fill",
+                        color:
                             RecalllQTheme.success
                     )
+
+                    dashboardStatCard(
+                        title: "Quizzes",
+                        value:
+                            "\(quizVM.totalQuizzes)",
+                        icon:
+                            "questionmark.circle.fill",
+                        color:
+                            RecalllQTheme.secondary
+                    )
                 }
+
+                // =====================================================
+                // FLASHCARD PERFORMANCE
+                // =====================================================
+
+                VStack(
+                    alignment: .leading,
+                    spacing: 14
+                ) {
+
+                    HStack {
+
+                        VStack(
+                            alignment: .leading,
+                            spacing: 4
+                        ) {
+
+                            Text("Flashcard Performance")
+                                .font(.headline)
+
+                            Text(
+                                "\(flashcardVM.reviewedFlashcards) cards reviewed"
+                            )
+                            .font(.caption)
+                            .foregroundColor(
+                                RecalllQTheme.secondaryText
+                            )
+                        }
+
+                        Spacer()
+
+                        Text(
+                            "\(Int(flashcardVM.overallAccuracy * 100))%"
+                        )
+                        .font(.headline)
+                        .bold()
+                        .foregroundColor(
+                            RecalllQTheme.primary
+                        )
+                    }
+
+                    ProgressView(
+                        value:
+                            flashcardVM.overallAccuracy,
+                        total: 1.0
+                    )
+                    .tint(
+                        RecalllQTheme.primary
+                    )
+
+                    Text(
+                        flashcardVM.totalFlashcards == 0
+                        ? "Generate flashcards from your Memories to start studying."
+                        : flashcardVM.reviewedFlashcards == 0
+                        ? "Start reviewing your flashcards to build your accuracy."
+                        : "Keep practicing to improve your recall."
+                    )
+                    .font(.caption)
+                    .foregroundColor(
+                        RecalllQTheme.secondaryText
+                    )
+                }
+                .padding(
+                    RecalllQTheme.largePadding
+                )
+                .frame(
+                    maxWidth: .infinity,
+                    alignment: .leading
+                )
+                .background(
+                    RoundedRectangle(
+                        cornerRadius:
+                            RecalllQTheme.largeRadius
+                    )
+                    .fill(
+                        RecalllQTheme.blueBackground
+                    )
+                )
+
+                // =====================================================
+                // QUIZ PERFORMANCE
+                // =====================================================
+
+                VStack(
+                    alignment: .leading,
+                    spacing: 14
+                ) {
+
+                    HStack {
+
+                        VStack(
+                            alignment: .leading,
+                            spacing: 4
+                        ) {
+
+                            Text("Quiz Performance")
+                                .font(.headline)
+
+                            Text(
+                                "\(quizVM.completedQuizzes) of \(quizVM.totalQuizzes) quizzes completed"
+                            )
+                            .font(.caption)
+                            .foregroundColor(
+                                RecalllQTheme.secondaryText
+                            )
+                        }
+
+                        Spacer()
+
+                        Text(
+                            "\(Int(quizVM.overallPercentage))%"
+                        )
+                        .font(.headline)
+                        .bold()
+                        .foregroundColor(
+                            RecalllQTheme.studyOrange
+                        )
+                    }
+
+                    ProgressView(
+                        value:
+                            quizVM.overallPercentage / 100,
+                        total: 1.0
+                    )
+                    .tint(
+                        RecalllQTheme.studyOrange
+                    )
+
+                    Text(
+                        quizVM.totalQuizzes == 0
+                        ? "Create a quiz from your Memories to test your knowledge."
+                        : quizVM.completedQuizzes == 0
+                        ? "Complete a quiz to see your score here."
+                        : "Great work! Keep testing your knowledge."
+                    )
+                    .font(.caption)
+                    .foregroundColor(
+                        RecalllQTheme.secondaryText
+                    )
+                }
+                .padding(
+                    RecalllQTheme.largePadding
+                )
+                .frame(
+                    maxWidth: .infinity,
+                    alignment: .leading
+                )
+                .background(
+                    RoundedRectangle(
+                        cornerRadius:
+                            RecalllQTheme.largeRadius
+                    )
+                    .fill(
+                        RecalllQTheme.orangeBackground
+                    )
+                )
 
                 // =====================================================
                 // MEMORY PROGRESS
@@ -290,7 +444,7 @@ struct DashboardView: View {
                         Spacer()
 
                         Text(
-                            "\(min(viewModel.memories.count, memoryGoal))/\(memoryGoal)"
+                            "\(min(memoryVM.memories.count, memoryGoal))/\(memoryGoal)"
                         )
                         .font(.headline)
                         .bold()
@@ -299,17 +453,14 @@ struct DashboardView: View {
                         )
                     }
 
-                    // -------------------------------------------------
-                    // PROGRESS BAR
-                    // -------------------------------------------------
-
                     ProgressView(
-                        value: Double(
-                            min(
-                                viewModel.memories.count,
-                                memoryGoal
-                            )
-                        ),
+                        value:
+                            Double(
+                                min(
+                                    memoryVM.memories.count,
+                                    memoryGoal
+                                )
+                            ),
                         total:
                             Double(memoryGoal)
                     )
@@ -317,14 +468,10 @@ struct DashboardView: View {
                         RecalllQTheme.primary
                     )
 
-                    // -------------------------------------------------
-                    // PROGRESS MESSAGE
-                    // -------------------------------------------------
-
                     Text(
-                        viewModel.memories.count >= memoryGoal
+                        memoryVM.memories.count >= memoryGoal
                         ? "🎉 Great job! You reached your memory goal."
-                        : "\(memoryGoal - viewModel.memories.count) more memories to reach your goal."
+                        : "\(memoryGoal - memoryVM.memories.count) more memories to reach your goal."
                     )
                     .font(.caption)
                     .foregroundColor(
@@ -349,7 +496,7 @@ struct DashboardView: View {
                 )
 
                 // =====================================================
-                // SMART SUGGESTIONS HEADER
+                // SMART SUGGESTIONS
                 // =====================================================
 
                 HStack {
@@ -361,23 +508,21 @@ struct DashboardView: View {
                     Spacer()
 
                     Image(
-                        systemName: "sparkles"
+                        systemName:
+                            "sparkles"
                     )
                     .foregroundColor(
                         RecalllQTheme.studyOrange
                     )
                 }
 
-                // =====================================================
-                // SMART SUGGESTIONS
-                // =====================================================
-
-                if viewModel.suggestedMemories.isEmpty {
+                if memoryVM.suggestedMemories.isEmpty {
 
                     VStack(spacing: 12) {
 
                         Image(
-                            systemName: "lightbulb"
+                            systemName:
+                                "lightbulb"
                         )
                         .font(.largeTitle)
                         .foregroundColor(
@@ -417,7 +562,7 @@ struct DashboardView: View {
                 } else {
 
                     ForEach(
-                        viewModel.suggestedMemories
+                        memoryVM.suggestedMemories
                     ) { memory in
 
                         VStack(
@@ -435,18 +580,22 @@ struct DashboardView: View {
                                     RecalllQTheme.studyOrange
                                 )
 
-                                Text(memory.title)
-                                    .font(.headline)
+                                Text(
+                                    memory.title
+                                )
+                                .font(.headline)
 
                                 Spacer()
                             }
 
-                            Text(memory.summary)
-                                .font(.caption)
-                                .foregroundColor(
-                                    RecalllQTheme.secondaryText
-                                )
-                                .lineLimit(2)
+                            Text(
+                                memory.summary
+                            )
+                            .font(.caption)
+                            .foregroundColor(
+                                RecalllQTheme.secondaryText
+                            )
+                            .lineLimit(2)
                         }
                         .padding()
                         .frame(
@@ -485,7 +634,7 @@ struct DashboardView: View {
                     .bold()
 
                 // =====================================================
-                // CREATE NOTE - BLUE
+                // CREATE NOTE
                 // =====================================================
 
                 NavigationLink(
@@ -556,7 +705,7 @@ struct DashboardView: View {
                 }
 
                 // =====================================================
-                // EXPLORE MEMORIES - ORANGE
+                // EXPLORE MEMORIES
                 // =====================================================
 
                 NavigationLink(
@@ -641,13 +790,71 @@ struct DashboardView: View {
         )
 
         // =====================================================
-        // REFRESH SMART SUGGESTIONS
+        // REFRESH SUGGESTIONS
         // =====================================================
 
         .onAppear {
 
-            viewModel.generateSuggestions()
+            memoryVM.generateSuggestions()
         }
+    }
+
+    // =====================================================
+    // DASHBOARD STAT CARD
+    // =====================================================
+
+    @ViewBuilder
+    private func dashboardStatCard(
+        title: String,
+        value: String,
+        icon: String,
+        color: Color
+    ) -> some View {
+
+        VStack(
+            spacing: 8
+        ) {
+
+            Image(
+                systemName: icon
+            )
+            .font(.title3)
+            .foregroundColor(color)
+
+            Text(value)
+                .font(.title2)
+                .bold()
+
+            Text(title)
+                .font(.caption)
+                .foregroundColor(
+                    RecalllQTheme.secondaryText
+                )
+        }
+        .frame(
+            maxWidth: .infinity
+        )
+        .padding(.vertical, 16)
+        .background(
+            RoundedRectangle(
+                cornerRadius:
+                    RecalllQTheme.mediumRadius
+            )
+            .fill(
+                RecalllQTheme.cardBackground
+            )
+        )
+        .shadow(
+            color:
+                Color.black.opacity(
+                    RecalllQTheme.shadowOpacity
+                ),
+            radius:
+                RecalllQTheme.shadowRadius,
+            x: 0,
+            y:
+                RecalllQTheme.shadowY
+        )
     }
 }
 
