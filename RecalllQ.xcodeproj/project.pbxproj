@@ -15,6 +15,7 @@
 		A496EBB8302F5133005C604F /* RecalllQTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A496EBB7302F511C005C604F /* RecalllQTheme.swift */; };
 		A496EBC0302F54CE005C604F /* DocumentScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A496EBBF302F54BE005C604F /* DocumentScannerView.swift */; };
 		A496EBC2302F5952005C604F /* ScanReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A496EBC1302F5938005C604F /* ScanReviewView.swift */; };
+		A496EBCA302F6367005C604F /* FlashcardsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A496EBC9302F635D005C604F /* FlashcardsView.swift */; };
 		A49E31622FEEAD5700483750 /* EditNoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A49E31612FEEAD4500483750 /* EditNoteView.swift */; };
 		A49E31782FEED2C500483750 /* MemoriesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A49E31772FEED2BB00483750 /* MemoriesView.swift */; };
 		A49E31812FEF02B800483750 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A49E31802FEF02AB00483750 /* MainTabView.swift */; };
@@ -31,6 +32,7 @@
 		A496EBB7302F511C005C604F /* RecalllQTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecalllQTheme.swift; sourceTree = "<group>"; };
 		A496EBBF302F54BE005C604F /* DocumentScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentScannerView.swift; sourceTree = "<group>"; };
 		A496EBC1302F5938005C604F /* ScanReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanReviewView.swift; sourceTree = "<group>"; };
+		A496EBC9302F635D005C604F /* FlashcardsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlashcardsView.swift; sourceTree = "<group>"; };
 		A49E31612FEEAD4500483750 /* EditNoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditNoteView.swift; sourceTree = "<group>"; };
 		A49E31772FEED2BB00483750 /* MemoriesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoriesView.swift; sourceTree = "<group>"; };
 		A49E31802FEF02AB00483750 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
@@ -75,6 +77,7 @@
 		A40E9D212FEDA71800869607 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				A496EBC9302F635D005C604F /* FlashcardsView.swift */,
 				A496EBC1302F5938005C604F /* ScanReviewView.swift */,
 				A496EBBF302F54BE005C604F /* DocumentScannerView.swift */,
 				A496EBB7302F511C005C604F /* RecalllQTheme.swift */,
@@ -125,7 +128,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2650;
-				LastUpgradeCheck = 2650;
+				LastUpgradeCheck = 2660;
 				TargetAttributes = {
 					A40E9D122FEDA42F00869607 = {
 						CreatedOnToolsVersion = 26.5;
@@ -178,6 +181,7 @@
 				A49E31622FEEAD5700483750 /* EditNoteView.swift in Sources */,
 				A496EBC0302F54CE005C604F /* DocumentScannerView.swift in Sources */,
 				A40E9D232FEDA72F00869607 /* WelcomeView.swift in Sources */,
+				A496EBCA302F6367005C604F /* FlashcardsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -242,6 +246,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -298,6 +303,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};

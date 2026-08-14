@@ -7,8 +7,10 @@ import SwiftUI
 // PURPOSE:
 // - Displays all notes that have reminders
 // - Sorts reminders by upcoming date/time
-// - Provides a clean and professional reminder interface
-// - Uses AppState as the single source of truth
+// - Uses RecalllQ learning colours
+// - Blue = learning / trust
+// - Orange = reminders / focus
+// - Green = positive progress
 // =====================================================
 
 struct ReminderView: View {
@@ -16,6 +18,7 @@ struct ReminderView: View {
     // =====================================================
     // GLOBAL APP STATE
     // =====================================================
+
     @EnvironmentObject var appState: AppState
 
     // =====================================================
@@ -23,13 +26,6 @@ struct ReminderView: View {
     // =====================================================
 
     var body: some View {
-
-        // =====================================================
-        // FILTER + SORT REMINDERS
-        // =====================================================
-        // Only notes containing a reminder date are displayed.
-        // Reminders are sorted from earliest to latest.
-        // =====================================================
 
         let reminderNotes = appState.notesViewModel.notes
             .filter { $0.reminderDate != nil }
@@ -50,7 +46,7 @@ struct ReminderView: View {
         // MAIN VIEW
         // =====================================================
 
-        return ScrollView {
+        ScrollView {
 
             VStack(alignment: .leading, spacing: 22) {
 
@@ -62,18 +58,42 @@ struct ReminderView: View {
 
                     HStack(spacing: 10) {
 
-                        Image(systemName: "bell.badge.fill")
+                        ZStack {
+
+                            Circle()
+                                .fill(
+                                    RecalllQTheme.secondary
+                                        .opacity(0.15)
+                                )
+                                .frame(
+                                    width: 44,
+                                    height: 44
+                                )
+
+                            Image(
+                                systemName: "bell.badge.fill"
+                            )
                             .font(.title2)
-                            .foregroundColor(.orange)
+                            .foregroundColor(
+                                RecalllQTheme.secondary
+                            )
+                        }
 
                         Text("Reminders")
                             .font(.largeTitle)
                             .bold()
+                            .foregroundColor(
+                                RecalllQTheme.primaryText
+                            )
                     }
 
-                    Text("Stay on top of important tasks and study plans.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                    Text(
+                        "Stay on top of important tasks and study plans."
+                    )
+                    .font(.subheadline)
+                    .foregroundColor(
+                        RecalllQTheme.secondaryText
+                    )
                 }
                 .padding(.top, 8)
 
@@ -81,17 +101,40 @@ struct ReminderView: View {
                 // REMINDER SUMMARY
                 // =====================================================
 
-                HStack(spacing: 12) {
+                HStack(spacing: 14) {
 
-                    Image(systemName: "clock.fill")
+                    ZStack {
+
+                        Circle()
+                            .fill(
+                                RecalllQTheme.primary
+                                    .opacity(0.12)
+                            )
+                            .frame(
+                                width: 46,
+                                height: 46
+                            )
+
+                        Image(
+                            systemName: "clock.fill"
+                        )
                         .font(.title3)
-                        .foregroundColor(.orange)
+                        .foregroundColor(
+                            RecalllQTheme.primary
+                        )
+                    }
 
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(
+                        alignment: .leading,
+                        spacing: 3
+                    ) {
 
                         Text("\(reminderNotes.count)")
                             .font(.title2)
                             .bold()
+                            .foregroundColor(
+                                RecalllQTheme.primary
+                            )
 
                         Text(
                             reminderNotes.count == 1
@@ -99,16 +142,35 @@ struct ReminderView: View {
                             : "Active Reminders"
                         )
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(
+                            RecalllQTheme.secondaryText
+                        )
                     }
 
                     Spacer()
+
+                    Image(
+                        systemName: "checkmark.circle.fill"
+                    )
+                    .font(.title2)
+                    .foregroundColor(
+                        RecalllQTheme.success
+                    )
                 }
-                .padding()
-                .frame(maxWidth: .infinity)
+                .padding(
+                    RecalllQTheme.largePadding
+                )
+                .frame(
+                    maxWidth: .infinity
+                )
                 .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.orange.opacity(0.10))
+                    RoundedRectangle(
+                        cornerRadius:
+                            RecalllQTheme.largeRadius
+                    )
+                    .fill(
+                        RecalllQTheme.blueBackground
+                    )
                 )
 
                 // =====================================================
@@ -119,28 +181,56 @@ struct ReminderView: View {
 
                     VStack(spacing: 16) {
 
-                        Image(systemName: "bell.slash")
-                            .font(.system(size: 45))
-                            .foregroundColor(.secondary)
+                        ZStack {
+
+                            Circle()
+                                .fill(
+                                    RecalllQTheme.orangeBackground
+                                )
+                                .frame(
+                                    width: 80,
+                                    height: 80
+                                )
+
+                            Image(
+                                systemName: "bell.slash.fill"
+                            )
+                            .font(.system(size: 32))
+                            .foregroundColor(
+                                RecalllQTheme.secondary
+                            )
+                        }
 
                         Text("No reminders yet")
                             .font(.title3)
                             .bold()
+                            .foregroundColor(
+                                RecalllQTheme.primaryText
+                            )
 
                         Text(
                             "Create a reminder when adding a note and it will appear here."
                         )
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(
+                            RecalllQTheme.secondaryText
+                        )
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
 
                     }
-                    .frame(maxWidth: .infinity)
+                    .frame(
+                        maxWidth: .infinity
+                    )
                     .padding(.vertical, 50)
                     .background(
-                        RoundedRectangle(cornerRadius: 18)
-                            .fill(Color.gray.opacity(0.08))
+                        RoundedRectangle(
+                            cornerRadius:
+                                RecalllQTheme.largeRadius
+                        )
+                        .fill(
+                            RecalllQTheme.orangeBackground
+                        )
                     )
 
                 } else {
@@ -149,9 +239,24 @@ struct ReminderView: View {
                     // UPCOMING REMINDERS
                     // =====================================================
 
-                    Text("Upcoming")
-                        .font(.title3)
-                        .bold()
+                    HStack {
+
+                        Text("Upcoming")
+                            .font(.title3)
+                            .bold()
+                            .foregroundColor(
+                                RecalllQTheme.primaryText
+                            )
+
+                        Spacer()
+
+                        Image(
+                            systemName: "sparkles"
+                        )
+                        .foregroundColor(
+                            RecalllQTheme.secondary
+                        )
+                    }
 
                     // =====================================================
                     // REMINDER CARDS
@@ -173,16 +278,13 @@ struct ReminderView: View {
         // NAVIGATION
         // =====================================================
 
-        .navigationTitle("")
+        .navigationTitle("Reminders")
         .navigationBarTitleDisplayMode(.inline)
     }
 }
 
 // =====================================================
 // COMPONENT: ReminderCard
-// =====================================================
-// PURPOSE:
-// Reusable card displaying one reminder.
 // =====================================================
 
 private struct ReminderCard: View {
@@ -191,7 +293,10 @@ private struct ReminderCard: View {
 
     var body: some View {
 
-        HStack(alignment: .top, spacing: 14) {
+        HStack(
+            alignment: .top,
+            spacing: 14
+        ) {
 
             // =====================================================
             // REMINDER ICON
@@ -200,18 +305,31 @@ private struct ReminderCard: View {
             ZStack {
 
                 Circle()
-                    .fill(Color.orange.opacity(0.15))
-                    .frame(width: 46, height: 46)
+                    .fill(
+                        RecalllQTheme.secondary
+                            .opacity(0.15)
+                    )
+                    .frame(
+                        width: 48,
+                        height: 48
+                    )
 
-                Image(systemName: "bell.fill")
-                    .foregroundColor(.orange)
+                Image(
+                    systemName: "bell.fill"
+                )
+                .foregroundColor(
+                    RecalllQTheme.secondary
+                )
             }
 
             // =====================================================
             // REMINDER INFORMATION
             // =====================================================
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(
+                alignment: .leading,
+                spacing: 6
+            ) {
 
                 Text(
                     note.title.isEmpty
@@ -219,13 +337,18 @@ private struct ReminderCard: View {
                     : note.title
                 )
                 .font(.headline)
+                .foregroundColor(
+                    RecalllQTheme.primaryText
+                )
                 .lineLimit(2)
 
                 if !note.content.isEmpty {
 
                     Text(note.content)
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(
+                            RecalllQTheme.secondaryText
+                        )
                         .lineLimit(2)
                 }
 
@@ -237,7 +360,9 @@ private struct ReminderCard: View {
 
                     HStack(spacing: 6) {
 
-                        Image(systemName: "clock")
+                        Image(
+                            systemName: "clock.fill"
+                        )
 
                         Text(
                             date.formatted(
@@ -247,17 +372,50 @@ private struct ReminderCard: View {
                         )
                     }
                     .font(.caption)
-                    .foregroundColor(.orange)
+                    .bold()
+                    .foregroundColor(
+                        RecalllQTheme.secondary
+                    )
                 }
             }
 
             Spacer()
         }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(
+            RecalllQTheme.mediumPadding
+        )
+        .frame(
+            maxWidth: .infinity,
+            alignment: .leading
+        )
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.gray.opacity(0.08))
+            RoundedRectangle(
+                cornerRadius:
+                    RecalllQTheme.mediumRadius
+            )
+            .fill(
+                RecalllQTheme.cardBackground
+            )
+        )
+        .overlay(
+            RoundedRectangle(
+                cornerRadius:
+                    RecalllQTheme.mediumRadius
+            )
+            .stroke(
+                RecalllQTheme.primary.opacity(0.08),
+                lineWidth: 1
+            )
+        )
+        .shadow(
+            color: Color.black.opacity(
+                RecalllQTheme.shadowOpacity
+            ),
+            radius:
+                RecalllQTheme.shadowRadius,
+            x: 0,
+            y: RecalllQTheme.shadowY
         )
     }
 }
+

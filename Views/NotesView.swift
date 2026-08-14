@@ -6,7 +6,13 @@ import VisionKit
 // VIEW: NotesView
 // =====================================================
 // PURPOSE:
-// Main notes screen for RecalllQ.
+// Main study notes screen for RecalllQ.
+//
+// DESIGN:
+// 🔵 Blue   = Learning / Primary Actions
+// 🟠 Orange = Focus / Reminders / Scanning
+// 🟣 Purple = Smart / OCR Features
+// 🟢 Green  = Success / Processing
 //
 // FEATURES:
 // - Search notes
@@ -19,26 +25,6 @@ import VisionKit
 // - Delete notes
 // - Undo delete
 // - Safe scanner availability handling
-//
-// SCANNING FLOW:
-//
-// Scan Study Notes
-//       ↓
-// Check Scanner Availability
-//       ↓
-// Document Scanner
-//       ↓
-// OCRService
-//       ↓
-// Extracted Text
-//       ↓
-// Review Text
-//       ↓
-// Create Note
-//       ↓
-// MemoryEngine
-//       ↓
-// New Memory
 // =====================================================
 
 struct NotesView: View {
@@ -117,301 +103,601 @@ struct NotesView: View {
 
     var body: some View {
 
-        VStack(spacing: 12) {
+        VStack(spacing: 0) {
 
             // =================================================
             // SEARCH BAR
             // =================================================
 
-            TextField(
-                "Search notes...",
-                text: $appState.notesViewModel.searchText
-            )
-            .textFieldStyle(.roundedBorder)
-            .padding(.horizontal)
+            HStack(spacing: 10) {
 
-            // =================================================
-            // MANUAL NOTE INPUT
-            // =================================================
-
-            VStack(spacing: 10) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(
+                        RecalllQTheme.primary
+                    )
 
                 TextField(
-                    "Enter title",
-                    text: $title
+                    "Search your study notes...",
+                    text: $appState.notesViewModel.searchText
                 )
-                .textFieldStyle(.roundedBorder)
-                .focused($isInputFocused)
 
-                TextField(
-                    "Enter content",
-                    text: $content
-                )
-                .textFieldStyle(.roundedBorder)
-                .focused($isInputFocused)
-
-                // =================================================
-                // REMINDER TOGGLE
-                // =================================================
-
-                Toggle(
-                    isOn: $addReminder
-                ) {
-
-                    Label(
-                        "Set Study Reminder",
-                        systemImage: "bell.fill"
-                    )
-                }
-                .tint(.orange)
-
-                // =================================================
-                // DATE + TIME PICKER
-                // =================================================
-
-                if addReminder {
-
-                    DatePicker(
-                        "Reminder",
-                        selection: $reminderDate,
-                        in: Date()...,
-                        displayedComponents: [
-                            .date,
-                            .hourAndMinute
-                        ]
-                    )
-                    .datePickerStyle(.compact)
-                    .padding(.vertical, 4)
-                }
-            }
-            .padding(.horizontal)
-
-            // =================================================
-            // ADD NOTE BUTTON
-            // =================================================
-
-            Button {
-
-                addManualNote()
-
-            } label: {
-
-                Label(
-                    "Add Note",
-                    systemImage: "plus.circle.fill"
-                )
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(12)
-                .padding(.horizontal)
-            }
-
-            // =================================================
-            // SCAN STUDY NOTES BUTTON
-            // =================================================
-
-            Button {
-
-                openScanner()
-
-            } label: {
-
-                HStack(spacing: 10) {
-
-                    Image(
-                        systemName: "doc.viewfinder"
-                    )
-                    .font(.title3)
-
-                    VStack(
-                        alignment: .leading,
-                        spacing: 2
-                    ) {
-
-                        Text("Scan Study Notes")
-                            .font(.headline)
-
-                        Text("Use your camera with OCR")
-                            .font(.caption)
-                            .opacity(0.9)
-                    }
-
-                    Spacer()
-
-                    Image(
-                        systemName: "camera.fill"
-                    )
-                }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.green)
-                .foregroundColor(.white)
-                .cornerRadius(12)
-                .padding(.horizontal)
-            }
-
-            // =================================================
-            // SCANNING STATUS
-            // =================================================
-
-            if isProcessingScan {
-
-                HStack(spacing: 10) {
-
-                    ProgressView()
-
-                    Text(
-                        "Reading your study material..."
-                    )
-                    .foregroundColor(.secondary)
-                }
-                .padding()
-            }
-
-            // =================================================
-            // NOTES LIST
-            // =================================================
-
-            List {
-
-                if appState
+                if !appState
                     .notesViewModel
-                    .filteredNotes
+                    .searchText
                     .isEmpty {
 
-                    Text("No notes found")
-                        .foregroundColor(.gray)
-                        .frame(
-                            maxWidth: .infinity
-                        )
-                }
+                    Button {
 
-                ForEach(
-                    appState
-                        .notesViewModel
-                        .filteredNotes
-                ) { note in
+                        appState
+                            .notesViewModel
+                            .searchText = ""
+
+                    } label: {
+
+                        Image(
+                            systemName: "xmark.circle.fill"
+                        )
+                        .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(
+                    cornerRadius:
+                        RecalllQTheme.mediumRadius
+                )
+                .fill(
+                    RecalllQTheme.blueBackground
+                )
+            )
+            .overlay(
+                RoundedRectangle(
+                    cornerRadius:
+                        RecalllQTheme.mediumRadius
+                )
+                .stroke(
+                    RecalllQTheme.primary.opacity(0.15),
+                    lineWidth: 1
+                )
+            )
+            .padding(.horizontal)
+            .padding(.top, 10)
+
+            // =================================================
+            // MAIN CONTENT
+            // =================================================
+
+            ScrollView {
+
+                VStack(
+                    alignment: .leading,
+                    spacing: 18
+                ) {
+
+                    // =============================================
+                    // CREATE NOTE SECTION
+                    // =============================================
 
                     VStack(
                         alignment: .leading,
-                        spacing: 6
+                        spacing: 14
                     ) {
-
-                        // -----------------------------------------
-                        // TITLE
-                        // -----------------------------------------
 
                         HStack {
 
-                            Text(note.title)
-                                .font(.headline)
+                            ZStack {
 
-                            Spacer()
-
-                            if note.reminderDate != nil {
+                                Circle()
+                                    .fill(
+                                        RecalllQTheme.primary
+                                            .opacity(0.12)
+                                    )
+                                    .frame(
+                                        width: 42,
+                                        height: 42
+                                    )
 
                                 Image(
                                     systemName:
-                                    "bell.fill"
+                                        "note.text.badge.plus"
                                 )
-                                .foregroundColor(.orange)
+                                .foregroundColor(
+                                    RecalllQTheme.primary
+                                )
+                                .font(.title3)
                             }
 
-                            Image(
-                                systemName:
-                                note.isPinned
-                                ? "pin.fill"
-                                : "pin"
-                            )
-                            .foregroundColor(.orange)
-                        }
-
-                        // -----------------------------------------
-                        // CONTENT
-                        // -----------------------------------------
-
-                        Text(note.content)
-                            .foregroundColor(.gray)
-                            .lineLimit(3)
-
-                        // -----------------------------------------
-                        // REMINDER INFORMATION
-                        // -----------------------------------------
-
-                        if let reminder =
-                            note.formattedReminder {
-
-                            Label(
-                                reminder,
-                                systemImage: "clock.fill"
-                            )
-                            .font(.caption)
-                            .foregroundColor(.orange)
-                        }
-                    }
-
-                    .padding(.vertical, 4)
-
-                    // ---------------------------------------------
-                    // SWIPE ACTIONS
-                    // ---------------------------------------------
-
-                    .swipeActions {
-
-                        // -----------------------------------------
-                        // DELETE
-                        // -----------------------------------------
-
-                        Button(role: .destructive) {
-
-                            appState
-                                .notesViewModel
-                                .deleteNote(
-                                    id: note.id
-                                )
-
-                            showUndo = true
-
-                            DispatchQueue.main.asyncAfter(
-                                deadline: .now() + 3
+                            VStack(
+                                alignment: .leading,
+                                spacing: 3
                             ) {
 
-                                showUndo = false
+                                Text("Create Study Note")
+                                    .font(.headline)
+
+                                Text(
+                                    "Capture something you want to remember"
+                                )
+                                .font(.caption)
+                                .foregroundColor(
+                                    RecalllQTheme.secondaryText
+                                )
                             }
 
-                        } label: {
-
-                            Label(
-                                "Delete",
-                                systemImage: "trash"
-                            )
+                            Spacer()
                         }
 
-                        // -----------------------------------------
-                        // PIN
-                        // -----------------------------------------
+                        // =========================================
+                        // TITLE
+                        // =========================================
+
+                        TextField(
+                            "Note title",
+                            text: $title
+                        )
+                        .textFieldStyle(.plain)
+                        .padding()
+                        .background(
+                            RoundedRectangle(
+                                cornerRadius:
+                                    RecalllQTheme.smallRadius
+                            )
+                            .fill(
+                                RecalllQTheme.pageBackground
+                            )
+                        )
+                        .focused(
+                            $isInputFocused
+                        )
+
+                        // =========================================
+                        // CONTENT
+                        // =========================================
+
+                        TextField(
+                            "What did you learn?",
+                            text: $content,
+                            axis: .vertical
+                        )
+                        .lineLimit(3...6)
+                        .textFieldStyle(.plain)
+                        .padding()
+                        .background(
+                            RoundedRectangle(
+                                cornerRadius:
+                                    RecalllQTheme.smallRadius
+                            )
+                            .fill(
+                                RecalllQTheme.pageBackground
+                            )
+                        )
+                        .focused(
+                            $isInputFocused
+                        )
+
+                        // =========================================
+                        // REMINDER
+                        // =========================================
+
+                        VStack(
+                            alignment: .leading,
+                            spacing: 10
+                        ) {
+
+                            Toggle(
+                                isOn: $addReminder
+                            ) {
+
+                                HStack(spacing: 10) {
+
+                                    Image(
+                                        systemName:
+                                            "bell.fill"
+                                    )
+                                    .foregroundColor(
+                                        RecalllQTheme.secondary
+                                    )
+
+                                    VStack(
+                                        alignment: .leading,
+                                        spacing: 2
+                                    ) {
+
+                                        Text(
+                                            "Set Study Reminder"
+                                        )
+                                        .font(.subheadline)
+                                        .bold()
+
+                                        Text(
+                                            "Review this note later"
+                                        )
+                                        .font(.caption)
+                                        .foregroundColor(
+                                            RecalllQTheme.secondaryText
+                                        )
+                                    }
+                                }
+                            }
+                            .tint(
+                                RecalllQTheme.secondary
+                            )
+
+                            if addReminder {
+
+                                DatePicker(
+                                    "Review at",
+                                    selection:
+                                        $reminderDate,
+                                    in: Date()...,
+                                    displayedComponents: [
+                                        .date,
+                                        .hourAndMinute
+                                    ]
+                                )
+                                .font(.subheadline)
+                                .padding(
+                                    .horizontal,
+                                    8
+                                )
+                                .padding(
+                                    .vertical,
+                                    6
+                                )
+                                .background(
+                                    RoundedRectangle(
+                                        cornerRadius:
+                                            RecalllQTheme.smallRadius
+                                    )
+                                    .fill(
+                                        RecalllQTheme.orangeBackground
+                                    )
+                                )
+                            }
+                        }
+                        .padding(
+                            .vertical,
+                            4
+                        )
+
+                        // =========================================
+                        // ADD NOTE BUTTON
+                        // =========================================
 
                         Button {
 
-                            appState
-                                .notesViewModel
-                                .togglePin(
-                                    id: note.id
-                                )
+                            addManualNote()
 
                         } label: {
 
-                            Label(
-                                "Pin",
-                                systemImage: "pin"
+                            HStack {
+
+                                Image(
+                                    systemName:
+                                        "plus.circle.fill"
+                                )
+
+                                Text("Add Note")
+                                    .font(.headline)
+
+                                Spacer()
+
+                                Image(
+                                    systemName:
+                                        "arrow.right"
+                                )
+                            }
+                            .padding()
+                            .frame(
+                                maxWidth: .infinity
+                            )
+                            .foregroundColor(.white)
+                            .background(
+                                RoundedRectangle(
+                                    cornerRadius:
+                                        RecalllQTheme.buttonRadius
+                                )
+                                .fill(
+                                    RecalllQTheme.primaryButton
+                                )
                             )
                         }
-                        .tint(.orange)
+                        .disabled(
+                            title
+                                .trimmingCharacters(
+                                    in: .whitespacesAndNewlines
+                                )
+                                .isEmpty &&
+                            content
+                                .trimmingCharacters(
+                                    in: .whitespacesAndNewlines
+                                )
+                                .isEmpty
+                        )
+                        .opacity(
+                            title
+                                .trimmingCharacters(
+                                    in: .whitespacesAndNewlines
+                                )
+                                .isEmpty &&
+                            content
+                                .trimmingCharacters(
+                                    in: .whitespacesAndNewlines
+                                )
+                                .isEmpty
+                            ? 0.55
+                            : 1.0
+                        )
+                    }
+                    .padding(
+                        RecalllQTheme.largePadding
+                    )
+                    .frame(
+                        maxWidth: .infinity,
+                        alignment: .leading
+                    )
+                    .background(
+                        RoundedRectangle(
+                            cornerRadius:
+                                RecalllQTheme.largeRadius
+                        )
+                        .fill(
+                            RecalllQTheme.cardBackground
+                        )
+                    )
+                    .shadow(
+                        color: Color.black.opacity(
+                            RecalllQTheme.shadowOpacity
+                        ),
+                        radius:
+                            RecalllQTheme.shadowRadius,
+                        x: 0,
+                        y: RecalllQTheme.shadowY
+                    )
+
+                    // =============================================
+                    // SCAN STUDY MATERIAL
+                    // =============================================
+
+                    Button {
+
+                        openScanner()
+
+                    } label: {
+
+                        HStack(spacing: 14) {
+
+                            ZStack {
+
+                                Circle()
+                                    .fill(
+                                        Color.white.opacity(0.18)
+                                    )
+                                    .frame(
+                                        width: 48,
+                                        height: 48
+                                    )
+
+                                Image(
+                                    systemName:
+                                        "doc.viewfinder"
+                                )
+                                .font(.title2)
+                            }
+
+                            VStack(
+                                alignment: .leading,
+                                spacing: 3
+                            ) {
+
+                                Text(
+                                    "Scan Study Material"
+                                )
+                                .font(.headline)
+
+                                Text(
+                                    "Use OCR to turn pages into notes"
+                                )
+                                .font(.caption)
+                                .opacity(0.9)
+                            }
+
+                            Spacer()
+
+                            Image(
+                                systemName:
+                                    "camera.fill"
+                            )
+                            .font(.title3)
+                        }
+                        .padding()
+                        .frame(
+                            maxWidth: .infinity
+                        )
+                        .foregroundColor(.white)
+                        .background(
+                            RoundedRectangle(
+                                cornerRadius:
+                                    RecalllQTheme.buttonRadius
+                            )
+                            .fill(
+                                RecalllQTheme.secondaryButton
+                            )
+                        )
+                    }
+
+                    // =============================================
+                    // OCR PROCESSING
+                    // =============================================
+
+                    if isProcessingScan {
+
+                        HStack(spacing: 12) {
+
+                            ProgressView()
+                                .tint(
+                                    RecalllQTheme.primary
+                                )
+
+                            VStack(
+                                alignment: .leading,
+                                spacing: 2
+                            ) {
+
+                                Text(
+                                    "Reading study material..."
+                                )
+                                .font(.subheadline)
+                                .bold()
+
+                                Text(
+                                    "RecalllQ is extracting the text"
+                                )
+                                .font(.caption)
+                                .foregroundColor(
+                                    RecalllQTheme.secondaryText
+                                )
+                            }
+
+                            Spacer()
+                        }
+                        .padding()
+                        .background(
+                            RoundedRectangle(
+                                cornerRadius:
+                                    RecalllQTheme.mediumRadius
+                            )
+                            .fill(
+                                RecalllQTheme.blueBackground
+                            )
+                        )
+                    }
+
+                    // =============================================
+                    // NOTES HEADER
+                    // =============================================
+
+                    HStack {
+
+                        VStack(
+                            alignment: .leading,
+                            spacing: 3
+                        ) {
+
+                            Text("My Study Notes")
+                                .font(.title3)
+                                .bold()
+
+                            Text(
+                                "\(appState.notesViewModel.filteredNotes.count) notes"
+                            )
+                            .font(.caption)
+                            .foregroundColor(
+                                RecalllQTheme.secondaryText
+                            )
+                        }
+
+                        Spacer()
+
+                        Image(
+                            systemName:
+                                "books.vertical.fill"
+                        )
+                        .foregroundColor(
+                            RecalllQTheme.primary
+                        )
+                    }
+
+                    // =============================================
+                    // EMPTY STATE
+                    // =============================================
+
+                    if appState
+                        .notesViewModel
+                        .filteredNotes
+                        .isEmpty {
+
+                        VStack(spacing: 14) {
+
+                            ZStack {
+
+                                Circle()
+                                    .fill(
+                                        RecalllQTheme.blueBackground
+                                    )
+                                    .frame(
+                                        width: 76,
+                                        height: 76
+                                    )
+
+                                Image(
+                                    systemName:
+                                        "note.text"
+                                )
+                                .font(.system(size: 30))
+                                .foregroundColor(
+                                    RecalllQTheme.primary
+                                )
+                            }
+
+                            Text(
+                                appState
+                                    .notesViewModel
+                                    .searchText
+                                    .isEmpty
+                                ? "No study notes yet"
+                                : "No notes found"
+                            )
+                            .font(.headline)
+
+                            Text(
+                                appState
+                                    .notesViewModel
+                                    .searchText
+                                    .isEmpty
+                                ? "Create your first note and RecalllQ will turn it into a smart memory."
+                                : "Try a different search term."
+                            )
+                            .font(.caption)
+                            .foregroundColor(
+                                RecalllQTheme.secondaryText
+                            )
+                            .multilineTextAlignment(
+                                .center
+                            )
+                        }
+                        .frame(
+                            maxWidth: .infinity
+                        )
+                        .padding(28)
+                        .background(
+                            RoundedRectangle(
+                                cornerRadius:
+                                    RecalllQTheme.largeRadius
+                            )
+                            .fill(
+                                RecalllQTheme.blueBackground
+                            )
+                        )
+
+                    } else {
+
+                        // =========================================
+                        // NOTES
+                        // =========================================
+
+                        ForEach(
+                            appState
+                                .notesViewModel
+                                .filteredNotes
+                        ) { note in
+
+                            noteCard(note)
+                        }
                     }
                 }
+                .padding()
             }
 
             // =================================================
@@ -420,13 +706,19 @@ struct NotesView: View {
 
             if showUndo {
 
-                HStack {
+                HStack(spacing: 10) {
 
                     Image(
-                        systemName: "trash"
+                        systemName:
+                            "trash.fill"
+                    )
+                    .foregroundColor(
+                        .red
                     )
 
                     Text("Note deleted")
+                        .font(.subheadline)
+                        .bold()
 
                     Spacer()
 
@@ -438,22 +730,37 @@ struct NotesView: View {
 
                         showUndo = false
                     }
+                    .foregroundColor(
+                        RecalllQTheme.primary
+                    )
                     .bold()
                 }
                 .padding()
                 .background(
-                    Color.gray.opacity(0.1)
+                    RoundedRectangle(
+                        cornerRadius:
+                            RecalllQTheme.mediumRadius
+                    )
+                    .fill(
+                        RecalllQTheme.cardBackground
+                    )
                 )
-                .cornerRadius(10)
+                .shadow(
+                    color: Color.black.opacity(0.08),
+                    radius: 5,
+                    y: 2
+                )
                 .padding(.horizontal)
+                .padding(.bottom, 8)
             }
         }
 
         // =====================================================
-        // NAVIGATION TITLE
+        // NAVIGATION
         // =====================================================
 
         .navigationTitle("Study Notes")
+        .navigationBarTitleDisplayMode(.inline)
 
         // =====================================================
         // DOCUMENT SCANNER
@@ -492,15 +799,17 @@ struct NotesView: View {
         }
 
         // =====================================================
-        // SCANNER UNAVAILABLE ALERT
+        // SCANNER ALERT
         // =====================================================
 
         .alert(
             "Camera Scanner Unavailable",
-            isPresented: $showScannerUnavailable
+            isPresented:
+                $showScannerUnavailable
         ) {
 
             Button("OK") {
+
                 showScannerUnavailable = false
             }
 
@@ -513,12 +822,222 @@ struct NotesView: View {
     }
 
     // =====================================================
+    // NOTE CARD
+    // =====================================================
+
+    @ViewBuilder
+    private func noteCard(
+        _ note: Note
+    ) -> some View {
+
+        VStack(
+            alignment: .leading,
+            spacing: 10
+        ) {
+
+            // =============================================
+            // TITLE ROW
+            // =============================================
+
+            HStack {
+
+                Image(
+                    systemName:
+                        note.isPinned
+                        ? "pin.fill"
+                        : "note.text"
+                )
+                .foregroundColor(
+                    note.isPinned
+                    ? RecalllQTheme.secondary
+                    : RecalllQTheme.primary
+                )
+
+                Text(note.title)
+                    .font(.headline)
+                    .lineLimit(1)
+
+                Spacer()
+
+                if note.reminderDate != nil {
+
+                    Image(
+                        systemName:
+                            "bell.fill"
+                    )
+                    .foregroundColor(
+                        RecalllQTheme.secondary
+                    )
+                }
+
+                if note.isPinned {
+
+                    Image(
+                        systemName:
+                            "pin.fill"
+                    )
+                    .foregroundColor(
+                        RecalllQTheme.secondary
+                    )
+                }
+            }
+
+            // =============================================
+            // CONTENT
+            // =============================================
+
+            Text(note.content)
+                .font(.subheadline)
+                .foregroundColor(
+                    RecalllQTheme.secondaryText
+                )
+                .lineLimit(3)
+
+            // =============================================
+            // REMINDER
+            // =============================================
+
+            if let reminder =
+                note.formattedReminder {
+
+                HStack(spacing: 6) {
+
+                    Image(
+                        systemName:
+                            "clock.fill"
+                    )
+
+                    Text(reminder)
+                }
+                .font(.caption)
+                .foregroundColor(
+                    RecalllQTheme.secondary
+                )
+                .padding(
+                    .horizontal,
+                    8
+                )
+                .padding(
+                    .vertical,
+                    5
+                )
+                .background(
+                    Capsule()
+                        .fill(
+                            RecalllQTheme.orangeBackground
+                        )
+                )
+            }
+        }
+        .padding()
+        .frame(
+            maxWidth: .infinity,
+            alignment: .leading
+        )
+        .background(
+            RoundedRectangle(
+                cornerRadius:
+                    RecalllQTheme.mediumRadius
+            )
+            .fill(
+                RecalllQTheme.cardBackground
+            )
+        )
+        .overlay(
+            RoundedRectangle(
+                cornerRadius:
+                    RecalllQTheme.mediumRadius
+            )
+            .stroke(
+                note.isPinned
+                ? RecalllQTheme.secondary.opacity(0.35)
+                : RecalllQTheme.primary.opacity(0.08),
+                lineWidth: 1
+            )
+        )
+        .shadow(
+            color: Color.black.opacity(
+                RecalllQTheme.shadowOpacity
+            ),
+            radius:
+                RecalllQTheme.shadowRadius,
+            x: 0,
+            y: RecalllQTheme.shadowY
+        )
+        .swipeActions {
+
+            // =============================================
+            // DELETE
+            // =============================================
+
+            Button(
+                role: .destructive
+            ) {
+
+                appState
+                    .notesViewModel
+                    .deleteNote(
+                        id: note.id
+                    )
+
+                showUndo = true
+
+                DispatchQueue.main.asyncAfter(
+                    deadline: .now() + 3
+                ) {
+
+                    showUndo = false
+                }
+
+            } label: {
+
+                Label(
+                    "Delete",
+                    systemImage:
+                        "trash"
+                )
+            }
+
+            // =============================================
+            // PIN
+            // =============================================
+
+            Button {
+
+                appState
+                    .notesViewModel
+                    .togglePin(
+                        id: note.id
+                    )
+
+            } label: {
+
+                Label(
+                    note.isPinned
+                    ? "Unpin"
+                    : "Pin",
+                    systemImage:
+                        note.isPinned
+                        ? "pin.slash"
+                        : "pin"
+                )
+            }
+            .tint(
+                RecalllQTheme.secondary
+            )
+        }
+    }
+
+    // =====================================================
     // OPEN SCANNER
     // =====================================================
 
     private func openScanner() {
 
-        guard VNDocumentCameraViewController.isSupported else {
+        guard
+            VNDocumentCameraViewController
+                .isSupported
+        else {
 
             showScannerUnavailable = true
 
@@ -555,9 +1074,9 @@ struct NotesView: View {
             return
         }
 
-        // =================================================
-        // ADD NOTE WITH OPTIONAL REMINDER
-        // =================================================
+        // =============================================
+        // SAVE NOTE
+        // =============================================
 
         appState.notesViewModel.addNote(
             title: cleanTitle,
@@ -568,9 +1087,9 @@ struct NotesView: View {
                 : nil
         )
 
-        // =================================================
-        // RESET INPUT
-        // =================================================
+        // =============================================
+        // RESET
+        // =============================================
 
         title = ""
         content = ""
@@ -607,9 +1126,9 @@ struct NotesView: View {
 
         let group = DispatchGroup()
 
-        // =================================================
+        // =============================================
         // OCR EACH PAGE
-        // =================================================
+        // =============================================
 
         for image in images {
 
@@ -628,9 +1147,9 @@ struct NotesView: View {
             }
         }
 
-        // =================================================
-        // WAIT FOR ALL PAGES
-        // =================================================
+        // =============================================
+        // WAIT FOR OCR
+        // =============================================
 
         group.notify(
             queue: .main
@@ -638,9 +1157,10 @@ struct NotesView: View {
 
             isProcessingScan = false
 
-            scannedText = results.joined(
-                separator: "\n\n"
-            )
+            scannedText =
+                results.joined(
+                    separator: "\n\n"
+                )
 
             if !scannedText.isEmpty {
 
@@ -672,25 +1192,25 @@ struct NotesView: View {
             return
         }
 
-        // =================================================
+        // =============================================
         // AUTOMATIC TITLE
-        // =================================================
+        // =============================================
 
         let title =
             "Scanned Study Notes"
 
-        // =================================================
-        // SAVE THROUGH VIEWMODEL
-        // =================================================
+        // =============================================
+        // SAVE NOTE
+        // =============================================
 
         appState.notesViewModel.addNote(
             title: title,
             content: cleanText
         )
 
-        // =================================================
-        // CLEAR SCANNER STATE
-        // =================================================
+        // =============================================
+        // CLEAR
+        // =============================================
 
         scannedText = ""
     }

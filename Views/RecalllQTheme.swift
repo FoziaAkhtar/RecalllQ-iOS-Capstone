@@ -5,84 +5,78 @@ import SwiftUI
 // THEME: RecalllQTheme
 // =====================================================
 // PURPOSE:
-// Centralized visual theme for the RecalllQ application.
+// Centralized colour and style system for RecalllQ.
 //
 // DESIGN:
-// - Professional academic / study appearance
-// - Consistent colors across the application
-// - Easy to maintain and update
-// - Designed for students and learning
+// 🔵 Blue   = Learning / Technology / Trust
+// 🟠 Orange = Motivation / Focus / Reminders
+// 🟣 Purple = Smart AI / OCR / Intelligence
+// 🟢 Green  = Success / Progress
+// ⚪ White  = Clean Learning Environment
+//
+// Used across:
+// - Dashboard
+// - Notes
+// - Memories
+// - Reminders
+// - Buttons
+// - Cards
 // =====================================================
 
 struct RecalllQTheme {
 
     // =====================================================
-    // PRIMARY COLORS
+    // PRIMARY LEARNING COLOUR
     // =====================================================
 
-    /// Main academic blue
     static let primary = Color(
-        red: 0.12,
-        green: 0.32,
-        blue: 0.62
+        red: 0.10,
+        green: 0.40,
+        blue: 0.85
     )
 
-    /// Secondary study purple
+    // =====================================================
+    // SECONDARY / MOTIVATION COLOUR
+    // =====================================================
+
     static let secondary = Color(
-        red: 0.38,
-        green: 0.28,
-        blue: 0.65
+        red: 1.00,
+        green: 0.55,
+        blue: 0.10
     )
 
-    /// Learning / success green
+    // =====================================================
+    // SUCCESS COLOUR
+    // =====================================================
+
     static let success = Color(
-        red: 0.18,
-        green: 0.55,
-        blue: 0.38
+        red: 0.15,
+        green: 0.65,
+        blue: 0.35
     )
 
-    /// Reminder / attention orange
+    // =====================================================
+    // WARNING / FOCUS COLOUR
+    // =====================================================
+
     static let warning = Color(
-        red: 0.92,
-        green: 0.55,
-        blue: 0.18
-    )
-
-    /// Error / destructive actions
-    static let danger = Color(
-        red: 0.82,
-        green: 0.24,
-        blue: 0.24
+        red: 1.00,
+        green: 0.60,
+        blue: 0.10
     )
 
     // =====================================================
-    // BACKGROUND COLORS
+    // SMART AI / PURPLE
     // =====================================================
 
-    /// Main soft study background
-    static let background = Color(
-        red: 0.96,
-        green: 0.97,
-        blue: 0.99
+    static let smartPurple = Color(
+        red: 0.45,
+        green: 0.30,
+        blue: 0.80
     )
 
-    /// Card background
-    static let cardBackground = Color.white
-
-    /// Soft blue section background
-    static let blueBackground = primary.opacity(0.10)
-
-    /// Soft purple section background
-    static let purpleBackground = secondary.opacity(0.10)
-
-    /// Soft green section background
-    static let greenBackground = success.opacity(0.10)
-
-    /// Soft orange section background
-    static let orangeBackground = warning.opacity(0.10)
-
     // =====================================================
-    // TEXT COLORS
+    // TEXT
     // =====================================================
 
     static let primaryText = Color.primary
@@ -90,24 +84,93 @@ struct RecalllQTheme {
     static let secondaryText = Color.secondary
 
     // =====================================================
-    // CORNER RADIUS
+    // BACKGROUNDS
     // =====================================================
 
-    static let smallRadius: CGFloat = 8
+    static let pageBackground =
+        Color(.systemGroupedBackground)
 
-    static let mediumRadius: CGFloat = 14
+    static let cardBackground =
+        Color(.systemBackground)
 
-    static let largeRadius: CGFloat = 20
+    static let blueBackground =
+        primary.opacity(0.08)
+
+    static let orangeBackground =
+        secondary.opacity(0.10)
+
+    static let greenBackground =
+        success.opacity(0.10)
+
+    static let purpleBackground =
+        smartPurple.opacity(0.10)
 
     // =====================================================
-    // STANDARD PADDING
+    // BUTTON COLOURS
+    // =====================================================
+
+    static let primaryButton =
+        primary
+
+    static let secondaryButton =
+        secondary
+
+    static let successButton =
+        success
+
+    static let smartButton =
+        smartPurple
+
+    // =====================================================
+    // STUDY CATEGORY COLOURS
+    // =====================================================
+
+    static let studyBlue = Color(
+        red: 0.12,
+        green: 0.45,
+        blue: 0.90
+    )
+
+    static let studyOrange = Color(
+        red: 1.00,
+        green: 0.50,
+        blue: 0.08
+    )
+
+    static let studyPurple = Color(
+        red: 0.45,
+        green: 0.30,
+        blue: 0.80
+    )
+
+    static let studyGreen = Color(
+        red: 0.15,
+        green: 0.65,
+        blue: 0.35
+    )
+
+    // =====================================================
+    // SPACING
     // =====================================================
 
     static let smallPadding: CGFloat = 8
 
     static let mediumPadding: CGFloat = 14
 
-    static let largePadding: CGFloat = 20
+    static let largePadding: CGFloat = 18
+
+    // =====================================================
+    // CORNER RADIUS
+    // =====================================================
+
+    static let smallRadius: CGFloat = 8
+
+    static let mediumRadius: CGFloat = 12
+
+    static let largeRadius: CGFloat = 18
+
+    // Button radius
+    static let buttonRadius: CGFloat = 14
 
     // =====================================================
     // SHADOW
@@ -115,48 +178,7 @@ struct RecalllQTheme {
 
     static let shadowOpacity: Double = 0.08
 
-    static let shadowRadius: CGFloat = 8
+    static let shadowRadius: CGFloat = 6
 
-    static let shadowY: CGFloat = 4
-}
-
-// =====================================================
-// THEME CARD MODIFIER
-// =====================================================
-// Reusable professional card appearance.
-// =====================================================
-
-struct RecalllQCardModifier: ViewModifier {
-
-    func body(content: Content) -> some View {
-
-        content
-            .background(
-                RoundedRectangle(
-                    cornerRadius: RecalllQTheme.mediumRadius
-                )
-                .fill(RecalllQTheme.cardBackground)
-            )
-            .shadow(
-                color: Color.black.opacity(
-                    RecalllQTheme.shadowOpacity
-                ),
-                radius: RecalllQTheme.shadowRadius,
-                x: 0,
-                y: RecalllQTheme.shadowY
-            )
-    }
-}
-
-// =====================================================
-// VIEW EXTENSION
-// =====================================================
-
-extension View {
-
-    /// Applies the standard RecalllQ professional card style.
-    func recalllQCard() -> some View {
-
-        modifier(RecalllQCardModifier())
-    }
+    static let shadowY: CGFloat = 3
 }

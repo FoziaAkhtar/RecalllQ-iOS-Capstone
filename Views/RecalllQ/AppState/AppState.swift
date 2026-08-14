@@ -13,54 +13,58 @@ import Combine
 // - Manages global ViewModels
 // - Connects NotesViewModel to AppState
 // - Connects MemoryViewModel to AppState
-// - Provides centralized Memory creation
-// - Keeps the application architecture organized
+// - Connects FlashcardViewModel to AppState
+// - Creates memories from notes
+// - Keeps RecalllQ architecture organized
 //
 // DATA FLOW:
 //
-// NotesView
-//      ↓
+// Notes
+//   ↓
 // NotesViewModel
-//      ↓
+//   ↓
 // AppState
-//      ↓
+//   ↓
 // MemoryEngine
-//      ↓
+//   ↓
 // MemoryViewModel
-//      ↓
-// Memories
+//   ↓
+// Memory
+//   ↓
+// FlashcardViewModel
+//   ↓
+// Flashcards
 // =====================================================
 
 final class AppState: ObservableObject {
 
     // =====================================================
-    // SINGLE SOURCE OF TRUTH
+    // MEMORY VIEW MODEL
     // =====================================================
-    // These ViewModels are shared throughout the application.
-    // Views access them through @EnvironmentObject.
-// =====================================================
 
     @Published var memoryViewModel: MemoryViewModel
+
+    // =====================================================
+    // NOTES VIEW MODEL
+    // =====================================================
 
     @Published var notesViewModel: NotesViewModel
 
     // =====================================================
+    // FLASHCARD VIEW MODEL
+    // =====================================================
+
+    @Published var flashcardViewModel: FlashcardViewModel
+
+    // =====================================================
     // MEMORY ENGINE
     // =====================================================
-    // Responsible for converting notes into structured
-    // AI-style memories.
-    //
-    // This is local intelligence and does not require
-    // an external API or internet connection.
-    // =====================================================
+    // Converts notes into structured memories.
 
     let memoryEngine: MemoryEngine
 
     // =====================================================
     // INIT
-    // =====================================================
-    // Creates the application's ViewModels and connects
-    // them to the central AppState.
     // =====================================================
 
     init() {
@@ -75,6 +79,9 @@ final class AppState: ObservableObject {
         let notesVM =
             NotesViewModel()
 
+        let flashcardVM =
+            FlashcardViewModel()
+
         // =================================================
         // ASSIGN VIEW MODELS
         // =================================================
@@ -84,6 +91,9 @@ final class AppState: ObservableObject {
 
         self.notesViewModel =
             notesVM
+
+        self.flashcardViewModel =
+            flashcardVM
 
         // =================================================
         // CREATE MEMORY ENGINE
@@ -95,35 +105,26 @@ final class AppState: ObservableObject {
         // =================================================
         // CONNECT NOTES VIEW MODEL
         // =================================================
-        // This allows NotesViewModel to call:
-        //
-        // appState?.createMemoryFromNote(...)
-        //
-        // when a new note is created.
-        // =================================================
 
         notesVM.appState =
             self
     }
 
     // =====================================================
-    // CENTRALIZED MEMORY CREATION PIPELINE
+    // CREATE MEMORY FROM NOTE
     // =====================================================
-    // Converts a note into a structured Memory object.
-    //
-    // PIPELINE:
+    // Pipeline:
     //
     // Note
     //   ↓
     // MemoryEngine
     //   ↓
-    // Structured Memory
-    //   ↓
     // MemoryViewModel
     //   ↓
-    // Save
-    //   ↓
-    // Refresh Suggestions
+    // FlashcardViewModel
+    //
+    // A flashcard is NOT automatically created here yet.
+    // The user can choose when to create flashcards.
     // =====================================================
 
     func createMemoryFromNote(
@@ -165,13 +166,49 @@ final class AppState: ObservableObject {
         // =================================================
         // GLOBAL MEMORY EVENT
         // =================================================
-        // Lets other parts of RecalllQ know that a new
-        // memory was created from a note.
-        // =================================================
 
         NotificationCenter.default.post(
             name: .memoryCreatedFromNote,
             object: memory
         )
+    }
+
+    // =====================================================
+    // CREATE FLASHCARD FROM MEMORY
+    // =====================================================
+    // Convenience method for future buttons.
+    //
+    // Example:
+    //
+    // Create Flashcard
+    //       ↓
+    // AppState
+    //       ↓
+    // FlashcardViewModel
+    // =====================================================
+
+    func createFlashcardFromMemory(
+        _ memory: Memory
+    ) {
+
+        flashcardViewModel
+            .createFromMemory(memory)
+    }
+
+    // =====================================================
+    // CREATE FLASHCARDS FROM ALL MEMORIES
+    // =====================================================
+    // Useful for a future:
+    //
+    // "Generate Flashcards"
+    //
+    // button.
+
+    func createFlashcardsFromAllMemories() {
+
+        flashcardViewModel
+            .createFromMemories(
+                memoryViewModel.memories
+            )
     }
 }
