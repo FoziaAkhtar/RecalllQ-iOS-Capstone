@@ -9,14 +9,14 @@ import Foundation
 //
 // FLOW:
 //
-// Memory
-//    ↓
-// Quiz
-//    ↓
-// QuizQuestion
-//    ↓
-// Student Answer
-//    ↓
+// Flashcard / Memory
+//        ↓
+//   QuizQuestion
+//        ↓
+// Student selects answer
+//        ↓
+// Submit answer
+//        ↓
 // Correct / Incorrect
 // =====================================================
 
@@ -26,7 +26,7 @@ struct QuizQuestion: Identifiable, Codable, Equatable {
     // IDENTITY
     // =====================================================
 
-    var id: UUID = UUID()
+    var id: UUID
 
     // =====================================================
     // SOURCE MEMORY
@@ -41,7 +41,7 @@ struct QuizQuestion: Identifiable, Codable, Equatable {
     var question: String
 
     // =====================================================
-    // MULTIPLE-CHOICE OPTIONS
+    // ANSWER OPTIONS
     // =====================================================
 
     var options: [String]
@@ -53,7 +53,7 @@ struct QuizQuestion: Identifiable, Codable, Equatable {
     var correctAnswer: String
 
     // =====================================================
-    // STUDENT ANSWER
+    // SELECTED ANSWER
     // =====================================================
 
     var selectedAnswer: String?
@@ -62,13 +62,38 @@ struct QuizQuestion: Identifiable, Codable, Equatable {
     // EXPLANATION
     // =====================================================
 
-    var explanation: String = ""
+    var explanation: String
 
     // =====================================================
     // DIFFICULTY
     // =====================================================
 
-    var difficulty: Difficulty = .medium
+    var difficulty: Difficulty
+
+    // =====================================================
+    // INITIALIZER
+    // =====================================================
+
+    init(
+        id: UUID = UUID(),
+        memoryID: UUID? = nil,
+        question: String,
+        options: [String],
+        correctAnswer: String,
+        selectedAnswer: String? = nil,
+        explanation: String = "",
+        difficulty: Difficulty = .medium
+    ) {
+
+        self.id = id
+        self.memoryID = memoryID
+        self.question = question
+        self.options = options
+        self.correctAnswer = correctAnswer
+        self.selectedAnswer = selectedAnswer
+        self.explanation = explanation
+        self.difficulty = difficulty
+    }
 
     // =====================================================
     // ANSWER STATUS
@@ -78,7 +103,12 @@ struct QuizQuestion: Identifiable, Codable, Equatable {
         selectedAnswer != nil
     }
 
+    // =====================================================
+    // CORRECT / INCORRECT
+    // =====================================================
+
     var isCorrect: Bool {
+
         guard let selectedAnswer else {
             return false
         }
@@ -96,6 +126,10 @@ struct QuizQuestion: Identifiable, Codable, Equatable {
         case medium
         case hard
 
+        // =================================================
+        // DISPLAY NAME
+        // =================================================
+
         var displayName: String {
 
             switch self {
@@ -112,3 +146,4 @@ struct QuizQuestion: Identifiable, Codable, Equatable {
         }
     }
 }
+

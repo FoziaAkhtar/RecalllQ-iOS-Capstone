@@ -11,9 +11,11 @@ import SwiftUI
 // - Flashcard statistics
 // - Search flashcards
 // - Generate flashcards from Memories
+// - Reset all flashcards
 // - Study mode
 // - Show / hide answer
 // - Easy / Medium / Hard review
+// - Previous / Next navigation
 // - Progress tracking
 // - Delete flashcards
 // - Empty state
@@ -34,6 +36,12 @@ struct FlashcardsView: View {
     private var vm: FlashcardViewModel {
         appState.flashcardViewModel
     }
+
+    // =====================================================
+    // RESET CONFIRMATION
+    // =====================================================
+
+    @State private var showingResetConfirmation = false
 
     // =====================================================
     // BODY
@@ -126,13 +134,12 @@ struct FlashcardsView: View {
                 }
 
                 // =================================================
-                // GENERATE BUTTON
+                // GENERATE FLASHCARDS
                 // =================================================
 
                 Button {
 
-                    appState
-                        .createFlashcardsFromAllMemories()
+                    appState.createFlashcardsFromAllMemories()
 
                 } label: {
 
@@ -182,6 +189,80 @@ struct FlashcardsView: View {
                             RecalllQTheme.primary
                         )
                     )
+                }
+
+                // =================================================
+                // RESET ALL FLASHCARDS
+                // =================================================
+                // This is useful during development/testing.
+                // It removes all saved flashcards and returns
+                // the Cards counter to 0.
+                // =================================================
+
+                if !vm.flashcards.isEmpty {
+
+                    Button {
+
+                        showingResetConfirmation = true
+
+                    } label: {
+
+                        HStack {
+
+                            Image(
+                                systemName:
+                                    "trash.fill"
+                            )
+
+                            Text(
+                                "Reset All Flashcards"
+                            )
+                            .font(.headline)
+
+                            Spacer()
+                        }
+                        .padding()
+                        .frame(
+                            maxWidth: .infinity
+                        )
+                        .foregroundColor(
+                            RecalllQTheme.error
+                        )
+                        .background(
+                            RoundedRectangle(
+                                cornerRadius:
+                                    RecalllQTheme.mediumRadius
+                            )
+                            .fill(
+                                RecalllQTheme.redBackground
+                            )
+                        )
+                    }
+                    .alert(
+                        "Reset All Flashcards?",
+                        isPresented:
+                            $showingResetConfirmation
+                    ) {
+
+                        Button(
+                            "Cancel",
+                            role: .cancel
+                        ) { }
+
+                        Button(
+                            "Reset",
+                            role: .destructive
+                        ) {
+
+                            vm.resetAllFlashcards()
+                        }
+
+                    } message: {
+
+                        Text(
+                            "This will permanently delete all your saved flashcards."
+                        )
+                    }
                 }
 
                 // =================================================
@@ -260,9 +341,11 @@ struct FlashcardsView: View {
 
                 if !vm.filteredFlashcards.isEmpty {
 
-                    Text("Your Flashcards")
-                        .font(.title3)
-                        .bold()
+                    Text(
+                        "Your Flashcards"
+                    )
+                    .font(.title3)
+                    .bold()
 
                     ForEach(
                         vm.filteredFlashcards
@@ -276,8 +359,12 @@ struct FlashcardsView: View {
             }
             .padding()
         }
-        .navigationTitle("Flashcards")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle(
+            "Flashcards"
+        )
+        .navigationBarTitleDisplayMode(
+            .inline
+        )
     }
 
     // =====================================================
@@ -314,7 +401,9 @@ struct FlashcardsView: View {
             Image(
                 systemName: icon
             )
-            .foregroundColor(color)
+            .foregroundColor(
+                color
+            )
 
             Text(value)
                 .font(.headline)
@@ -404,13 +493,15 @@ struct FlashcardsView: View {
                     RecalllQTheme.secondaryText
                 )
 
-            Text(card.question)
-                .font(.title3)
-                .bold()
-                .fixedSize(
-                    horizontal: false,
-                    vertical: true
-                )
+            Text(
+                card.question
+            )
+            .font(.title3)
+            .bold()
+            .fixedSize(
+                horizontal: false,
+                vertical: true
+            )
 
             // ---------------------------------------------
             // ANSWER
@@ -426,30 +517,36 @@ struct FlashcardsView: View {
                         RecalllQTheme.secondaryText
                     )
 
-                Text(card.answer)
-                    .font(.body)
-                    .fixedSize(
-                        horizontal: false,
-                        vertical: true
-                    )
+                Text(
+                    card.answer
+                )
+                .font(.body)
+                .fixedSize(
+                    horizontal: false,
+                    vertical: true
+                )
 
                 // -----------------------------------------
-                // DIFFICULTY BUTTONS
+                // DIFFICULTY
                 // -----------------------------------------
 
-                Text("How difficult was this?")
-                    .font(.caption)
-                    .foregroundColor(
-                        RecalllQTheme.secondaryText
-                    )
-                    .padding(.top, 4)
+                Text(
+                    "How difficult was this?"
+                )
+                .font(.caption)
+                .foregroundColor(
+                    RecalllQTheme.secondaryText
+                )
+                .padding(.top, 4)
 
                 HStack(spacing: 8) {
 
                     difficultyButton(
                         title: "Easy",
-                        icon: "face.smiling.fill",
-                        color: RecalllQTheme.success
+                        icon:
+                            "face.smiling.fill",
+                        color:
+                            RecalllQTheme.success
                     ) {
 
                         vm.markEasy()
@@ -457,8 +554,10 @@ struct FlashcardsView: View {
 
                     difficultyButton(
                         title: "Medium",
-                        icon: "minus.circle.fill",
-                        color: RecalllQTheme.secondary
+                        icon:
+                            "minus.circle.fill",
+                        color:
+                            RecalllQTheme.secondary
                     ) {
 
                         vm.markMedium()
@@ -466,8 +565,10 @@ struct FlashcardsView: View {
 
                     difficultyButton(
                         title: "Hard",
-                        icon: "exclamationmark.circle.fill",
-                        color: .red
+                        icon:
+                            "exclamationmark.circle.fill",
+                        color:
+                            RecalllQTheme.error
                     ) {
 
                         vm.markHard()
@@ -493,8 +594,10 @@ struct FlashcardsView: View {
                                 "eye.fill"
                         )
 
-                        Text("Show Answer")
-                            .font(.headline)
+                        Text(
+                            "Show Answer"
+                        )
+                        .font(.headline)
 
                         Spacer()
 
@@ -521,7 +624,7 @@ struct FlashcardsView: View {
             }
 
             // ---------------------------------------------
-            // NAVIGATION BUTTONS
+            // NAVIGATION
             // ---------------------------------------------
 
             HStack {
@@ -582,7 +685,9 @@ struct FlashcardsView: View {
                     RecalllQTheme.largeRadius
             )
             .stroke(
-                RecalllQTheme.primary.opacity(0.12),
+                RecalllQTheme.primary.opacity(
+                    0.12
+                ),
                 lineWidth: 1
             )
         )
@@ -616,21 +721,27 @@ struct FlashcardsView: View {
 
         } label: {
 
-            VStack(spacing: 5) {
+            VStack(
+                spacing: 5
+            ) {
 
                 Image(
                     systemName: icon
                 )
 
-                Text(title)
-                    .font(.caption)
-                    .bold()
+                Text(
+                    title
+                )
+                .font(.caption)
+                .bold()
             }
             .frame(
                 maxWidth: .infinity
             )
             .padding(.vertical, 10)
-            .foregroundColor(color)
+            .foregroundColor(
+                color
+            )
             .background(
                 RoundedRectangle(
                     cornerRadius:
@@ -682,18 +793,24 @@ struct FlashcardsView: View {
                 spacing: 6
             ) {
 
-                Text(card.question)
-                    .font(.headline)
-                    .lineLimit(2)
+                Text(
+                    card.question
+                )
+                .font(.headline)
+                .lineLimit(2)
 
-                Text(card.answer)
-                    .font(.caption)
-                    .foregroundColor(
-                        RecalllQTheme.secondaryText
-                    )
-                    .lineLimit(2)
+                Text(
+                    card.answer
+                )
+                .font(.caption)
+                .foregroundColor(
+                    RecalllQTheme.secondaryText
+                )
+                .lineLimit(2)
 
-                HStack(spacing: 8) {
+                HStack(
+                    spacing: 8
+                ) {
 
                     Text(
                         card.difficulty.displayName
@@ -775,7 +892,9 @@ struct FlashcardsView: View {
 
     private var emptyState: some View {
 
-        VStack(spacing: 14) {
+        VStack(
+            spacing: 14
+        ) {
 
             ZStack {
 
@@ -792,7 +911,9 @@ struct FlashcardsView: View {
                     systemName:
                         "rectangle.on.rectangle"
                 )
-                .font(.system(size: 32))
+                .font(
+                    .system(size: 32)
+                )
                 .foregroundColor(
                     RecalllQTheme.primary
                 )

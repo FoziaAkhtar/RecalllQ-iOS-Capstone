@@ -12,6 +12,7 @@ import SwiftUI
 // 🟠 Orange = Motivation / Focus / Reminders
 // 🟣 Purple = Smart AI / OCR / Intelligence
 // 🟢 Green  = Success / Progress
+// 🔴 Red    = Incorrect / Error
 // ⚪ White  = Clean Learning Environment
 //
 // Used across:
@@ -19,6 +20,8 @@ import SwiftUI
 // - Notes
 // - Memories
 // - Reminders
+// - Flashcards
+// - Quiz
 // - Buttons
 // - Cards
 // =====================================================
@@ -53,6 +56,16 @@ struct RecalllQTheme {
         red: 0.15,
         green: 0.65,
         blue: 0.35
+    )
+
+    // =====================================================
+    // ERROR / INCORRECT COLOUR
+    // =====================================================
+
+    static let error = Color(
+        red: 0.90,
+        green: 0.20,
+        blue: 0.20
     )
 
     // =====================================================
@@ -93,14 +106,38 @@ struct RecalllQTheme {
     static let cardBackground =
         Color(.systemBackground)
 
+    // =====================================================
+    // BLUE BACKGROUND
+    // =====================================================
+
     static let blueBackground =
         primary.opacity(0.08)
+
+    // =====================================================
+    // ORANGE BACKGROUND
+    // =====================================================
 
     static let orangeBackground =
         secondary.opacity(0.10)
 
+    // =====================================================
+    // GREEN BACKGROUND
+    // =====================================================
+
     static let greenBackground =
         success.opacity(0.10)
+
+    // =====================================================
+    // RED BACKGROUND
+    // =====================================================
+    // Used for incorrect quiz answers and errors.
+
+    static let redBackground =
+        error.opacity(0.10)
+
+    // =====================================================
+    // PURPLE BACKGROUND
+    // =====================================================
 
     static let purpleBackground =
         smartPurple.opacity(0.10)
@@ -169,7 +206,10 @@ struct RecalllQTheme {
 
     static let largeRadius: CGFloat = 18
 
-    // Button radius
+    // =====================================================
+    // BUTTON RADIUS
+    // =====================================================
+
     static let buttonRadius: CGFloat = 14
 
     // =====================================================
@@ -182,3 +222,4 @@ struct RecalllQTheme {
 
     static let shadowY: CGFloat = 3
 }
+

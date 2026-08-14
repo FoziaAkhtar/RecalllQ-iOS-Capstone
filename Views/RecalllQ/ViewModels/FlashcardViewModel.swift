@@ -10,14 +10,17 @@ import Combine
 //
 // FEATURES:
 // - Create flashcards from Memories
-// - Save flashcards locally
-// - Load flashcards
-// - Delete flashcards
+// - Prevent duplicate flashcards
+// - Save / load flashcards
+// - Delete individual flashcards
+// - RESET ALL FLASHCARDS
 // - Search flashcards
 // - Track reviews
 // - Track correct answers
 // - Track difficulty
-// - Prepare for spaced repetition
+// - Spaced repetition
+// - Safe Previous / Next navigation
+// - Stable card numbering
 // =====================================================
 
 final class FlashcardViewModel: ObservableObject {
@@ -53,7 +56,11 @@ final class FlashcardViewModel: ObservableObject {
     // =====================================================
 
     init() {
+
         loadFlashcards()
+
+        currentIndex = 0
+        isShowingAnswer = false
     }
 
     // =====================================================
@@ -76,12 +83,45 @@ final class FlashcardViewModel: ObservableObject {
                 in: .whitespacesAndNewlines
             )
 
+        // -------------------------------------------------
+        // Validate
+        // -------------------------------------------------
+
         guard
             !cleanQuestion.isEmpty,
             !cleanAnswer.isEmpty
         else {
+
+            print("❌ Flashcard was not created.")
+            print("Question or answer is empty.")
+
             return
         }
+
+        // -------------------------------------------------
+        // Prevent duplicate cards from same Memory
+        // -------------------------------------------------
+
+        if let memoryID = memoryID {
+
+            let alreadyExists =
+                flashcards.contains {
+                    $0.memoryID == memoryID
+                }
+
+            if alreadyExists {
+
+                print(
+                    "⚠️ Flashcard already exists for this Memory."
+                )
+
+                return
+            }
+        }
+
+        // -------------------------------------------------
+        // Create flashcard
+        // -------------------------------------------------
 
         let flashcard = Flashcard(
             memoryID: memoryID,
@@ -89,31 +129,60 @@ final class FlashcardViewModel: ObservableObject {
             answer: cleanAnswer
         )
 
-        flashcards.insert(
-            flashcard,
-            at: 0
-        )
+        // -------------------------------------------------
+        // Add to end
+        //
+        // This keeps numbering stable:
+        //
+        // 1
+        // 2
+        // 3
+        // 4
+        // -------------------------------------------------
+
+        flashcards.append(flashcard)
+
+        // -------------------------------------------------
+        // Save
+        // -------------------------------------------------
 
         saveFlashcards()
+
+        print("========================================")
+        print("✅ FLASHCARD CREATED")
+        print("Question: \(cleanQuestion)")
+        print("Total cards: \(flashcards.count)")
+        print("========================================")
     }
 
     // =====================================================
-    // CREATE FLASHCARDS FROM MEMORY
+    // CREATE FROM ONE MEMORY
     // =====================================================
-    // Creates a simple question/answer card from
-    // an existing RecalllQ Memory.
 
     func createFromMemory(
         _ memory: Memory
     ) {
 
+        print("🧠 Creating flashcard from:")
+        print("Memory: \(memory.title)")
+
         let question =
             "What is the main idea of \(memory.title)?"
 
+        let cleanSummary =
+            memory.summary.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+
+        let cleanContent =
+            memory.content.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+
         let answer =
-            memory.summary.isEmpty
-            ? memory.content
-            : memory.summary
+            cleanSummary.isEmpty
+            ? cleanContent
+            : cleanSummary
 
         addFlashcard(
             question: question,
@@ -123,40 +192,171 @@ final class FlashcardViewModel: ObservableObject {
     }
 
     // =====================================================
-    // CREATE FLASHCARDS FROM ALL MEMORIES
+    // CREATE FROM ALL MEMORIES
     // =====================================================
 
     func createFromMemories(
         _ memories: [Memory]
     ) {
 
+        print("========================================")
+        print("🚀 GENERATE FLASHCARDS")
+        print("Memories received: \(memories.count)")
+        print("Existing cards: \(flashcards.count)")
+        print("========================================")
+
+        guard !memories.isEmpty else {
+
+            print("❌ No Memories available.")
+            print("Create a Memory first.")
+
+            return
+        }
+
+        var createdCount = 0
+        var skippedCount = 0
+
+        // -------------------------------------------------
+        // Create one flashcard per Memory
+        // -------------------------------------------------
+
         for memory in memories {
 
-            createFromMemory(
-                memory
-            )
+            let alreadyExists =
+                flashcards.contains {
+                    $0.memoryID == memory.id
+                }
+
+            if alreadyExists {
+
+                skippedCount += 1
+
+                print(
+                    "⏭️ Skipped existing card: \(memory.title)"
+                )
+
+                continue
+            }
+
+            let oldCount =
+                flashcards.count
+
+            createFromMemory(memory)
+
+            if flashcards.count > oldCount {
+
+                createdCount += 1
+            }
         }
+
+        // -------------------------------------------------
+        // Always start study at Card 1 after generation
+        // -------------------------------------------------
+
+        currentIndex = 0
+        isShowingAnswer = false
+
+        print("========================================")
+        print("✅ GENERATION COMPLETE")
+        print("New cards: \(createdCount)")
+        print("Duplicates skipped: \(skippedCount)")
+        print("Total cards: \(flashcards.count)")
+        print("Starting Card: 1")
+        print("========================================")
     }
 
     // =====================================================
-    // DELETE FLASHCARD
+    // DELETE ONE FLASHCARD
     // =====================================================
 
     func deleteFlashcard(
         id: UUID
     ) {
 
-        flashcards.removeAll {
-            $0.id == id
+        guard let deletedIndex =
+            flashcards.firstIndex(
+                where: {
+                    $0.id == id
+                }
+            )
+        else {
+
+            return
         }
+
+        flashcards.remove(
+            at: deletedIndex
+        )
+
+        // -------------------------------------------------
+        // Keep current index safe
+        // -------------------------------------------------
+
+        let count =
+            filteredFlashcards.count
+
+        if count == 0 {
+
+            currentIndex = 0
+
+        } else if currentIndex >= count {
+
+            currentIndex = count - 1
+        }
+
+        isShowingAnswer = false
 
         saveFlashcards()
 
-        resetStudy()
+        print("🗑️ Flashcard deleted.")
     }
 
     // =====================================================
-    // MARK CARD AS EASY
+    // RESET ALL FLASHCARDS
+    // =====================================================
+
+    func resetAllFlashcards() {
+
+        print("========================================")
+        print("🗑️ RESET ALL FLASHCARDS")
+        print("Cards before reset: \(flashcards.count)")
+        print("========================================")
+
+        // Remove all cards
+
+        flashcards.removeAll()
+
+        // Reset study position
+
+        currentIndex = 0
+
+        // Hide answer
+
+        isShowingAnswer = false
+
+        // Clear search
+
+        searchText = ""
+
+        // Delete saved data
+
+        UserDefaults.standard.removeObject(
+            forKey: storageKey
+        )
+
+        // Force synchronization
+
+        UserDefaults.standard.synchronize()
+
+        print("========================================")
+        print("✅ ALL FLASHCARDS RESET")
+        print("Cards remaining: \(flashcards.count)")
+        print("Current card index: \(currentIndex)")
+        print("========================================")
+    }
+
+    // =====================================================
+    // MARK EASY
     // =====================================================
 
     func markEasy() {
@@ -168,7 +368,7 @@ final class FlashcardViewModel: ObservableObject {
     }
 
     // =====================================================
-    // MARK CARD AS MEDIUM
+    // MARK MEDIUM
     // =====================================================
 
     func markMedium() {
@@ -180,7 +380,7 @@ final class FlashcardViewModel: ObservableObject {
     }
 
     // =====================================================
-    // MARK CARD AS HARD
+    // MARK HARD
     // =====================================================
 
     func markHard() {
@@ -200,62 +400,87 @@ final class FlashcardViewModel: ObservableObject {
         correct: Bool
     ) {
 
-        guard
-            !filteredFlashcards.isEmpty,
-            currentIndex < filteredFlashcards.count
-        else {
+        let cards =
+            filteredFlashcards
+
+        guard !cards.isEmpty else {
+
             return
         }
 
-        let currentCard =
-            filteredFlashcards[currentIndex]
+        // -------------------------------------------------
+        // Never allow an invalid index
+        // -------------------------------------------------
 
-        guard let index =
+        guard
+            currentIndex >= 0,
+            currentIndex < cards.count
+        else {
+
+            currentIndex = 0
+
+            return
+        }
+
+        // -------------------------------------------------
+        // Get current card
+        // -------------------------------------------------
+
+        let currentCard =
+            cards[currentIndex]
+
+        // -------------------------------------------------
+        // Find original card
+        // -------------------------------------------------
+
+        guard let originalIndex =
             flashcards.firstIndex(
                 where: {
                     $0.id == currentCard.id
                 }
             )
         else {
+
             return
         }
 
-        // =================================================
-        // UPDATE REVIEW DATA
-        // =================================================
+        // -------------------------------------------------
+        // Update review information
+        // -------------------------------------------------
 
-        flashcards[index].difficulty =
+        flashcards[originalIndex].difficulty =
             difficulty
 
-        flashcards[index].timesReviewed += 1
+        flashcards[originalIndex].timesReviewed += 1
 
         if correct {
-            flashcards[index].timesCorrect += 1
+
+            flashcards[originalIndex].timesCorrect += 1
         }
 
-        flashcards[index].lastReviewed =
+        flashcards[originalIndex].lastReviewed =
             Date()
 
-        // =================================================
-        // CALCULATE NEXT REVIEW
-        // =================================================
+        // -------------------------------------------------
+        // Calculate next review
+        // -------------------------------------------------
 
-        flashcards[index].nextReviewDate =
+        flashcards[originalIndex].nextReviewDate =
             calculateNextReviewDate(
                 difficulty: difficulty
             )
 
-        // =================================================
-        // SAVE
-        // =================================================
+        // -------------------------------------------------
+        // Save
+        // -------------------------------------------------
 
         saveFlashcards()
 
-        // =================================================
-        // MOVE TO NEXT CARD
-        // =================================================
+        // -------------------------------------------------
+        // Move EXACTLY one card
+        // -------------------------------------------------
 
-        nextCard()
+        moveToNextCard()
     }
 
     // =====================================================
@@ -264,21 +489,48 @@ final class FlashcardViewModel: ObservableObject {
 
     func nextCard() {
 
-        guard !filteredFlashcards.isEmpty else {
+        moveToNextCard()
+    }
+
+    // =====================================================
+    // MOVE TO NEXT CARD
+    // =====================================================
+
+    private func moveToNextCard() {
+
+        let count =
+            filteredFlashcards.count
+
+        guard count > 0 else {
+
+            currentIndex = 0
+            isShowingAnswer = false
+
             return
         }
 
-        if currentIndex <
-            filteredFlashcards.count - 1 {
+        // -------------------------------------------------
+        // IMPORTANT:
+        // Only increase by ONE.
+        // -------------------------------------------------
 
-            currentIndex += 1
+        if currentIndex + 1 < count {
+
+            currentIndex =
+                currentIndex + 1
 
         } else {
+
+            // Last card → return to Card 1
 
             currentIndex = 0
         }
 
         isShowingAnswer = false
+
+        print(
+            "➡️ NEXT: Card \(currentIndex + 1) of \(count)"
+        )
     }
 
     // =====================================================
@@ -287,21 +539,39 @@ final class FlashcardViewModel: ObservableObject {
 
     func previousCard() {
 
-        guard !filteredFlashcards.isEmpty else {
+        let count =
+            filteredFlashcards.count
+
+        guard count > 0 else {
+
+            currentIndex = 0
+            isShowingAnswer = false
+
             return
         }
 
+        // -------------------------------------------------
+        // Move EXACTLY one card backward
+        // -------------------------------------------------
+
         if currentIndex > 0 {
 
-            currentIndex -= 1
+            currentIndex =
+                currentIndex - 1
 
         } else {
 
+            // Card 1 → last card
+
             currentIndex =
-                filteredFlashcards.count - 1
+                count - 1
         }
 
         isShowingAnswer = false
+
+        print(
+            "⬅️ PREVIOUS: Card \(currentIndex + 1) of \(count)"
+        )
     }
 
     // =====================================================
@@ -325,7 +595,7 @@ final class FlashcardViewModel: ObservableObject {
     }
 
     // =====================================================
-    // FILTERED FLASHCARDS
+    // SEARCH
     // =====================================================
 
     var filteredFlashcards: [Flashcard] {
@@ -335,21 +605,24 @@ final class FlashcardViewModel: ObservableObject {
                 in: .whitespacesAndNewlines
             )
 
+        // No search
+
         guard !query.isEmpty else {
+
             return flashcards
         }
 
+        // Search question and answer
+
         return flashcards.filter {
 
-            $0.question
-                .localizedCaseInsensitiveContains(
-                    query
-                )
+            $0.question.localizedCaseInsensitiveContains(
+                query
+            )
             ||
-            $0.answer
-                .localizedCaseInsensitiveContains(
-                    query
-                )
+            $0.answer.localizedCaseInsensitiveContains(
+                query
+            )
         }
     }
 
@@ -359,14 +632,56 @@ final class FlashcardViewModel: ObservableObject {
 
     var currentFlashcard: Flashcard? {
 
-        guard
-            !filteredFlashcards.isEmpty,
-            currentIndex < filteredFlashcards.count
-        else {
+        let cards =
+            filteredFlashcards
+
+        guard !cards.isEmpty else {
+
             return nil
         }
 
-        return filteredFlashcards[currentIndex]
+        // -------------------------------------------------
+        // IMPORTANT:
+        // DO NOT modify currentIndex here.
+        //
+        // This prevents SwiftUI from changing the index
+        // unexpectedly during a redraw.
+        // -------------------------------------------------
+
+        guard
+            currentIndex >= 0,
+            currentIndex < cards.count
+        else {
+
+            return cards[0]
+        }
+
+        return cards[currentIndex]
+    }
+
+    // =====================================================
+    // CURRENT CARD NUMBER
+    // =====================================================
+
+    var currentCardNumber: Int {
+
+        let count =
+            filteredFlashcards.count
+
+        guard count > 0 else {
+
+            return 0
+        }
+
+        guard
+            currentIndex >= 0,
+            currentIndex < count
+        else {
+
+            return 1
+        }
+
+        return currentIndex + 1
     }
 
     // =====================================================
@@ -385,7 +700,9 @@ final class FlashcardViewModel: ObservableObject {
     var reviewedFlashcards: Int {
 
         flashcards.filter {
+
             $0.timesReviewed > 0
+
         }.count
     }
 
@@ -411,24 +728,32 @@ final class FlashcardViewModel: ObservableObject {
 
         let reviewed =
             flashcards.filter {
+
                 $0.timesReviewed > 0
+
             }
 
         guard !reviewed.isEmpty else {
+
             return 0
         }
 
         let totalReviews =
             reviewed.reduce(0) {
+
                 $0 + $1.timesReviewed
+
             }
 
         let totalCorrect =
             reviewed.reduce(0) {
+
                 $0 + $1.timesCorrect
+
             }
 
         guard totalReviews > 0 else {
+
             return 0
         }
 
@@ -439,13 +764,6 @@ final class FlashcardViewModel: ObservableObject {
     // =====================================================
     // SPACED REPETITION
     // =====================================================
-    // Simple first version.
-    //
-    // Easy   → 7 days
-    // Medium → 3 days
-    // Hard   → 1 day
-    //
-    // We can make this smarter later.
 
     private func calculateNextReviewDate(
         difficulty: Flashcard.Difficulty
@@ -456,12 +774,15 @@ final class FlashcardViewModel: ObservableObject {
         switch difficulty {
 
         case .easy:
+
             days = 7
 
         case .medium:
+
             days = 3
 
         case .hard:
+
             days = 1
         }
 
@@ -478,23 +799,28 @@ final class FlashcardViewModel: ObservableObject {
 
     private func saveFlashcards() {
 
-        guard let data =
-            try? JSONEncoder().encode(
-                flashcards
+        do {
+
+            let data =
+                try JSONEncoder().encode(
+                    flashcards
+                )
+
+            UserDefaults.standard.set(
+                data,
+                forKey: storageKey
             )
-        else {
 
             print(
-                "❌ Could not save flashcards."
+                "💾 Saved \(flashcards.count) flashcards."
             )
 
-            return
-        }
+        } catch {
 
-        UserDefaults.standard.set(
-            data,
-            forKey: storageKey
-        )
+            print(
+                "❌ Could not save flashcards: \(error)"
+            )
+        }
     }
 
     // =====================================================
@@ -507,23 +833,38 @@ final class FlashcardViewModel: ObservableObject {
             let data =
                 UserDefaults.standard.data(
                     forKey: storageKey
-                ),
-
-            let decoded =
-                try? JSONDecoder().decode(
-                    [Flashcard].self,
-                    from: data
                 )
-
         else {
 
             print(
                 "ℹ️ No saved flashcards found."
             )
 
+            flashcards = []
+
             return
         }
 
-        flashcards = decoded
+        do {
+
+            flashcards =
+                try JSONDecoder().decode(
+                    [Flashcard].self,
+                    from: data
+                )
+
+            print(
+                "✅ Loaded \(flashcards.count) flashcards."
+            )
+
+        } catch {
+
+            print(
+                "❌ Could not load flashcards: \(error)"
+            )
+
+            flashcards = []
+        }
     }
 }
+

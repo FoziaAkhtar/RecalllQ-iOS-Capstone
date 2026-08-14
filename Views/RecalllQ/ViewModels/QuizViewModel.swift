@@ -6,41 +6,45 @@ import Combine
 // VIEWMODEL: QuizViewModel
 // =====================================================
 // PURPOSE:
-// Manages all quiz-related operations for RecalllQ.
+// Controls the RecalllQ quiz system.
 //
 // FEATURES:
 // - Create quizzes
 // - Create quizzes from Memories
+// - Start quizzes
 // - Select answers
+// - Submit answers
+// - Track score
 // - Move between questions
-// - Calculate scores
-// - Complete quizzes
+// - Complete quiz
+// - Restart quiz
+// - Delete quizzes
 // - Save quizzes locally
 // - Load quizzes locally
-// - Delete quizzes
-// - Track quiz progress
 // =====================================================
 
 final class QuizViewModel: ObservableObject {
 
     // =====================================================
-    // MAIN STATE
+    // QUIZ STORAGE
     // =====================================================
 
     @Published var quizzes: [Quiz] = []
 
     // =====================================================
-    // UI STATE
+    // CURRENT QUIZ
     // =====================================================
 
-    @Published var currentQuizID: UUID?
+    @Published var currentQuiz: Quiz?
 
-    @Published var selectedAnswer: String?
+    // =====================================================
+    // UI STATE
+    // =====================================================
 
     @Published var showResult: Bool = false
 
     // =====================================================
-    // STORAGE
+    // STORAGE KEY
     // =====================================================
 
     private let storageKey = "saved_quizzes"
@@ -67,15 +71,8 @@ final class QuizViewModel: ObservableObject {
             return
         }
 
-        let cleanTitle =
-            title.trimmingCharacters(
-                in: .whitespacesAndNewlines
-            )
-
         let quiz = Quiz(
-            title: cleanTitle.isEmpty
-                ? "Study Quiz"
-                : cleanTitle,
+            title: title,
             questions: questions,
             memoryID: memoryID
         )
@@ -85,22 +82,18 @@ final class QuizViewModel: ObservableObject {
             at: 0
         )
 
-        currentQuizID = quiz.id
-
         saveQuizzes()
     }
 
     // =====================================================
     // CREATE QUIZ FROM MEMORY
     // =====================================================
-    // Creates a simple quiz using information from
-    // an existing RecalllQ Memory.
 
     func createFromMemory(
         _ memory: Memory
     ) {
 
-        let answer =
+        let correctAnswer =
             memory.summary.isEmpty
             ? memory.content
             : memory.summary
@@ -110,14 +103,14 @@ final class QuizViewModel: ObservableObject {
             question:
                 "What is the main idea of \(memory.title)?",
             options: [
-                answer,
-                "This topic is unrelated to the study material.",
-                "There is not enough information to understand this topic.",
+                correctAnswer,
+                "This information is unrelated.",
+                "There is not enough information.",
                 "None of the above."
-            ],
-            correctAnswer: answer,
+            ].shuffled(),
+            correctAnswer: correctAnswer,
             explanation:
-                "The correct answer is based on the summary of this memory."
+                "The correct answer is based on the Memory created by RecalllQ."
         )
 
         createQuiz(
@@ -144,53 +137,62 @@ final class QuizViewModel: ObservableObject {
     }
 
     // =====================================================
-    // START QUIZ
+    // START QUIZ BY ID
     // =====================================================
 
     func startQuiz(
         id: UUID
     ) {
 
-        guard let index =
-            quizzes.firstIndex(
-                where: { $0.id == id }
-            )
+        guard let existingQuiz =
+                quizzes.first(
+                    where: {
+                        $0.id == id
+                    }
+                )
         else {
             return
         }
 
-        quizzes[index].currentQuestionIndex = 0
-        quizzes[index].isCompleted = false
-        quizzes[index].score = 0
+        var quiz = existingQuiz
 
-        for questionIndex in quizzes[index].questions.indices {
+        // Reset quiz
 
-            quizzes[index]
-                .questions[questionIndex]
-                .selectedAnswer = nil
+        quiz.currentQuestionIndex = 0
+        quiz.isCompleted = false
+        quiz.score = 0
+
+        // Clear previous answers
+
+        for index in quiz.questions.indices {
+
+            quiz.questions[index].selectedAnswer = nil
         }
 
-        currentQuizID = id
+        currentQuiz = quiz
 
-        selectedAnswer = nil
         showResult = false
 
-        saveQuizzes()
+        saveCurrentQuiz()
     }
 
     // =====================================================
-    // CURRENT QUIZ
+    // START FIRST AVAILABLE QUIZ
     // =====================================================
 
-    var currentQuiz: Quiz? {
+    func startQuiz() {
 
-        guard let currentQuizID else {
-            return nil
+        guard let firstQuiz = quizzes.first else {
+
+            currentQuiz = nil
+            showResult = false
+
+            return
         }
 
-        return quizzes.first {
-            $0.id == currentQuizID
-        }
+        startQuiz(
+            id: firstQuiz.id
+        )
     }
 
     // =====================================================
@@ -199,7 +201,65 @@ final class QuizViewModel: ObservableObject {
 
     var currentQuestion: QuizQuestion? {
 
-        currentQuiz?.currentQuestion
+        guard let quiz = currentQuiz else {
+            return nil
+        }
+
+        guard
+            quiz.currentQuestionIndex >= 0,
+            quiz.currentQuestionIndex < quiz.questions.count
+        else {
+            return nil
+        }
+
+        return quiz.questions[
+            quiz.currentQuestionIndex
+        ]
+    }
+
+    // =====================================================
+    // CURRENT INDEX
+    // =====================================================
+
+    var currentIndex: Int {
+
+        currentQuiz?.currentQuestionIndex ?? 0
+    }
+
+    // =====================================================
+    // QUESTIONS
+    // =====================================================
+
+    var questions: [QuizQuestion] {
+
+        currentQuiz?.questions ?? []
+    }
+
+    // =====================================================
+    // CORRECT ANSWERS
+    // =====================================================
+
+    var correctAnswers: Int {
+
+        currentQuiz?.correctAnswers ?? 0
+    }
+
+    // =====================================================
+    // SCORE PERCENTAGE
+    // =====================================================
+
+    var scorePercentage: Double {
+
+        currentQuiz?.percentage ?? 0
+    }
+
+    // =====================================================
+    // QUIZ COMPLETE
+    // =====================================================
+
+    var isQuizComplete: Bool {
+
+        currentQuiz?.isCompleted ?? false
     }
 
     // =====================================================
@@ -210,34 +270,30 @@ final class QuizViewModel: ObservableObject {
         _ answer: String
     ) {
 
+        guard !showResult else {
+            return
+        }
+
+        guard var quiz = currentQuiz else {
+            return
+        }
+
+        let index =
+            quiz.currentQuestionIndex
+
         guard
-            let quizID = currentQuizID,
-            let quizIndex =
-                quizzes.firstIndex(
-                    where: { $0.id == quizID }
-                )
+            index >= 0,
+            index < quiz.questions.count
         else {
             return
         }
 
-        let questionIndex =
-            quizzes[quizIndex].currentQuestionIndex
+        quiz.questions[index].selectedAnswer =
+            answer
 
-        guard
-            questionIndex >= 0,
-            questionIndex <
-                quizzes[quizIndex].questions.count
-        else {
-            return
-        }
+        currentQuiz = quiz
 
-        quizzes[quizIndex]
-            .questions[questionIndex]
-            .selectedAnswer = answer
-
-        selectedAnswer = answer
-
-        saveQuizzes()
+        saveCurrentQuiz()
     }
 
     // =====================================================
@@ -246,39 +302,38 @@ final class QuizViewModel: ObservableObject {
 
     func submitAnswer() {
 
+        guard var quiz = currentQuiz else {
+            return
+        }
+
+        let index =
+            quiz.currentQuestionIndex
+
         guard
-            let quizID = currentQuizID,
-            let quizIndex =
-                quizzes.firstIndex(
-                    where: { $0.id == quizID }
-                )
+            index >= 0,
+            index < quiz.questions.count
         else {
             return
         }
 
-        let questionIndex =
-            quizzes[quizIndex].currentQuestionIndex
-
         guard
-            questionIndex >= 0,
-            questionIndex <
-                quizzes[quizIndex].questions.count
+            quiz.questions[index].selectedAnswer != nil
         else {
             return
         }
 
-        let question =
-            quizzes[quizIndex]
-                .questions[questionIndex]
+        // Calculate score from all answered questions
 
-        if question.isCorrect {
+        quiz.score =
+            quiz.questions.filter {
+                $0.isCorrect
+            }.count
 
-            quizzes[quizIndex].score += 1
-        }
+        currentQuiz = quiz
 
         showResult = true
 
-        saveQuizzes()
+        saveCurrentQuiz()
     }
 
     // =====================================================
@@ -287,90 +342,47 @@ final class QuizViewModel: ObservableObject {
 
     func nextQuestion() {
 
-        guard
-            let quizID = currentQuizID,
-            let quizIndex =
-                quizzes.firstIndex(
-                    where: { $0.id == quizID }
-                )
-        else {
+        guard var quiz = currentQuiz else {
             return
         }
 
-        if quizzes[quizIndex].currentQuestionIndex <
-            quizzes[quizIndex].questions.count - 1 {
+        let currentIndex =
+            quiz.currentQuestionIndex
 
-            quizzes[quizIndex]
-                .currentQuestionIndex += 1
+        // =================================================
+        // FINISH QUIZ
+        // =================================================
 
-            selectedAnswer =
-                quizzes[quizIndex]
-                    .currentQuestion?
-                    .selectedAnswer
+        if currentIndex >=
+            quiz.questions.count - 1 {
+
+            quiz.score =
+                quiz.questions.filter {
+                    $0.isCorrect
+                }.count
+
+            quiz.isCompleted = true
+
+            currentQuiz = quiz
 
             showResult = false
 
-        } else {
+            saveCurrentQuiz()
 
-            completeQuiz()
-        }
-
-        saveQuizzes()
-    }
-
-    // =====================================================
-    // PREVIOUS QUESTION
-    // =====================================================
-
-    func previousQuestion() {
-
-        guard
-            let quizID = currentQuizID,
-            let quizIndex =
-                quizzes.firstIndex(
-                    where: { $0.id == quizID }
-                )
-        else {
             return
         }
 
-        if quizzes[quizIndex].currentQuestionIndex > 0 {
+        // =================================================
+        // MOVE TO NEXT QUESTION
+        // =================================================
 
-            quizzes[quizIndex]
-                .currentQuestionIndex -= 1
+        quiz.currentQuestionIndex += 1
 
-            selectedAnswer =
-                quizzes[quizIndex]
-                    .currentQuestion?
-                    .selectedAnswer
+        currentQuiz = quiz
 
-            showResult = false
-        }
+        showResult = false
 
-        saveQuizzes()
-    }
-
-    // =====================================================
-    // COMPLETE QUIZ
-    // =====================================================
-
-    func completeQuiz() {
-
-        guard
-            let quizID = currentQuizID,
-            let quizIndex =
-                quizzes.firstIndex(
-                    where: { $0.id == quizID }
-                )
-        else {
-            return
-        }
-
-        quizzes[quizIndex].isCompleted = true
-
-        showResult = true
-
-        saveQuizzes()
+        saveCurrentQuiz()
     }
 
     // =====================================================
@@ -379,13 +391,22 @@ final class QuizViewModel: ObservableObject {
 
     func resetCurrentQuiz() {
 
-        guard let quizID = currentQuizID else {
+        guard let quiz = currentQuiz else {
             return
         }
 
         startQuiz(
-            id: quizID
+            id: quiz.id
         )
+    }
+
+    // =====================================================
+    // RESTART QUIZ
+    // =====================================================
+
+    func restartQuiz() {
+
+        resetCurrentQuiz()
     }
 
     // =====================================================
@@ -400,9 +421,9 @@ final class QuizViewModel: ObservableObject {
             $0.id == id
         }
 
-        if currentQuizID == id {
-            currentQuizID = nil
-            selectedAnswer = nil
+        if currentQuiz?.id == id {
+
+            currentQuiz = nil
             showResult = false
         }
 
@@ -414,6 +435,7 @@ final class QuizViewModel: ObservableObject {
     // =====================================================
 
     var totalQuizzes: Int {
+
         quizzes.count
     }
 
@@ -429,10 +451,10 @@ final class QuizViewModel: ObservableObject {
     }
 
     // =====================================================
-    // AVERAGE SCORE
+    // OVERALL SCORE
     // =====================================================
 
-    var averageScore: Double {
+    var overallPercentage: Double {
 
         let completed =
             quizzes.filter {
@@ -444,56 +466,90 @@ final class QuizViewModel: ObservableObject {
             return 0
         }
 
-        let total =
-            completed.reduce(0.0) {
-                $0 + $1.percentage
+        let totalQuestions =
+            completed.reduce(0) {
+                $0 + $1.totalQuestions
             }
 
-        return total /
-            Double(completed.count)
+        let totalCorrect =
+            completed.reduce(0) {
+                $0 + $1.correctAnswers
+            }
+
+        guard totalQuestions > 0 else {
+            return 0
+        }
+
+        return Double(totalCorrect)
+            / Double(totalQuestions)
+            * 100
     }
 
     // =====================================================
-    // SAVE
+    // SAVE CURRENT QUIZ
+    // =====================================================
+
+    private func saveCurrentQuiz() {
+
+        guard let currentQuiz else {
+            return
+        }
+
+        if let index =
+            quizzes.firstIndex(
+                where: {
+                    $0.id == currentQuiz.id
+                }
+            ) {
+
+            quizzes[index] = currentQuiz
+
+        } else {
+
+            quizzes.insert(
+                currentQuiz,
+                at: 0
+            )
+        }
+
+        saveQuizzes()
+    }
+
+    // =====================================================
+    // SAVE QUIZZES
     // =====================================================
 
     private func saveQuizzes() {
 
-        guard let data =
-            try? JSONEncoder().encode(
-                quizzes
+        do {
+
+            let data =
+                try JSONEncoder().encode(
+                    quizzes
+                )
+
+            UserDefaults.standard.set(
+                data,
+                forKey: storageKey
             )
-        else {
+
+        } catch {
 
             print(
-                "❌ Could not save quizzes."
+                "❌ Could not save quizzes: \(error)"
             )
-
-            return
         }
-
-        UserDefaults.standard.set(
-            data,
-            forKey: storageKey
-        )
     }
 
     // =====================================================
-    // LOAD
+    // LOAD QUIZZES
     // =====================================================
 
     private func loadQuizzes() {
 
-        guard
-            let data =
+        guard let data =
                 UserDefaults.standard.data(
                     forKey: storageKey
-                ),
-
-            let decoded =
-                try? JSONDecoder().decode(
-                    [Quiz].self,
-                    from: data
                 )
         else {
 
@@ -504,6 +560,19 @@ final class QuizViewModel: ObservableObject {
             return
         }
 
-        quizzes = decoded
+        do {
+
+            quizzes =
+                try JSONDecoder().decode(
+                    [Quiz].self,
+                    from: data
+                )
+
+        } catch {
+
+            print(
+                "❌ Could not load quizzes: \(error)"
+            )
+        }
     }
 }
