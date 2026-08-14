@@ -82,3 +82,4 @@ struct Note: Identifiable, Codable, Equatable {
         return formatter
     }()
 }
+

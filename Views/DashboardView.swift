@@ -5,190 +5,544 @@ import SwiftUI
 // VIEW: DashboardView
 // =====================================================
 // PURPOSE:
-// - Central dashboard for RecalllQ
-// - Displays AI insights
-// - Shows analytics
-// - Provides quick navigation
-// - Displays smart recommendations
+// - Main home screen for RecalllQ
+// - Displays learning progress
+// - Shows AI memory insights
+// - Displays smart suggestions
+// - Provides quick actions
+// - Uses the RecalllQ professional study theme
 // =====================================================
 
 struct DashboardView: View {
 
+    // =====================================================
+    // GLOBAL APP STATE
+    // =====================================================
+
     @EnvironmentObject var appState: AppState
 
-    // Direct reference (safe + stable)
+    // =====================================================
+    // MEMORY VIEW MODEL
+    // =====================================================
+
     private var viewModel: MemoryViewModel {
         appState.memoryViewModel
     }
 
+    // =====================================================
+    // MEMORY GOAL
+    // =====================================================
+
     private let memoryGoal = 20
+
+    // =====================================================
+    // BODY
+    // =====================================================
 
     var body: some View {
 
         ScrollView {
 
-            VStack(spacing: 20) {
+            VStack(alignment: .leading, spacing: 24) {
 
                 // =====================================================
-                // HEADER
+                // WELCOME HEADER
                 // =====================================================
-                VStack(spacing: 8) {
 
-                    Text("RecalllQ Dashboard")
-                        .font(.largeTitle)
-                        .bold()
+                VStack(alignment: .leading, spacing: 6) {
 
-                    Text("Your Intelligent Academic Memory Assistant")
-                        .foregroundColor(.secondary)
+                    Text("Welcome back 👋")
+                        .font(.subheadline)
+                        .foregroundColor(RecalllQTheme.secondaryText)
+
+                    Text("RecalllQ")
+                        .font(.system(size: 34, weight: .bold))
+                        .foregroundColor(RecalllQTheme.primary)
+
+                    Text("Your intelligent study companion")
+                        .font(.subheadline)
+                        .foregroundColor(RecalllQTheme.secondaryText)
                 }
 
                 // =====================================================
-                // AI INSIGHT
+                // AI MEMORY ASSISTANT
                 // =====================================================
-                VStack(alignment: .leading, spacing: 8) {
 
-                    Text("🧠 AI Insight")
-                        .font(.headline)
+                VStack(alignment: .leading, spacing: 14) {
+
+                    HStack {
+
+                        ZStack {
+
+                            Circle()
+                                .fill(
+                                    RecalllQTheme.primary
+                                        .opacity(0.15)
+                                )
+                                .frame(
+                                    width: 48,
+                                    height: 48
+                                )
+
+                            Image(
+                                systemName:
+                                    "brain.head.profile"
+                            )
+                            .font(.title2)
+                            .foregroundColor(
+                                RecalllQTheme.primary
+                            )
+                        }
+
+                        VStack(
+                            alignment: .leading,
+                            spacing: 3
+                        ) {
+
+                            Text("AI Memory Assistant")
+                                .font(.headline)
+
+                            HStack(spacing: 5) {
+
+                                Circle()
+                                    .fill(
+                                        RecalllQTheme.success
+                                    )
+                                    .frame(
+                                        width: 8,
+                                        height: 8
+                                    )
+
+                                Text("Ready to learn")
+                                    .font(.caption)
+                                    .foregroundColor(
+                                        RecalllQTheme.success
+                                    )
+                            }
+                        }
+
+                        Spacer()
+                    }
 
                     Text(
                         viewModel.memories.isEmpty
-                        ? "No memories available yet. Start by creating notes and memories."
-                        : "Currently tracking \(viewModel.memories.count) memories across \(viewModel.allTags.count) categories."
+                        ? "Create your first note and RecalllQ will organize it into a structured memory."
+                        : "RecalllQ is tracking \(viewModel.memories.count) memories across \(viewModel.allTags.count) study categories."
                     )
-                    .font(.body)
+                    .font(.subheadline)
+                    .foregroundColor(
+                        RecalllQTheme.secondaryText
+                    )
+                    .fixedSize(
+                        horizontal: false,
+                        vertical: true
+                    )
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding()
-                .background(Color.gray.opacity(0.12))
-                .cornerRadius(12)
+                .padding(RecalllQTheme.largePadding)
+                .frame(
+                    maxWidth: .infinity,
+                    alignment: .leading
+                )
+                .background(
+                    RoundedRectangle(
+                        cornerRadius:
+                            RecalllQTheme.largeRadius
+                    )
+                    .fill(
+                        RecalllQTheme.blueBackground
+                    )
+                )
 
                 // =====================================================
-                // STATS
+                // LEARNING OVERVIEW
                 // =====================================================
-                VStack(spacing: 12) {
 
-                    HStack(spacing: 12) {
+                Text("Learning Overview")
+                    .font(.title3)
+                    .bold()
+                    .foregroundColor(
+                        RecalllQTheme.primaryText
+                    )
 
-                        StatCard(
-                            title: "Memories",
-                            value: "\(viewModel.memories.count)"
-                        )
+                // =====================================================
+                // STAT CARDS
+                // =====================================================
 
-                        StatCard(
-                            title: "Tags",
-                            value: "\(viewModel.allTags.count)"
-                        )
-                    }
+                HStack(spacing: 12) {
 
-                    HStack(spacing: 12) {
+                    StatCard(
+                        title: "Memories",
+                        value: "\(viewModel.memories.count)",
+                        valueColor: RecalllQTheme.primary
+                    )
 
-                        StatCard(
-                            title: "Suggestions",
-                            value: "\(viewModel.suggestedMemories.count)"
-                        )
+                    StatCard(
+                        title: "Categories",
+                        value: "\(viewModel.allTags.count)",
+                        valueColor: RecalllQTheme.secondary
+                    )
+                }
 
-                        StatCard(
-                            title: "Status",
-                            value: viewModel.memories.isEmpty ? "Idle" : "Active"
-                        )
-                    }
+                HStack(spacing: 12) {
+
+                    StatCard(
+                        title: "Suggestions",
+                        value: "\(viewModel.suggestedMemories.count)",
+                        valueColor: RecalllQTheme.warning
+                    )
+
+                    StatCard(
+                        title: "Status",
+                        value: viewModel.memories.isEmpty
+                            ? "Ready"
+                            : "Active",
+                        valueColor: RecalllQTheme.success
+                    )
                 }
 
                 // =====================================================
-                // PROGRESS
+                // MEMORY PROGRESS
                 // =====================================================
-                VStack(alignment: .leading, spacing: 8) {
 
-                    Text("📈 Progress")
+                VStack(alignment: .leading, spacing: 14) {
+
+                    HStack {
+
+                        VStack(
+                            alignment: .leading,
+                            spacing: 4
+                        ) {
+
+                            Text("Memory Progress")
+                                .font(.headline)
+
+                            Text(
+                                "Build your knowledge base"
+                            )
+                            .font(.caption)
+                            .foregroundColor(
+                                RecalllQTheme.secondaryText
+                            )
+                        }
+
+                        Spacer()
+
+                        Text(
+                            "\(min(viewModel.memories.count, memoryGoal))/\(memoryGoal)"
+                        )
                         .font(.headline)
+                        .bold()
+                        .foregroundColor(
+                            RecalllQTheme.primary
+                        )
+                    }
 
                     ProgressView(
-                        value: Double(min(viewModel.memories.count, memoryGoal)),
+                        value: Double(
+                            min(
+                                viewModel.memories.count,
+                                memoryGoal
+                            )
+                        ),
                         total: Double(memoryGoal)
                     )
+                    .tint(RecalllQTheme.primary)
 
-                    Text("\(viewModel.memories.count) of \(memoryGoal) memories added")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    Text(
+                        viewModel.memories.count >= memoryGoal
+                        ? "🎉 Great job! You reached your memory goal."
+                        : "\(memoryGoal - viewModel.memories.count) more memories to reach your goal."
+                    )
+                    .font(.caption)
+                    .foregroundColor(
+                        RecalllQTheme.secondaryText
+                    )
                 }
-                .padding()
-                .background(Color.blue.opacity(0.08))
-                .cornerRadius(12)
+                .padding(RecalllQTheme.largePadding)
+                .frame(
+                    maxWidth: .infinity,
+                    alignment: .leading
+                )
+                .background(
+                    RoundedRectangle(
+                        cornerRadius:
+                            RecalllQTheme.largeRadius
+                    )
+                    .fill(
+                        RecalllQTheme.greenBackground
+                    )
+                )
 
                 // =====================================================
-                // SUGGESTIONS
+                // SMART SUGGESTIONS HEADER
                 // =====================================================
-                VStack(alignment: .leading, spacing: 10) {
 
-                    Text("💡 Smart Suggestions")
-                        .font(.headline)
+                HStack {
 
-                    if viewModel.suggestedMemories.isEmpty {
+                    Text("Smart Suggestions")
+                        .font(.title3)
+                        .bold()
 
-                        Text("No recommendations yet.")
-                            .foregroundColor(.gray)
+                    Spacer()
 
-                    } else {
+                    Image(
+                        systemName: "sparkles"
+                    )
+                    .foregroundColor(
+                        RecalllQTheme.warning
+                    )
+                }
 
-                        ForEach(viewModel.suggestedMemories) { memory in
+                // =====================================================
+                // SMART SUGGESTIONS
+                // =====================================================
 
-                            VStack(alignment: .leading, spacing: 5) {
+                if viewModel.suggestedMemories.isEmpty {
+
+                    VStack(spacing: 12) {
+
+                        Image(
+                            systemName: "lightbulb"
+                        )
+                        .font(.largeTitle)
+                        .foregroundColor(
+                            RecalllQTheme.warning
+                        )
+
+                        Text("Suggestions coming soon")
+                            .font(.headline)
+
+                        Text(
+                            "Create a few memories and RecalllQ will start showing useful study suggestions."
+                        )
+                        .font(.caption)
+                        .foregroundColor(
+                            RecalllQTheme.secondaryText
+                        )
+                        .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(25)
+                    .background(
+                        RoundedRectangle(
+                            cornerRadius:
+                                RecalllQTheme.mediumRadius
+                        )
+                        .fill(
+                            RecalllQTheme.orangeBackground
+                        )
+                    )
+
+                } else {
+
+                    ForEach(
+                        viewModel.suggestedMemories
+                    ) { memory in
+
+                        VStack(
+                            alignment: .leading,
+                            spacing: 8
+                        ) {
+
+                            HStack {
+
+                                Image(
+                                    systemName: "brain"
+                                )
+                                .foregroundColor(
+                                    RecalllQTheme.secondary
+                                )
 
                                 Text(memory.title)
                                     .font(.headline)
 
-                                Text(memory.summary)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                                Spacer()
                             }
-                            .padding()
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color.gray.opacity(0.10))
-                            .cornerRadius(10)
+
+                            Text(memory.summary)
+                                .font(.caption)
+                                .foregroundColor(
+                                    RecalllQTheme.secondaryText
+                                )
+                                .lineLimit(2)
                         }
+                        .padding()
+                        .frame(
+                            maxWidth: .infinity,
+                            alignment: .leading
+                        )
+                        .background(
+                            RoundedRectangle(
+                                cornerRadius:
+                                    RecalllQTheme.mediumRadius
+                            )
+                            .fill(
+                                RecalllQTheme.cardBackground
+                            )
+                        )
+                        .shadow(
+                            color: Color.black.opacity(
+                                RecalllQTheme.shadowOpacity
+                            ),
+                            radius:
+                                RecalllQTheme.shadowRadius,
+                            x: 0,
+                            y: RecalllQTheme.shadowY
+                        )
                     }
                 }
 
                 // =====================================================
-                // NAVIGATION
+                // QUICK ACTIONS
                 // =====================================================
-                VStack(spacing: 12) {
 
-                    NavigationLink {
+                Text("Quick Actions")
+                    .font(.title3)
+                    .bold()
 
-                        NotesView()
-                            .environmentObject(appState) // ✅ FIX
+                // =====================================================
+                // CREATE NOTE
+                // =====================================================
 
-                    } label: {
+                NavigationLink(
+                    destination: NotesView()
+                        .environmentObject(appState)
+                ) {
 
-                        Text("📝 Open Notes")
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
+                    HStack(spacing: 14) {
+
+                        ZStack {
+
+                            Circle()
+                                .fill(
+                                    Color.white.opacity(0.18)
+                                )
+                                .frame(
+                                    width: 44,
+                                    height: 44
+                                )
+
+                            Image(
+                                systemName: "note.text"
+                            )
+                            .font(.title3)
+                        }
+
+                        VStack(
+                            alignment: .leading,
+                            spacing: 3
+                        ) {
+
+                            Text("Create a Note")
+                                .font(.headline)
+
+                            Text(
+                                "Capture something you want to remember"
+                            )
+                            .font(.caption)
+                            .opacity(0.9)
+                        }
+
+                        Spacer()
+
+                        Image(
+                            systemName: "chevron.right"
+                        )
                     }
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .foregroundColor(.white)
+                    .background(
+                        RoundedRectangle(
+                            cornerRadius:
+                                RecalllQTheme.mediumRadius
+                        )
+                        .fill(
+                            RecalllQTheme.primary
+                        )
+                    )
+                }
 
-                    NavigationLink {
+                // =====================================================
+                // EXPLORE MEMORIES
+                // =====================================================
 
-                        MemoriesView()
-                            .environmentObject(appState) 
+                NavigationLink(
+                    destination: MemoriesView()
+                        .environmentObject(appState)
+                ) {
 
-                    } label: {
+                    HStack(spacing: 14) {
 
-                        Text("🧠 Open Memories")
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.green)
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
+                        ZStack {
+
+                            Circle()
+                                .fill(
+                                    Color.white.opacity(0.18)
+                                )
+                                .frame(
+                                    width: 44,
+                                    height: 44
+                                )
+
+                            Image(
+                                systemName:
+                                    "brain.head.profile"
+                            )
+                            .font(.title3)
+                        }
+
+                        VStack(
+                            alignment: .leading,
+                            spacing: 3
+                        ) {
+
+                            Text("Explore Memories")
+                                .font(.headline)
+
+                            Text(
+                                "Review your organized knowledge"
+                            )
+                            .font(.caption)
+                            .opacity(0.9)
+                        }
+
+                        Spacer()
+
+                        Image(
+                            systemName: "chevron.right"
+                        )
                     }
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .foregroundColor(.white)
+                    .background(
+                        RoundedRectangle(
+                            cornerRadius:
+                                RecalllQTheme.mediumRadius
+                        )
+                        .fill(
+                            RecalllQTheme.secondary
+                        )
+                    )
                 }
             }
             .padding()
         }
+
+        // =====================================================
+        // DASHBOARD NAVIGATION
+        // =====================================================
+
         .navigationTitle("Dashboard")
+        .navigationBarTitleDisplayMode(.inline)
+
+        // =====================================================
+        // REFRESH SUGGESTIONS
+        // =====================================================
+
         .onAppear {
+
             viewModel.generateSuggestions()
         }
     }

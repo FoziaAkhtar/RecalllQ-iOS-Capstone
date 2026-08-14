@@ -12,6 +12,9 @@
 		A40E9D2B2FEDA92700869607 /* NotesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40E9D2A2FEDA92100869607 /* NotesView.swift */; };
 		A40E9D2F2FEDAAEE00869607 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40E9D2E2FEDAAE300869607 /* SearchView.swift */; };
 		A40E9D312FEDAB5100869607 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40E9D302FEDAB4500869607 /* SettingsView.swift */; };
+		A496EBB8302F5133005C604F /* RecalllQTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A496EBB7302F511C005C604F /* RecalllQTheme.swift */; };
+		A496EBC0302F54CE005C604F /* DocumentScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A496EBBF302F54BE005C604F /* DocumentScannerView.swift */; };
+		A496EBC2302F5952005C604F /* ScanReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A496EBC1302F5938005C604F /* ScanReviewView.swift */; };
 		A49E31622FEEAD5700483750 /* EditNoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A49E31612FEEAD4500483750 /* EditNoteView.swift */; };
 		A49E31782FEED2C500483750 /* MemoriesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A49E31772FEED2BB00483750 /* MemoriesView.swift */; };
 		A49E31812FEF02B800483750 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A49E31802FEF02AB00483750 /* MainTabView.swift */; };
@@ -25,6 +28,9 @@
 		A40E9D2A2FEDA92100869607 /* NotesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesView.swift; sourceTree = "<group>"; };
 		A40E9D2E2FEDAAE300869607 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		A40E9D302FEDAB4500869607 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A496EBB7302F511C005C604F /* RecalllQTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecalllQTheme.swift; sourceTree = "<group>"; };
+		A496EBBF302F54BE005C604F /* DocumentScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentScannerView.swift; sourceTree = "<group>"; };
+		A496EBC1302F5938005C604F /* ScanReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanReviewView.swift; sourceTree = "<group>"; };
 		A49E31612FEEAD4500483750 /* EditNoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditNoteView.swift; sourceTree = "<group>"; };
 		A49E31772FEED2BB00483750 /* MemoriesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoriesView.swift; sourceTree = "<group>"; };
 		A49E31802FEF02AB00483750 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
@@ -69,6 +75,9 @@
 		A40E9D212FEDA71800869607 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				A496EBC1302F5938005C604F /* ScanReviewView.swift */,
+				A496EBBF302F54BE005C604F /* DocumentScannerView.swift */,
+				A496EBB7302F511C005C604F /* RecalllQTheme.swift */,
 				A49E31852FEF07CE00483750 /* ReminderView.swift */,
 				A49E31802FEF02AB00483750 /* MainTabView.swift */,
 				A49E31612FEEAD4500483750 /* EditNoteView.swift */,
@@ -157,6 +166,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A496EBC2302F5952005C604F /* ScanReviewView.swift in Sources */,
+				A496EBB8302F5133005C604F /* RecalllQTheme.swift in Sources */,
 				A40E9D2B2FEDA92700869607 /* NotesView.swift in Sources */,
 				A40E9D252FEDA7F000869607 /* DashboardView.swift in Sources */,
 				A49E31862FEF07D700483750 /* ReminderView.swift in Sources */,
@@ -165,6 +176,7 @@
 				A49E31812FEF02B800483750 /* MainTabView.swift in Sources */,
 				A40E9D312FEDAB5100869607 /* SettingsView.swift in Sources */,
 				A49E31622FEEAD5700483750 /* EditNoteView.swift in Sources */,
+				A496EBC0302F54CE005C604F /* DocumentScannerView.swift in Sources */,
 				A40E9D232FEDA72F00869607 /* WelcomeView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -300,6 +312,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "RecalllQ uses the camera to scan your study notes and documents.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -331,6 +344,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "RecalllQ uses the camera to scan your study notes and documents.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

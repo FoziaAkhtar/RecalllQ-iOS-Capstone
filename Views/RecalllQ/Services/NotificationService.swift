@@ -6,8 +6,13 @@ import UserNotifications
 // SERVICE: NotificationService
 // =====================================================
 // PURPOSE:
-// Handles local iOS notifications (reminders)
-// Used for notes + memory alerts
+// Handles local iOS notifications for RecalllQ.
+//
+// FEATURES:
+// - Requests notification permission
+// - Checks current permission status
+// - Schedules reminders
+// - Cancels reminders
 // =====================================================
 
 final class NotificationService {
@@ -15,29 +20,70 @@ final class NotificationService {
     // =====================================================
     // REQUEST PERMISSION
     // =====================================================
+
     func requestPermission() {
 
-        UNUserNotificationCenter.current().requestAuthorization(
-            options: [.alert, .sound, .badge]
-        ) { granted, error in
+        UNUserNotificationCenter.current()
+            .requestAuthorization(
+                options: [
+                    .alert,
+                    .sound,
+                    .badge
+                ]
+            ) { granted, error in
 
-            DispatchQueue.main.async {
+                DispatchQueue.main.async {
 
-                if let error = error {
-                    print("❌ Notification permission error:", error.localizedDescription)
-                    return
+                    if let error = error {
+
+                        print(
+                            "❌ Notification permission error:",
+                            error.localizedDescription
+                        )
+
+                        return
+                    }
+
+                    if granted {
+
+                        print(
+                            "✅ Notification permission granted"
+                        )
+
+                    } else {
+
+                        print(
+                            "⚠️ Notification permission denied"
+                        )
+                    }
                 }
-
-                print(granted
-                      ? "✅ Notification permission granted"
-                      : "⚠️ Notification permission denied")
             }
-        }
+    }
+
+    // =====================================================
+    // CHECK PERMISSION
+    // =====================================================
+
+    func checkPermission(
+        completion: @escaping (Bool) -> Void
+    ) {
+
+        UNUserNotificationCenter.current()
+            .getNotificationSettings { settings in
+
+                DispatchQueue.main.async {
+
+                    completion(
+                        settings.authorizationStatus == .authorized
+                    )
+                }
+            }
     }
 
     // =====================================================
     // SCHEDULE NOTIFICATION
     // =====================================================
+
     func scheduleNotification(
         id: String = UUID().uuidString,
         title: String,
@@ -45,43 +91,131 @@ final class NotificationService {
         date: Date
     ) {
 
-        let content = UNMutableNotificationContent()
+        // -------------------------------------------------
+        // DO NOT SCHEDULE PAST DATES
+        // -------------------------------------------------
+
+        guard date > Date() else {
+
+            print(
+                "⚠️ Reminder date must be in the future."
+            )
+
+            return
+        }
+
+        // -------------------------------------------------
+        // NOTIFICATION CONTENT
+        // -------------------------------------------------
+
+        let content =
+            UNMutableNotificationContent()
+
         content.title = title
         content.body = body
         content.sound = .default
+        content.badge = 1
 
-        let trigger = UNCalendarNotificationTrigger(
-            dateMatching: Calendar.current.dateComponents(
-                [.year, .month, .day, .hour, .minute],
+        // -------------------------------------------------
+        // DATE COMPONENTS
+        // -------------------------------------------------
+
+        let components =
+            Calendar.current.dateComponents(
+                [
+                    .year,
+                    .month,
+                    .day,
+                    .hour,
+                    .minute
+                ],
                 from: date
-            ),
-            repeats: false
-        )
+            )
 
-        let request = UNNotificationRequest(
-            identifier: id,
-            content: content,
-            trigger: trigger
-        )
+        // -------------------------------------------------
+        // CREATE TRIGGER
+        // -------------------------------------------------
 
-        UNUserNotificationCenter.current().add(request) { error in
+        let trigger =
+            UNCalendarNotificationTrigger(
+                dateMatching: components,
+                repeats: false
+            )
 
-            if let error = error {
-                print("❌ Schedule notification error:", error.localizedDescription)
-            } else {
-                print("✅ Notification scheduled for \(date)")
+        // -------------------------------------------------
+        // CREATE REQUEST
+        // -------------------------------------------------
+
+        let request =
+            UNNotificationRequest(
+                identifier: id,
+                content: content,
+                trigger: trigger
+            )
+
+        // -------------------------------------------------
+        // ADD REQUEST
+        // -------------------------------------------------
+
+        UNUserNotificationCenter.current()
+            .add(request) { error in
+
+                DispatchQueue.main.async {
+
+                    if let error = error {
+
+                        print(
+                            "❌ Schedule notification error:",
+                            error.localizedDescription
+                        )
+
+                    } else {
+
+                        print(
+                            "✅ Reminder scheduled for \(date)"
+                        )
+                    }
+                }
             }
-        }
     }
 
     // =====================================================
     // CANCEL NOTIFICATION
     // =====================================================
-    func cancelNotification(id: String) {
+
+    func cancelNotification(
+        id: String
+    ) {
 
         UNUserNotificationCenter.current()
-            .removePendingNotificationRequests(withIdentifiers: [id])
+            .removePendingNotificationRequests(
+                withIdentifiers: [id]
+            )
 
-        print("🗑️ Cancelled notification: \(id)")
+        print(
+            "🗑️ Cancelled notification: \(id)"
+        )
+    }
+
+    // =====================================================
+    // SHOW PENDING REMINDERS
+    // =====================================================
+
+    func printPendingNotifications() {
+
+        UNUserNotificationCenter.current()
+            .getPendingNotificationRequests { requests in
+
+                print(
+                    "🔔 Pending reminders: \(requests.count)"
+                )
+
+                for request in requests {
+
+                    print(
+                        "➡️ \(request.identifier)"
+                    )
+                }
+            }
     }
 }

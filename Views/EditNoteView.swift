@@ -6,56 +6,94 @@ import SwiftUI
 // =====================================================
 // PURPOSE:
 // - Edit existing note safely
-// - Uses AppState (single source of truth)
+// - Uses AppState as the single source of truth
 // =====================================================
 
 struct EditNoteView: View {
 
     // =====================================================
-    // GLOBAL APP STATE 
+    // GLOBAL APP STATE
     // =====================================================
     @EnvironmentObject var appState: AppState
 
-    // NOTE
+    // =====================================================
+    // NOTE BEING EDITED
+    // =====================================================
     let note: Note
 
+    // =====================================================
     // LOCAL STATE
+    // =====================================================
     @State private var title: String
     @State private var content: String
 
+    // =====================================================
     // DISMISS
+    // =====================================================
     @Environment(\.dismiss) private var dismiss
 
+    // =====================================================
     // INIT
+    // =====================================================
     init(note: Note) {
+
         self.note = note
 
-        _title = State(initialValue: note.title)
-        _content = State(initialValue: note.content)
+        _title = State(
+            initialValue: note.title
+        )
+
+        _content = State(
+            initialValue: note.content
+        )
     }
 
+    // =====================================================
+    // BODY
+    // =====================================================
     var body: some View {
 
         VStack(spacing: 16) {
 
+            // =====================================================
             // TITLE
-            TextField("Title", text: $title)
-                .textFieldStyle(.roundedBorder)
+            // =====================================================
+            TextField(
+                "Title",
+                text: $title
+            )
+            .textFieldStyle(.roundedBorder)
 
+            // =====================================================
             // CONTENT
-            TextField("Content", text: $content)
-                .textFieldStyle(.roundedBorder)
+            // =====================================================
+            TextField(
+                "Content",
+                text: $content
+            )
+            .textFieldStyle(.roundedBorder)
 
+            // =====================================================
             // SAVE BUTTON
+            // =====================================================
             Button {
 
-                let cleanTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-                let cleanContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
+                let cleanTitle = title.trimmingCharacters(
+                    in: CharacterSet.whitespacesAndNewlines
+                )
 
-                guard !cleanTitle.isEmpty || !cleanContent.isEmpty else { return }
+                let cleanContent = content.trimmingCharacters(
+                    in: CharacterSet.whitespacesAndNewlines
+                )
+
+                // Don't save completely empty notes
+                guard !cleanTitle.isEmpty ||
+                      !cleanContent.isEmpty else {
+                    return
+                }
 
                 // =====================================================
-                // UPDATE THROUGH GLOBAL VIEWMODEL
+                // UPDATE NOTE
                 // =====================================================
                 appState.notesViewModel.updateNote(
                     id: note.id,
@@ -63,9 +101,11 @@ struct EditNoteView: View {
                     newContent: cleanContent
                 )
 
+                // Close edit screen
                 dismiss()
 
             } label: {
+
                 Text("Save Changes")
                     .frame(maxWidth: .infinity)
                     .padding()
