@@ -5,221 +5,214 @@ import SwiftUI
 // THEME: RecalllQTheme
 // =====================================================
 // PURPOSE:
-// Centralized colour and style system for RecalllQ.
+// Centralized visual styling for RecalllQ.
+//
+// Used by:
+// - DashboardView
+// - NotesView
+// - MemoriesView
+// - QuizView
+// - FlashcardsView
+// - StudySessionView
+// - SettingsView
+// - Other RecalllQ screens
 //
 // DESIGN:
-// 🔵 Blue   = Learning / Technology / Trust
-// 🟠 Orange = Motivation / Focus / Reminders
-// 🟣 Purple = Smart AI / OCR / Intelligence
-// 🟢 Green  = Success / Progress
-// 🔴 Red    = Incorrect / Error
-// ⚪ White  = Clean Learning Environment
-//
-// Used across:
-// - Dashboard
-// - Notes
-// - Memories
-// - Reminders
-// - Flashcards
-// - Quiz
-// - Buttons
-// - Cards
+// Bright, modern, lively academic / AI appearance.
 // =====================================================
 
 struct RecalllQTheme {
 
     // =====================================================
-    // PRIMARY LEARNING COLOUR
+    // MAIN COLORS
     // =====================================================
 
-    static let primary = Color(
-        red: 0.10,
-        green: 0.40,
-        blue: 0.85
-    )
+    static let primary =
+        Color(
+            red: 0.15,
+            green: 0.42,
+            blue: 0.95
+        )
+
+    static let primaryText =
+        Color.primary
+
+    static let secondaryText =
+        Color.secondary
 
     // =====================================================
-    // SECONDARY / MOTIVATION COLOUR
+    // APP BACKGROUND
     // =====================================================
+    // Light blue/lavender background gives RecalllQ
+    // a more lively AI-learning appearance.
 
-    static let secondary = Color(
-        red: 1.00,
-        green: 0.55,
-        blue: 0.10
-    )
-
-    // =====================================================
-    // SUCCESS COLOUR
-    // =====================================================
-
-    static let success = Color(
-        red: 0.15,
-        green: 0.65,
-        blue: 0.35
-    )
+    static let background =
+        Color(
+            red: 0.94,
+            green: 0.97,
+            blue: 1.00
+        )
 
     // =====================================================
-    // ERROR / INCORRECT COLOUR
-    // =====================================================
-
-    static let error = Color(
-        red: 0.90,
-        green: 0.20,
-        blue: 0.20
-    )
-
-    // =====================================================
-    // WARNING / FOCUS COLOUR
-    // =====================================================
-
-    static let warning = Color(
-        red: 1.00,
-        green: 0.60,
-        blue: 0.10
-    )
-
-    // =====================================================
-    // SMART AI / PURPLE
-    // =====================================================
-
-    static let smartPurple = Color(
-        red: 0.45,
-        green: 0.30,
-        blue: 0.80
-    )
-
-    // =====================================================
-    // TEXT
-    // =====================================================
-
-    static let primaryText = Color.primary
-
-    static let secondaryText = Color.secondary
-
-    // =====================================================
-    // BACKGROUNDS
+    // PAGE BACKGROUND
     // =====================================================
 
     static let pageBackground =
-        Color(.systemGroupedBackground)
-
-    static let cardBackground =
-        Color(.systemBackground)
+        Color(
+            red: 0.97,
+            green: 0.98,
+            blue: 1.00
+        )
 
     // =====================================================
-    // BLUE BACKGROUND
+    // CARD BACKGROUND
+    // =====================================================
+
+    static let cardBackground =
+        Color.white
+
+    // =====================================================
+    // FEATURE BACKGROUNDS
     // =====================================================
 
     static let blueBackground =
-        primary.opacity(0.08)
-
-    // =====================================================
-    // ORANGE BACKGROUND
-    // =====================================================
+        Color(
+            red: 0.88,
+            green: 0.94,
+            blue: 1.00
+        )
 
     static let orangeBackground =
-        secondary.opacity(0.10)
-
-    // =====================================================
-    // GREEN BACKGROUND
-    // =====================================================
+        Color(
+            red: 1.00,
+            green: 0.94,
+            blue: 0.84
+        )
 
     static let greenBackground =
-        success.opacity(0.10)
-
-    // =====================================================
-    // RED BACKGROUND
-    // =====================================================
-    // Used for incorrect quiz answers and errors.
+        Color(
+            red: 0.88,
+            green: 0.97,
+            blue: 0.91
+        )
 
     static let redBackground =
-        error.opacity(0.10)
-
-    // =====================================================
-    // PURPLE BACKGROUND
-    // =====================================================
+        Color(
+            red: 1.00,
+            green: 0.91,
+            blue: 0.91
+        )
 
     static let purpleBackground =
-        smartPurple.opacity(0.10)
+        Color(
+            red: 0.94,
+            green: 0.90,
+            blue: 1.00
+        )
 
     // =====================================================
-    // BUTTON COLOURS
+    // FEATURE COLORS
+    // =====================================================
+
+    static let studyOrange =
+        Color(
+            red: 1.00,
+            green: 0.55,
+            blue: 0.12
+        )
+
+    static let secondary =
+        Color(
+            red: 0.55,
+            green: 0.32,
+            blue: 0.90
+        )
+
+    static let success =
+        Color(
+            red: 0.15,
+            green: 0.70,
+            blue: 0.38
+        )
+
+    static let warning =
+        Color(
+            red: 1.00,
+            green: 0.62,
+            blue: 0.10
+        )
+
+    static let error =
+        Color(
+            red: 0.90,
+            green: 0.20,
+            blue: 0.25
+        )
+
+    static let smartPurple =
+        Color(
+            red: 0.60,
+            green: 0.35,
+            blue: 0.95
+        )
+
+    // =====================================================
+    // BUTTON COLORS
     // =====================================================
 
     static let primaryButton =
-        primary
+        Color(
+            red: 0.15,
+            green: 0.42,
+            blue: 0.95
+        )
 
     static let secondaryButton =
-        secondary
-
-    static let successButton =
-        success
-
-    static let smartButton =
-        smartPurple
+        Color(
+            red: 0.55,
+            green: 0.32,
+            blue: 0.90
+        )
 
     // =====================================================
-    // STUDY CATEGORY COLOURS
+    // PADDING
     // =====================================================
 
-    static let studyBlue = Color(
-        red: 0.12,
-        green: 0.45,
-        blue: 0.90
-    )
+    static let smallPadding: CGFloat =
+        8
 
-    static let studyOrange = Color(
-        red: 1.00,
-        green: 0.50,
-        blue: 0.08
-    )
+    static let mediumPadding: CGFloat =
+        14
 
-    static let studyPurple = Color(
-        red: 0.45,
-        green: 0.30,
-        blue: 0.80
-    )
-
-    static let studyGreen = Color(
-        red: 0.15,
-        green: 0.65,
-        blue: 0.35
-    )
-
-    // =====================================================
-    // SPACING
-    // =====================================================
-
-    static let smallPadding: CGFloat = 8
-
-    static let mediumPadding: CGFloat = 14
-
-    static let largePadding: CGFloat = 18
+    static let largePadding: CGFloat =
+        20
 
     // =====================================================
     // CORNER RADIUS
     // =====================================================
 
-    static let smallRadius: CGFloat = 8
+    static let smallRadius: CGFloat =
+        8
 
-    static let mediumRadius: CGFloat = 12
+    static let mediumRadius: CGFloat =
+        14
 
-    static let largeRadius: CGFloat = 18
+    static let largeRadius: CGFloat =
+        20
 
-    // =====================================================
-    // BUTTON RADIUS
-    // =====================================================
-
-    static let buttonRadius: CGFloat = 14
+    static let buttonRadius: CGFloat =
+        14
 
     // =====================================================
     // SHADOW
     // =====================================================
 
-    static let shadowOpacity: Double = 0.08
+    static let shadowOpacity: Double =
+        0.08
 
-    static let shadowRadius: CGFloat = 6
+    static let shadowRadius: CGFloat =
+        8
 
-    static let shadowY: CGFloat = 3
+    static let shadowY: CGFloat =
+        4
 }
-

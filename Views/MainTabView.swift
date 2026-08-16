@@ -5,15 +5,22 @@ import SwiftUI
 // MAIN TAB VIEW
 // =====================================================
 // PURPOSE:
-// - Central navigation hub for RecalllQ
-// - Provides access to all major learning features
-// - Keeps AppState available to every screen
+// Central navigation hub for RecalllQ.
 //
-// TABS:
-// 1. Dashboard
-// 2. Notes
-// 3. Memories
-// 4. Flashcards
+// TAB INDEX:
+// 0 = Dashboard
+// 1 = Notes
+// 2 = Memories
+// 3 = Flashcards
+//
+// SMART NAVIGATION:
+// Dashboard Smart Suggestion
+//        ↓
+// AppState
+//        ↓
+// selectedTab = 3
+//        ↓
+// Flashcards tab opens
 // =====================================================
 
 struct MainTabView: View {
@@ -30,7 +37,10 @@ struct MainTabView: View {
 
     var body: some View {
 
-        TabView {
+        TabView(
+            selection:
+                $appState.selectedTab
+        ) {
 
             // =================================================
             // DASHBOARD
@@ -39,7 +49,9 @@ struct MainTabView: View {
             NavigationStack {
 
                 DashboardView()
-                    .environmentObject(appState)
+                    .environmentObject(
+                        appState
+                    )
             }
             .tabItem {
 
@@ -49,6 +61,7 @@ struct MainTabView: View {
                         "brain.head.profile"
                 )
             }
+            .tag(0)
 
             // =================================================
             // NOTES
@@ -57,7 +70,9 @@ struct MainTabView: View {
             NavigationStack {
 
                 NotesView()
-                    .environmentObject(appState)
+                    .environmentObject(
+                        appState
+                    )
             }
             .tabItem {
 
@@ -67,6 +82,7 @@ struct MainTabView: View {
                         "note.text"
                 )
             }
+            .tag(1)
 
             // =================================================
             // MEMORIES
@@ -75,7 +91,9 @@ struct MainTabView: View {
             NavigationStack {
 
                 MemoriesView()
-                    .environmentObject(appState)
+                    .environmentObject(
+                        appState
+                    )
             }
             .tabItem {
 
@@ -85,6 +103,7 @@ struct MainTabView: View {
                         "sparkles"
                 )
             }
+            .tag(2)
 
             // =================================================
             // FLASHCARDS
@@ -93,7 +112,9 @@ struct MainTabView: View {
             NavigationStack {
 
                 FlashcardsView()
-                    .environmentObject(appState)
+                    .environmentObject(
+                        appState
+                    )
             }
             .tabItem {
 
@@ -103,6 +124,7 @@ struct MainTabView: View {
                         "rectangle.on.rectangle"
                 )
             }
+            .tag(3)
         }
     }
 }

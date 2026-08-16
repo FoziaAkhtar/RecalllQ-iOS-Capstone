@@ -20,26 +20,6 @@ import Combine
 // - Schedule study reminders
 // - Cancel reminders
 // - Create AI memories
-//
-// DATA FLOW:
-//
-// NotesView
-//     ↓
-// NotesViewModel
-//     ↓
-// Note
-//     ↓
-// Local Storage
-//
-// Reminder:
-//
-// NotesView
-//     ↓
-// NotesViewModel
-//     ↓
-// NotificationService
-//     ↓
-// iOS Notification
 // =====================================================
 
 final class NotesViewModel: ObservableObject {
@@ -81,7 +61,6 @@ final class NotesViewModel: ObservableObject {
     // =====================================================
 
     init() {
-
         loadNotes()
     }
 
@@ -95,33 +74,18 @@ final class NotesViewModel: ObservableObject {
         reminderDate: Date? = nil
     ) {
 
-        let cleanTitle =
-            title.trimmingCharacters(
-                in: .whitespacesAndNewlines
-            )
+        let cleanTitle = title.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
 
-        let cleanContent =
-            content.trimmingCharacters(
-                in: .whitespacesAndNewlines
-            )
+        let cleanContent = content.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
 
-        // =================================================
-        // VALIDATION
-        // =================================================
-
-        guard
-            !cleanTitle.isEmpty ||
-            !cleanContent.isEmpty
-        else {
-
+        guard !cleanTitle.isEmpty || !cleanContent.isEmpty else {
             print("❌ Cannot create empty note.")
-
             return
         }
-
-        // =================================================
-        // CREATE NOTE
-        // =================================================
 
         let note = Note(
             title: cleanTitle,
@@ -130,45 +94,26 @@ final class NotesViewModel: ObservableObject {
             reminderDate: reminderDate
         )
 
-        // =================================================
-        // ADD TO NOTES
-        // =================================================
-
-        notes.insert(
-            note,
-            at: 0
-        )
-
-        // =================================================
-        // SAVE
-        // =================================================
+        notes.insert(note, at: 0)
 
         saveNotes()
 
-        // =================================================
-        // CREATE AI MEMORY
-        // =================================================
-
+        // Create AI memory
         appState?.createMemoryFromNote(
             title: cleanTitle,
             content: cleanContent
         )
 
-        // =================================================
-        // REMINDER
-        // =================================================
-
-        if let date = reminderDate {
+        // Schedule reminder
+        if let date = reminderDate,
+           date > Date() {
 
             notificationService.requestPermission()
 
             notificationService.scheduleNotification(
-                id: notificationID(
-                    for: note
-                ),
+                id: notificationID(for: note),
                 title: "📚 RecalllQ Study Reminder",
-                body:
-                    cleanTitle.isEmpty
+                body: cleanTitle.isEmpty
                     ? "Time to review your study notes."
                     : cleanTitle,
                 date: date
@@ -187,54 +132,50 @@ final class NotesViewModel: ObservableObject {
     func updateNote(
         id: UUID,
         newTitle: String,
-        newContent: String
+        newContent: String,
+        reminderDate: Date?
     ) {
 
-        guard let index =
-            notes.firstIndex(
-                where: {
-                    $0.id == id
-                }
-            )
-        else {
+        guard let index = notes.firstIndex(
+            where: { $0.id == id }
+        ) else {
 
             print("❌ Note not found.")
-
             return
         }
 
-        let cleanTitle =
-            newTitle.trimmingCharacters(
-                in: .whitespacesAndNewlines
-            )
+        let cleanTitle = newTitle.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
 
-        let cleanContent =
-            newContent.trimmingCharacters(
-                in: .whitespacesAndNewlines
-            )
+        let cleanContent = newContent.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
 
-        guard
-            !cleanTitle.isEmpty ||
-            !cleanContent.isEmpty
-        else {
+        guard !cleanTitle.isEmpty || !cleanContent.isEmpty else {
 
             print("❌ Cannot save an empty note.")
-
             return
         }
 
         // =================================================
-        // UPDATE
+        // CANCEL OLD REMINDER
         // =================================================
 
-        notes[index].title =
-            cleanTitle
+        notificationService.cancelNotification(
+            id: notificationID(
+                for: notes[index]
+            )
+        )
 
-        notes[index].content =
-            cleanContent
+        // =================================================
+        // UPDATE NOTE
+        // =================================================
 
-        notes[index].updatedAt =
-            Date()
+        notes[index].title = cleanTitle
+        notes[index].content = cleanContent
+        notes[index].reminderDate = reminderDate
+        notes[index].updatedAt = Date()
 
         // =================================================
         // SAVE
@@ -242,68 +183,69 @@ final class NotesViewModel: ObservableObject {
 
         saveNotes()
 
-        print("✏️ Note updated.")
+        // =================================================
+        // SCHEDULE NEW REMINDER
+        // =================================================
+
+        if let date = reminderDate,
+           date > Date() {
+
+            notificationService.requestPermission()
+
+            notificationService.scheduleNotification(
+                id: notificationID(
+                    for: notes[index]
+                ),
+                title: "📚 RecalllQ Study Reminder",
+                body: cleanTitle.isEmpty
+                    ? "Time to review your study notes."
+                    : cleanTitle,
+                date: date
+            )
+        }
+
+        // =================================================
+        // UPDATE AI MEMORY
+        // =================================================
+
+        appState?.createMemoryFromNote(
+            title: cleanTitle,
+            content: cleanContent
+        )
+
+        print("✏️ Note updated successfully.")
     }
 
     // =====================================================
     // DELETE NOTE
     // =====================================================
-    // Deletes one note.
-    //
-    // The deleted note is temporarily stored so the user
-    // can use Undo.
-    // =====================================================
 
-    func deleteNote(
-        id: UUID
-    ) {
+    func deleteNote(id: UUID) {
 
-        guard let index =
-            notes.firstIndex(
-                where: {
-                    $0.id == id
-                }
-            )
-        else {
+        guard let index = notes.firstIndex(
+            where: { $0.id == id }
+        ) else {
 
             print("❌ Could not delete note.")
-            print("Note ID not found.")
-
             return
         }
 
-        // =================================================
-        // SAVE NOTE FOR UNDO
-        // =================================================
+        let deletedNote = notes[index]
 
-        let deletedNote =
-            notes[index]
+        // Save for undo
+        lastDeletedNote = deletedNote
 
-        lastDeletedNote =
-            deletedNote
-
-        // =================================================
-        // CANCEL REMINDER
-        // =================================================
-
+        // Cancel reminder
         notificationService.cancelNotification(
             id: notificationID(
                 for: deletedNote
             )
         )
 
-        // =================================================
-        // REMOVE NOTE
-        // =================================================
+        // Remove note
+        notes.remove(at: index)
 
-        notes.remove(
-            at: index
-        )
-
-        // =================================================
-        // SAVE UPDATED NOTES
-        // =================================================
-
+        // Save
         saveNotes()
 
         print("🗑️ Note deleted.")
@@ -317,43 +259,20 @@ final class NotesViewModel: ObservableObject {
 
     func undoDelete() {
 
-        guard let note =
-            lastDeletedNote
-        else {
+        guard let note = lastDeletedNote else {
 
             print("ℹ️ Nothing to restore.")
-
             return
         }
 
-        // =================================================
-        // RESTORE NOTE
-        // =================================================
+        notes.insert(note, at: 0)
 
-        notes.insert(
-            note,
-            at: 0
-        )
-
-        // =================================================
-        // CLEAR UNDO
-        // =================================================
-
-        lastDeletedNote =
-            nil
-
-        // =================================================
-        // SAVE
-        // =================================================
+        lastDeletedNote = nil
 
         saveNotes()
 
-        // =================================================
-        // RESTORE REMINDER
-        // =================================================
-
-        if let date =
-            note.reminderDate,
+        // Restore reminder
+        if let date = note.reminderDate,
            date > Date() {
 
             notificationService.requestPermission()
@@ -362,10 +281,8 @@ final class NotesViewModel: ObservableObject {
                 id: notificationID(
                     for: note
                 ),
-                title:
-                    "📚 RecalllQ Study Reminder",
-                body:
-                    note.title.isEmpty
+                title: "📚 RecalllQ Study Reminder",
+                body: note.title.isEmpty
                     ? "Time to review your study notes."
                     : note.title,
                 date: date
@@ -373,7 +290,6 @@ final class NotesViewModel: ObservableObject {
         }
 
         print("↩️ Note restored.")
-        print("Restored: \(note.title)")
     }
 
     // =====================================================
@@ -389,27 +305,19 @@ final class NotesViewModel: ObservableObject {
     // PIN / UNPIN
     // =====================================================
 
-    func togglePin(
-        id: UUID
-    ) {
+    func togglePin(id: UUID) {
 
-        guard let index =
-            notes.firstIndex(
-                where: {
-                    $0.id == id
-                }
-            )
-        else {
+        guard let index = notes.firstIndex(
+            where: { $0.id == id }
+        ) else {
 
             print("❌ Note not found.")
-
             return
         }
 
         notes[index].isPinned.toggle()
 
-        notes[index].updatedAt =
-            Date()
+        notes[index].updatedAt = Date()
 
         saveNotes()
 
@@ -423,12 +331,8 @@ final class NotesViewModel: ObservableObject {
     // =====================================================
     // DELETE ALL NOTES
     // =====================================================
-    // Useful for testing.
-    // =====================================================
 
     func deleteAllNotes() {
-
-        // Cancel all reminders first.
 
         for note in notes {
 
@@ -439,15 +343,9 @@ final class NotesViewModel: ObservableObject {
             )
         }
 
-        // Remove all notes.
-
         notes.removeAll()
 
-        // Clear undo.
-
         lastDeletedNote = nil
-
-        // Save empty array.
 
         saveNotes()
 
@@ -460,51 +358,37 @@ final class NotesViewModel: ObservableObject {
 
     var filteredNotes: [Note] {
 
-        let query =
-            searchText.trimmingCharacters(
-                in: .whitespacesAndNewlines
-            )
+        let query = searchText.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
 
         let filtered: [Note]
 
         if query.isEmpty {
 
-            filtered =
-                notes
+            filtered = notes
 
         } else {
 
-            filtered =
-                notes.filter {
+            filtered = notes.filter {
 
-                    $0.title
-                        .localizedCaseInsensitiveContains(
-                            query
-                        )
-                    ||
-                    $0.content
-                        .localizedCaseInsensitiveContains(
-                            query
-                        )
-                }
+                $0.title.localizedCaseInsensitiveContains(query)
+                ||
+                $0.content.localizedCaseInsensitiveContains(query)
+            }
         }
 
-        // =================================================
-        // PINNED NOTES FIRST
-        // =================================================
+        // Pinned notes first
+        // Newest updated notes second
 
         return filtered.sorted {
 
             if $0.isPinned != $1.isPinned {
 
-                return $0.isPinned &&
-                    !$1.isPinned
+                return $0.isPinned && !$1.isPinned
             }
 
-            // Newest updated note first.
-
-            return $0.updatedAt >
-                $1.updatedAt
+            return $0.updatedAt > $1.updatedAt
         }
     }
 
@@ -513,7 +397,6 @@ final class NotesViewModel: ObservableObject {
     // =====================================================
 
     var totalNotes: Int {
-
         notes.count
     }
 
@@ -558,19 +441,14 @@ final class NotesViewModel: ObservableObject {
 
         do {
 
-            let data =
-                try JSONEncoder().encode(
-                    notes
-                )
+            let data = try JSONEncoder().encode(notes)
 
             UserDefaults.standard.set(
                 data,
                 forKey: storageKey
             )
 
-            print(
-                "💾 Saved \(notes.count) notes."
-            )
+            print("💾 Saved \(notes.count) notes.")
 
         } catch {
 
@@ -586,27 +464,20 @@ final class NotesViewModel: ObservableObject {
 
     private func loadNotes() {
 
-        guard
-            let data =
-                UserDefaults.standard.data(
-                    forKey: storageKey
-                )
-        else {
+        guard let data = UserDefaults.standard.data(
+            forKey: storageKey
+        ) else {
 
-            print(
-                "ℹ️ No saved notes found."
-            )
-
+            print("ℹ️ No saved notes found.")
             return
         }
 
         do {
 
-            notes =
-                try JSONDecoder().decode(
-                    [Note].self,
-                    from: data
-                )
+            notes = try JSONDecoder().decode(
+                [Note].self,
+                from: data
+            )
 
             print(
                 "✅ Loaded \(notes.count) notes."

@@ -10,22 +10,23 @@ import VisionKit
 //
 // FEATURES:
 // - Search notes
-// - Create notes manually
+// - Create notes
+// - Edit notes
 // - Set study reminders
 // - Scan study material
 // - OCR text extraction
 // - Automatic Memory creation
 // - Pin / unpin notes
-// - Visible delete button
+// - Edit button
+// - Delete button
 // - Swipe-to-delete
 // - Undo delete
-// - Safe scanner availability handling
 // =====================================================
 
 struct NotesView: View {
 
     // =====================================================
-    // GLOBAL APP STATE
+    // APP STATE
     // =====================================================
 
     @EnvironmentObject var appState: AppState
@@ -63,33 +64,24 @@ struct NotesView: View {
     @State private var showUndo = false
 
     // =====================================================
+    // EDIT
+    // =====================================================
+
+    @State private var selectedNoteForEditing: Note?
+
+    // =====================================================
     // SCANNER
     // =====================================================
 
     @State private var showScanner = false
+    @State private var isProcessingScan = false
 
     // =====================================================
     // OCR
     // =====================================================
 
-    @State private var isProcessingScan = false
-
-    // =====================================================
-    // SCANNED TEXT
-    // =====================================================
-
     @State private var scannedText = ""
-
-    // =====================================================
-    // OCR REVIEW
-    // =====================================================
-
     @State private var showScanReview = false
-
-    // =====================================================
-    // SCANNER ALERT
-    // =====================================================
-
     @State private var showScannerUnavailable = false
 
     // =====================================================
@@ -106,20 +98,16 @@ struct NotesView: View {
 
             HStack(spacing: 10) {
 
-                Image(
-                    systemName:
-                        "magnifyingglass"
-                )
-                .foregroundColor(
-                    RecalllQTheme.primary
-                )
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(
+                        RecalllQTheme.primary
+                    )
 
                 TextField(
                     "Search your study notes...",
-                    text:
-                        $appState
-                            .notesViewModel
-                            .searchText
+                    text: $appState
+                        .notesViewModel
+                        .searchText
                 )
 
                 if !appState
@@ -139,9 +127,7 @@ struct NotesView: View {
                             systemName:
                                 "xmark.circle.fill"
                         )
-                        .foregroundColor(
-                            .secondary
-                        )
+                        .foregroundColor(.secondary)
                     }
                 }
             }
@@ -179,9 +165,9 @@ struct NotesView: View {
                     spacing: 18
                 ) {
 
-                    // =============================================
-                    // CREATE NOTE SECTION
-                    // =============================================
+                    // =================================================
+                    // CREATE NOTE
+                    // =================================================
 
                     VStack(
                         alignment: .leading,
@@ -217,10 +203,8 @@ struct NotesView: View {
                                 spacing: 3
                             ) {
 
-                                Text(
-                                    "Create Study Note"
-                                )
-                                .font(.headline)
+                                Text("Create Study Note")
+                                    .font(.headline)
 
                                 Text(
                                     "Capture something you want to remember"
@@ -234,9 +218,9 @@ struct NotesView: View {
                             Spacer()
                         }
 
-                        // =========================================
+                        // =================================================
                         // TITLE
-                        // =========================================
+                        // =================================================
 
                         TextField(
                             "Note title",
@@ -249,17 +233,20 @@ struct NotesView: View {
                                 cornerRadius:
                                     RecalllQTheme.smallRadius
                             )
+                            // FIX:
+                            // pageBackground does not exist
+                            // in RecalllQTheme.
                             .fill(
-                                RecalllQTheme.pageBackground
+                                RecalllQTheme.cardBackground
                             )
                         )
                         .focused(
                             $isInputFocused
                         )
 
-                        // =========================================
+                        // =================================================
                         // CONTENT
-                        // =========================================
+                        // =================================================
 
                         TextField(
                             "What did you learn?",
@@ -275,16 +262,16 @@ struct NotesView: View {
                                     RecalllQTheme.smallRadius
                             )
                             .fill(
-                                RecalllQTheme.pageBackground
+                                RecalllQTheme.cardBackground
                             )
                         )
                         .focused(
                             $isInputFocused
                         )
 
-                        // =========================================
+                        // =================================================
                         // REMINDER
-                        // =========================================
+                        // =================================================
 
                         VStack(
                             alignment: .leading,
@@ -292,13 +279,10 @@ struct NotesView: View {
                         ) {
 
                             Toggle(
-                                isOn:
-                                    $addReminder
+                                isOn: $addReminder
                             ) {
 
-                                HStack(
-                                    spacing: 10
-                                ) {
+                                HStack(spacing: 10) {
 
                                     Image(
                                         systemName:
@@ -343,8 +327,7 @@ struct NotesView: View {
                                     "Review at",
                                     selection:
                                         $reminderDate,
-                                    in:
-                                        Date()...,
+                                    in: Date()...,
                                     displayedComponents: [
                                         .date,
                                         .hourAndMinute
@@ -353,14 +336,8 @@ struct NotesView: View {
                                 .font(
                                     .subheadline
                                 )
-                                .padding(
-                                    .horizontal,
-                                    8
-                                )
-                                .padding(
-                                    .vertical,
-                                    6
-                                )
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 6)
                                 .background(
                                     RoundedRectangle(
                                         cornerRadius:
@@ -372,14 +349,11 @@ struct NotesView: View {
                                 )
                             }
                         }
-                        .padding(
-                            .vertical,
-                            4
-                        )
+                        .padding(.vertical, 4)
 
-                        // =========================================
-                        // ADD NOTE BUTTON
-                        // =========================================
+                        // =================================================
+                        // ADD NOTE
+                        // =================================================
 
                         Button {
 
@@ -394,12 +368,8 @@ struct NotesView: View {
                                         "plus.circle.fill"
                                 )
 
-                                Text(
-                                    "Add Note"
-                                )
-                                .font(
-                                    .headline
-                                )
+                                Text("Add Note")
+                                    .font(.headline)
 
                                 Spacer()
 
@@ -410,51 +380,42 @@ struct NotesView: View {
                             }
                             .padding()
                             .frame(
-                                maxWidth:
-                                    .infinity
+                                maxWidth: .infinity
                             )
-                            .foregroundColor(
-                                .white
-                            )
+                            .foregroundColor(.white)
                             .background(
                                 RoundedRectangle(
                                     cornerRadius:
                                         RecalllQTheme.buttonRadius
                                 )
+                                // FIX:
+                                // primaryButton does not exist.
                                 .fill(
-                                    RecalllQTheme.primaryButton
+                                    RecalllQTheme.primary
                                 )
                             )
                         }
                         .disabled(
-                            title
-                                .trimmingCharacters(
-                                    in:
-                                        .whitespacesAndNewlines
-                                )
-                                .isEmpty
+                            title.trimmingCharacters(
+                                in:
+                                    .whitespacesAndNewlines
+                            ).isEmpty
                             &&
-                            content
-                                .trimmingCharacters(
-                                    in:
-                                        .whitespacesAndNewlines
-                                )
-                                .isEmpty
+                            content.trimmingCharacters(
+                                in:
+                                    .whitespacesAndNewlines
+                            ).isEmpty
                         )
                         .opacity(
-                            title
-                                .trimmingCharacters(
-                                    in:
-                                        .whitespacesAndNewlines
-                                )
-                                .isEmpty
+                            title.trimmingCharacters(
+                                in:
+                                    .whitespacesAndNewlines
+                            ).isEmpty
                             &&
-                            content
-                                .trimmingCharacters(
-                                    in:
-                                        .whitespacesAndNewlines
-                                )
-                                .isEmpty
+                            content.trimmingCharacters(
+                                in:
+                                    .whitespacesAndNewlines
+                            ).isEmpty
                             ? 0.55
                             : 1.0
                         )
@@ -463,10 +424,8 @@ struct NotesView: View {
                         RecalllQTheme.largePadding
                     )
                     .frame(
-                        maxWidth:
-                            .infinity,
-                        alignment:
-                            .leading
+                        maxWidth: .infinity,
+                        alignment: .leading
                     )
                     .background(
                         RoundedRectangle(
@@ -489,9 +448,9 @@ struct NotesView: View {
                             RecalllQTheme.shadowY
                     )
 
-                    // =============================================
+                    // =================================================
                     // SCAN STUDY MATERIAL
-                    // =============================================
+                    // =================================================
 
                     Button {
 
@@ -499,16 +458,13 @@ struct NotesView: View {
 
                     } label: {
 
-                        HStack(
-                            spacing: 14
-                        ) {
+                        HStack(spacing: 14) {
 
                             ZStack {
 
                                 Circle()
                                     .fill(
-                                        Color.white
-                                            .opacity(0.18)
+                                        Color.white.opacity(0.18)
                                     )
                                     .frame(
                                         width: 48,
@@ -519,9 +475,7 @@ struct NotesView: View {
                                     systemName:
                                         "doc.viewfinder"
                                 )
-                                .font(
-                                    .title2
-                                )
+                                .font(.title2)
                             }
 
                             VStack(
@@ -532,16 +486,12 @@ struct NotesView: View {
                                 Text(
                                     "Scan Study Material"
                                 )
-                                .font(
-                                    .headline
-                                )
+                                .font(.headline)
 
                                 Text(
                                     "Use OCR to turn pages into notes"
                                 )
-                                .font(
-                                    .caption
-                                )
+                                .font(.caption)
                                 .opacity(0.9)
                             }
 
@@ -551,38 +501,33 @@ struct NotesView: View {
                                 systemName:
                                     "camera.fill"
                             )
-                            .font(
-                                .title3
-                            )
+                            .font(.title3)
                         }
                         .padding()
                         .frame(
-                            maxWidth:
-                                .infinity
+                            maxWidth: .infinity
                         )
-                        .foregroundColor(
-                            .white
-                        )
+                        .foregroundColor(.white)
                         .background(
                             RoundedRectangle(
                                 cornerRadius:
                                     RecalllQTheme.buttonRadius
                             )
+                            // FIX:
+                            // secondaryButton may not exist.
                             .fill(
-                                RecalllQTheme.secondaryButton
+                                RecalllQTheme.secondary
                             )
                         )
                     }
 
-                    // =============================================
+                    // =================================================
                     // OCR PROCESSING
-                    // =============================================
+                    // =================================================
 
                     if isProcessingScan {
 
-                        HStack(
-                            spacing: 12
-                        ) {
+                        HStack(spacing: 12) {
 
                             ProgressView()
                                 .tint(
@@ -597,17 +542,13 @@ struct NotesView: View {
                                 Text(
                                     "Reading study material..."
                                 )
-                                .font(
-                                    .subheadline
-                                )
+                                .font(.subheadline)
                                 .bold()
 
                                 Text(
                                     "RecalllQ is extracting the text"
                                 )
-                                .font(
-                                    .caption
-                                )
+                                .font(.caption)
                                 .foregroundColor(
                                     RecalllQTheme.secondaryText
                                 )
@@ -627,9 +568,9 @@ struct NotesView: View {
                         )
                     }
 
-                    // =============================================
+                    // =================================================
                     // NOTES HEADER
-                    // =============================================
+                    // =================================================
 
                     HStack {
 
@@ -638,20 +579,14 @@ struct NotesView: View {
                             spacing: 3
                         ) {
 
-                            Text(
-                                "My Study Notes"
-                            )
-                            .font(
-                                .title3
-                            )
-                            .bold()
+                            Text("My Study Notes")
+                                .font(.title3)
+                                .bold()
 
                             Text(
                                 "\(appState.notesViewModel.filteredNotes.count) notes"
                             )
-                            .font(
-                                .caption
-                            )
+                            .font(.caption)
                             .foregroundColor(
                                 RecalllQTheme.secondaryText
                             )
@@ -668,18 +603,16 @@ struct NotesView: View {
                         )
                     }
 
-                    // =============================================
+                    // =================================================
                     // EMPTY STATE
-                    // =============================================
+                    // =================================================
 
                     if appState
                         .notesViewModel
                         .filteredNotes
                         .isEmpty {
 
-                        VStack(
-                            spacing: 14
-                        ) {
+                        VStack(spacing: 14) {
 
                             ZStack {
 
@@ -697,9 +630,7 @@ struct NotesView: View {
                                         "note.text"
                                 )
                                 .font(
-                                    .system(
-                                        size: 30
-                                    )
+                                    .system(size: 30)
                                 )
                                 .foregroundColor(
                                     RecalllQTheme.primary
@@ -714,9 +645,7 @@ struct NotesView: View {
                                 ? "No study notes yet"
                                 : "No notes found"
                             )
-                            .font(
-                                .headline
-                            )
+                            .font(.headline)
 
                             Text(
                                 appState
@@ -726,9 +655,7 @@ struct NotesView: View {
                                 ? "Create your first note and RecalllQ will turn it into a smart memory."
                                 : "Try a different search term."
                             )
-                            .font(
-                                .caption
-                            )
+                            .font(.caption)
                             .foregroundColor(
                                 RecalllQTheme.secondaryText
                             )
@@ -737,8 +664,7 @@ struct NotesView: View {
                             )
                         }
                         .frame(
-                            maxWidth:
-                                .infinity
+                            maxWidth: .infinity
                         )
                         .padding(28)
                         .background(
@@ -753,9 +679,9 @@ struct NotesView: View {
 
                     } else {
 
-                        // =========================================
+                        // =================================================
                         // NOTES
-                        // =========================================
+                        // =================================================
 
                         ForEach(
                             appState
@@ -763,9 +689,7 @@ struct NotesView: View {
                                 .filteredNotes
                         ) { note in
 
-                            noteCard(
-                                note
-                            )
+                            noteCard(note)
                         }
                     }
                 }
@@ -778,31 +702,21 @@ struct NotesView: View {
 
             if showUndo {
 
-                HStack(
-                    spacing: 10
-                ) {
+                HStack(spacing: 10) {
 
                     Image(
                         systemName:
                             "trash.fill"
                     )
-                    .foregroundColor(
-                        .red
-                    )
+                    .foregroundColor(.red)
 
-                    Text(
-                        "Note deleted"
-                    )
-                    .font(
-                        .subheadline
-                    )
-                    .bold()
+                    Text("Note deleted")
+                        .font(.subheadline)
+                        .bold()
 
                     Spacer()
 
-                    Button(
-                        "Undo"
-                    ) {
+                    Button("Undo") {
 
                         appState
                             .notesViewModel
@@ -836,20 +750,39 @@ struct NotesView: View {
             }
         }
 
-        // =====================================================
+        // =================================================
         // NAVIGATION
-        // =====================================================
+        // =================================================
 
-        .navigationTitle(
-            "Study Notes"
-        )
-        .navigationBarTitleDisplayMode(
-            .inline
-        )
+        .navigationTitle("Study Notes")
+        .navigationBarTitleDisplayMode(.inline)
 
-        // =====================================================
+        // =================================================
+        // EDIT SHEET
+        // =================================================
+
+        .sheet(
+            item: $selectedNoteForEditing
+        ) { note in
+
+            EditNoteView(
+                note: note
+            ) { newTitle, newContent, newReminderDate in
+
+                appState
+                    .notesViewModel
+                    .updateNote(
+                        id: note.id,
+                        newTitle: newTitle,
+                        newContent: newContent,
+                        reminderDate: newReminderDate
+                    )
+            }
+        }
+
+        // =================================================
         // DOCUMENT SCANNER
-        // =====================================================
+        // =================================================
 
         .sheet(
             isPresented:
@@ -866,9 +799,9 @@ struct NotesView: View {
             }
         }
 
-        // =====================================================
+        // =================================================
         // OCR REVIEW
-        // =====================================================
+        // =================================================
 
         .sheet(
             isPresented:
@@ -887,9 +820,9 @@ struct NotesView: View {
             }
         }
 
-        // =====================================================
+        // =================================================
         // SCANNER ALERT
-        // =====================================================
+        // =================================================
 
         .alert(
             "Camera Scanner Unavailable",
@@ -897,12 +830,9 @@ struct NotesView: View {
                 $showScannerUnavailable
         ) {
 
-            Button(
-                "OK"
-            ) {
+            Button("OK") {
 
-                showScannerUnavailable =
-                    false
+                showScannerUnavailable = false
             }
 
         } message: {
@@ -950,16 +880,12 @@ struct NotesView: View {
                     ? "Untitled Note"
                     : note.title
                 )
-                .font(
-                    .headline
-                )
+                .font(.headline)
                 .lineLimit(1)
 
                 Spacer()
 
-                // =============================================
-                // REMINDER ICON
-                // =============================================
+                // REMINDER
 
                 if note.reminderDate != nil {
 
@@ -972,17 +898,39 @@ struct NotesView: View {
                     )
                 }
 
-                // =============================================
-                // PIN BUTTON
-                // =============================================
+                // =================================================
+                // EDIT
+                // =================================================
+
+                Button {
+
+                    selectedNoteForEditing = note
+
+                } label: {
+
+                    Image(
+                        systemName:
+                            "pencil"
+                    )
+                    .foregroundColor(
+                        RecalllQTheme.primary
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(
+                    "Edit note"
+                )
+
+                // =================================================
+                // PIN
+                // =================================================
 
                 Button {
 
                     appState
                         .notesViewModel
                         .togglePin(
-                            id:
-                                note.id
+                            id: note.id
                         )
 
                 } label: {
@@ -999,24 +947,20 @@ struct NotesView: View {
                         : RecalllQTheme.secondaryText
                     )
                 }
-                .buttonStyle(
-                    .plain
-                )
+                .buttonStyle(.plain)
                 .accessibilityLabel(
                     note.isPinned
                     ? "Unpin note"
                     : "Pin note"
                 )
 
-                // =============================================
-                // DELETE BUTTON
-                // =============================================
+                // =================================================
+                // DELETE
+                // =================================================
 
                 Button {
 
-                    deleteNote(
-                        note
-                    )
+                    deleteNote(note)
 
                 } label: {
 
@@ -1024,13 +968,9 @@ struct NotesView: View {
                         systemName:
                             "trash.fill"
                     )
-                    .foregroundColor(
-                        .red
-                    )
+                    .foregroundColor(.red)
                 }
-                .buttonStyle(
-                    .plain
-                )
+                .buttonStyle(.plain)
                 .accessibilityLabel(
                     "Delete note"
                 )
@@ -1045,9 +985,7 @@ struct NotesView: View {
                 ? "No content"
                 : note.content
             )
-            .font(
-                .subheadline
-            )
+            .font(.subheadline)
             .foregroundColor(
                 RecalllQTheme.secondaryText
             )
@@ -1060,22 +998,16 @@ struct NotesView: View {
             if let reminder =
                 note.formattedReminder {
 
-                HStack(
-                    spacing: 6
-                ) {
+                HStack(spacing: 6) {
 
                     Image(
                         systemName:
                             "clock.fill"
                     )
 
-                    Text(
-                        reminder
-                    )
+                    Text(reminder)
                 }
-                .font(
-                    .caption
-                )
+                .font(.caption)
                 .foregroundColor(
                     RecalllQTheme.secondary
                 )
@@ -1096,7 +1028,7 @@ struct NotesView: View {
             }
 
             // =================================================
-            // CARD ACTION HINT
+            // ACTION HINT
             // =================================================
 
             HStack {
@@ -1104,11 +1036,9 @@ struct NotesView: View {
                 Spacer()
 
                 Text(
-                    "Pin or delete this note"
+                    "Edit • Pin • Delete"
                 )
-                .font(
-                    .caption2
-                )
+                .font(.caption2)
                 .foregroundColor(
                     RecalllQTheme.secondaryText
                 )
@@ -1116,10 +1046,8 @@ struct NotesView: View {
         }
         .padding()
         .frame(
-            maxWidth:
-                .infinity,
-            alignment:
-                .leading
+            maxWidth: .infinity,
+            alignment: .leading
         )
         .background(
             RoundedRectangle(
@@ -1155,18 +1083,13 @@ struct NotesView: View {
         )
         .swipeActions {
 
-            // =================================================
             // SWIPE DELETE
-            // =================================================
 
             Button(
-                role:
-                    .destructive
+                role: .destructive
             ) {
 
-                deleteNote(
-                    note
-                )
+                deleteNote(note)
 
             } label: {
 
@@ -1177,17 +1100,14 @@ struct NotesView: View {
                 )
             }
 
-            // =================================================
             // SWIPE PIN
-            // =================================================
 
             Button {
 
                 appState
                     .notesViewModel
                     .togglePin(
-                        id:
-                            note.id
+                        id: note.id
                     )
 
             } label: {
@@ -1219,23 +1139,13 @@ struct NotesView: View {
         appState
             .notesViewModel
             .deleteNote(
-                id:
-                    note.id
+                id: note.id
             )
-
-        // =================================================
-        // SHOW UNDO
-        // =================================================
 
         showUndo = true
 
-        // =================================================
-        // HIDE UNDO AFTER 3 SECONDS
-        // =================================================
-
         DispatchQueue.main.asyncAfter(
-            deadline:
-                .now() + 3
+            deadline: .now() + 3
         ) {
 
             showUndo = false
@@ -1253,18 +1163,16 @@ struct NotesView: View {
                 .isSupported
         else {
 
-            showScannerUnavailable =
-                true
+            showScannerUnavailable = true
 
             print(
-                "⚠️ Document camera is not available on this device."
+                "⚠️ Document camera is not available."
             )
 
             return
         }
 
-        showScanner =
-            true
+        showScanner = true
     }
 
     // =====================================================
@@ -1275,67 +1183,44 @@ struct NotesView: View {
 
         let cleanTitle =
             title.trimmingCharacters(
-                in:
-                    .whitespacesAndNewlines
+                in: .whitespacesAndNewlines
             )
 
         let cleanContent =
             content.trimmingCharacters(
-                in:
-                    .whitespacesAndNewlines
+                in: .whitespacesAndNewlines
             )
-
-        // =================================================
-        // VALIDATION
-        // =================================================
 
         guard
             !cleanTitle.isEmpty ||
             !cleanContent.isEmpty
         else {
-
             return
         }
-
-        // =================================================
-        // SAVE NOTE
-        // =================================================
 
         appState
             .notesViewModel
             .addNote(
-                title:
-                    cleanTitle,
-                content:
-                    cleanContent,
+                title: cleanTitle,
+                content: cleanContent,
                 reminderDate:
                     addReminder
                     ? reminderDate
                     : nil
             )
 
-        // =================================================
-        // RESET FORM
-        // =================================================
-
         title = ""
-
         content = ""
-
         addReminder = false
 
         reminderDate =
             Calendar.current.date(
-                byAdding:
-                    .minute,
-                value:
-                    5,
-                to:
-                    Date()
+                byAdding: .minute,
+                value: 5,
+                to: Date()
             ) ?? Date()
 
-        isInputFocused =
-            false
+        isInputFocused = false
     }
 
     // =====================================================
@@ -1346,71 +1231,55 @@ struct NotesView: View {
         _ images: [UIImage]
     ) {
 
-        guard
-            !images.isEmpty
-        else {
-
+        guard !images.isEmpty else {
             return
         }
 
-        isProcessingScan =
-            true
+        isProcessingScan = true
 
-        let ocrService =
-            OCRService()
+        let ocrService = OCRService()
 
-        var results:
-            [String] = []
+        let group = DispatchGroup()
 
-        let group =
-            DispatchGroup()
+        var results = Array(
+            repeating: "",
+            count: images.count
+        )
 
-        // =================================================
-        // OCR EACH PAGE
-        // =================================================
-
-        for image in images {
+        for (index, image) in images.enumerated() {
 
             group.enter()
 
             ocrService.recognizeText(
-                from:
-                    image
+                from: image
             ) { text in
 
-                if !text.isEmpty {
-
-                    results.append(
-                        text
-                    )
-                }
+                results[index] = text
 
                 group.leave()
             }
         }
 
-        // =================================================
-        // WAIT FOR OCR
-        // =================================================
+        group.notify(queue: .main) {
 
-        group.notify(
-            queue:
-                .main
-        ) {
-
-            isProcessingScan =
-                false
+            isProcessingScan = false
 
             scannedText =
-                results.joined(
-                    separator:
-                        "\n\n"
-                )
+                results
+                    .filter {
+                        !$0.trimmingCharacters(
+                            in:
+                                .whitespacesAndNewlines
+                        ).isEmpty
+                    }
+                    .joined(
+                        separator:
+                            "\n\n"
+                    )
 
             if !scannedText.isEmpty {
 
-                showScanReview =
-                    true
+                showScanReview = true
 
             } else {
 
@@ -1426,8 +1295,7 @@ struct NotesView: View {
     // =====================================================
 
     private func saveScannedNote(
-        text:
-            String
+        text: String
     ) {
 
         let cleanText =
@@ -1436,39 +1304,19 @@ struct NotesView: View {
                     .whitespacesAndNewlines
             )
 
-        guard
-            !cleanText.isEmpty
-        else {
-
+        guard !cleanText.isEmpty else {
             return
         }
-
-        // =================================================
-        // AUTOMATIC TITLE
-        // =================================================
-
-        let title =
-            "Scanned Study Notes"
-
-        // =================================================
-        // SAVE NOTE
-        // =================================================
 
         appState
             .notesViewModel
             .addNote(
                 title:
-                    title,
+                    "Scanned Study Notes",
                 content:
                     cleanText
             )
 
-        // =================================================
-        // CLEAR OCR TEXT
-        // =================================================
-
-        scannedText =
-            ""
+        scannedText = ""
     }
 }
-

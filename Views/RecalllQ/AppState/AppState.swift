@@ -14,29 +14,10 @@ import Combine
 // - Connects Notes to Memories
 // - Connects Memories to Flashcards
 // - Connects Flashcards to Quiz
-// - Keeps SwiftUI UI synchronized with ViewModels
-//
-// DATA FLOW:
-//
-// Notes
-//   ↓
-// NotesViewModel
-//   ↓
-// AppState
-//   ↓
-// MemoryEngine
-//   ↓
-// MemoryViewModel
-//   ↓
-// Memories
-//   ↓
-// FlashcardViewModel
-//   ↓
-// Flashcards
-//   ↓
-// QuizViewModel
-//   ↓
-// Quiz
+// - Manages Study Sessions
+// - Provides personalized recommendations
+// - Controls main tab navigation
+// - Opens specific flashcards from Smart Suggestions
 // =====================================================
 
 final class AppState: ObservableObject {
@@ -53,6 +34,22 @@ final class AppState: ObservableObject {
 
     @Published var quizViewModel: QuizViewModel
 
+    @Published var studySessionViewModel: StudySessionViewModel
+
+    // =====================================================
+    // MAIN TAB NAVIGATION
+    // =====================================================
+    // 0 = Dashboard
+    // 1 = Notes
+    // 2 = Memories
+    // 3 = Flashcards
+    //
+    // This allows Dashboard Smart Suggestions to switch
+    // automatically to the Flashcards tab.
+    // =====================================================
+
+    @Published var selectedTab: Int = 0
+
     // =====================================================
     // MEMORY ENGINE
     // =====================================================
@@ -60,10 +57,25 @@ final class AppState: ObservableObject {
     let memoryEngine: MemoryEngine
 
     // =====================================================
+    // STUDY RECOMMENDATION SERVICE
+    // =====================================================
+
+    let studyRecommendationService:
+        StudyRecommendationService
+
+    // =====================================================
+    // PERSONALIZED RECOMMENDATIONS
+    // =====================================================
+
+    @Published var studyRecommendations:
+        [StudyRecommendationService.Recommendation] = []
+
+    // =====================================================
     // COMBINE
     // =====================================================
 
-    private var cancellables = Set<AnyCancellable>()
+    private var cancellables =
+        Set<AnyCancellable>()
 
     // =====================================================
     // INIT
@@ -71,38 +83,63 @@ final class AppState: ObservableObject {
 
     init() {
 
-        let memoryVM = MemoryViewModel()
+        // -------------------------------------------------
+        // Create ViewModels
+        // -------------------------------------------------
 
-        let notesVM = NotesViewModel()
+        let memoryVM =
+            MemoryViewModel()
 
-        let flashcardVM = FlashcardViewModel()
+        let notesVM =
+            NotesViewModel()
 
-        let quizVM = QuizViewModel()
+        let flashcardVM =
+            FlashcardViewModel()
 
-        self.memoryViewModel = memoryVM
-        self.notesViewModel = notesVM
-        self.flashcardViewModel = flashcardVM
-        self.quizViewModel = quizVM
+        let quizVM =
+            QuizViewModel()
 
-        self.memoryEngine = MemoryEngine()
+        let studySessionVM =
+            StudySessionViewModel()
+
+        // -------------------------------------------------
+        // Assign ViewModels
+        // -------------------------------------------------
+
+        self.memoryViewModel =
+            memoryVM
+
+        self.notesViewModel =
+            notesVM
+
+        self.flashcardViewModel =
+            flashcardVM
+
+        self.quizViewModel =
+            quizVM
+
+        self.studySessionViewModel =
+            studySessionVM
+
+        // -------------------------------------------------
+        // Create Services
+        // -------------------------------------------------
+
+        self.memoryEngine =
+            MemoryEngine()
+
+        self.studyRecommendationService =
+            StudyRecommendationService()
 
         // =================================================
         // CONNECT NOTES TO APP STATE
         // =================================================
 
-        notesVM.appState = self
+        notesVM.appState =
+            self
 
         // =================================================
-        // IMPORTANT:
-        // FORWARD VIEWMODEL CHANGES TO APPSTATE
-        // =================================================
-        //
-        // SwiftUI observes AppState.
-        //
-        // FlashcardViewModel also publishes changes.
-        //
-        // This forwards those changes so views using
-        // AppState refresh immediately.
+        // FORWARD MEMORY VIEWMODEL CHANGES
         // =================================================
 
         memoryVM.objectWillChange
@@ -110,40 +147,71 @@ final class AppState: ObservableObject {
 
                 self?.objectWillChange.send()
 
+                self?.generateStudyRecommendations()
             }
             .store(
                 in: &cancellables
             )
+
+        // =================================================
+        // FORWARD NOTES VIEWMODEL CHANGES
+        // =================================================
 
         notesVM.objectWillChange
             .sink { [weak self] _ in
 
                 self?.objectWillChange.send()
-
             }
             .store(
                 in: &cancellables
             )
+
+        // =================================================
+        // FORWARD FLASHCARD VIEWMODEL CHANGES
+        // =================================================
 
         flashcardVM.objectWillChange
             .sink { [weak self] _ in
 
                 self?.objectWillChange.send()
 
+                self?.generateStudyRecommendations()
             }
             .store(
                 in: &cancellables
             )
+
+        // =================================================
+        // FORWARD QUIZ VIEWMODEL CHANGES
+        // =================================================
 
         quizVM.objectWillChange
             .sink { [weak self] _ in
 
                 self?.objectWillChange.send()
-
             }
             .store(
                 in: &cancellables
             )
+
+        // =================================================
+        // FORWARD STUDY SESSION CHANGES
+        // =================================================
+
+        studySessionVM.objectWillChange
+            .sink { [weak self] _ in
+
+                self?.objectWillChange.send()
+            }
+            .store(
+                in: &cancellables
+            )
+
+        // =================================================
+        // INITIAL RECOMMENDATIONS
+        // =================================================
+
+        generateStudyRecommendations()
     }
 
     // =====================================================
@@ -170,6 +238,8 @@ final class AppState: ObservableObject {
 
         memoryViewModel.generateSuggestions()
 
+        generateStudyRecommendations()
+
         NotificationCenter.default.post(
             name: .memoryCreatedFromNote,
             object: memory
@@ -177,7 +247,7 @@ final class AppState: ObservableObject {
     }
 
     // =====================================================
-    // CREATE FLASHCARD FROM ONE MEMORY
+    // CREATE FLASHCARD FROM MEMORY
     // =====================================================
 
     func createFlashcardFromMemory(
@@ -187,6 +257,8 @@ final class AppState: ObservableObject {
         flashcardViewModel.createFromMemory(
             memory
         )
+
+        generateStudyRecommendations()
     }
 
     // =====================================================
@@ -198,6 +270,8 @@ final class AppState: ObservableObject {
         flashcardViewModel.createFromMemories(
             memoryViewModel.memories
         )
+
+        generateStudyRecommendations()
     }
 
     // =====================================================
@@ -207,6 +281,215 @@ final class AppState: ObservableObject {
     func createFlashcardsFromAllMemories() {
 
         createFlashcardsFromMemories()
+    }
+
+    // =====================================================
+    // OPEN MEMORY IN FLASHCARDS
+    // =====================================================
+    // THIS IS THE IMPORTANT NEW FUNCTION.
+    //
+    // Flow:
+    //
+    // Smart Suggestion
+    //       ↓
+    // Memory
+    //       ↓
+    // Find Flashcard
+    //       ↓
+    // If missing → create Flashcard
+    //       ↓
+    // Select Flashcard
+    //       ↓
+    // Switch to Flashcards tab
+    //
+    // =====================================================
+
+    func openMemoryInFlashcards(
+        _ memory: Memory
+    ) {
+
+        print("========================================")
+        print("🎯 OPENING SMART SUGGESTION")
+        print("Memory: \(memory.title)")
+        print("========================================")
+
+        // -------------------------------------------------
+        // Find existing flashcard
+        // -------------------------------------------------
+
+        if let existingFlashcard =
+            flashcardViewModel.flashcardForMemory(
+                memory.id
+            ) {
+
+            print("✅ Existing flashcard found.")
+
+            flashcardViewModel.searchText = ""
+
+            flashcardViewModel.selectFlashcard(
+                id: existingFlashcard.id
+            )
+
+        } else {
+
+            // -------------------------------------------------
+            // No flashcard exists.
+            // Automatically create one.
+            // -------------------------------------------------
+
+            print(
+                "ℹ️ No flashcard found."
+            )
+
+            print(
+                "🧠 Creating flashcard automatically..."
+            )
+
+            flashcardViewModel.createFromMemory(
+                memory
+            )
+
+            // -------------------------------------------------
+            // Find the newly-created flashcard
+            // -------------------------------------------------
+
+            if let newFlashcard =
+                flashcardViewModel.flashcardForMemory(
+                    memory.id
+                ) {
+
+                flashcardViewModel.searchText = ""
+
+                flashcardViewModel.selectFlashcard(
+                    id: newFlashcard.id
+                )
+
+                print(
+                    "✅ New flashcard created and selected."
+                )
+
+            } else {
+
+                print(
+                    "❌ Could not create flashcard."
+                )
+
+                return
+            }
+        }
+
+        // -------------------------------------------------
+        // Switch to Flashcards tab
+        // -------------------------------------------------
+
+        selectedTab = 3
+
+        print(
+            "➡️ Switched to Flashcards tab."
+        )
+
+        print("========================================")
+    }
+
+    // =====================================================
+    // OPEN FLASHCARD DIRECTLY
+    // =====================================================
+
+    func openFlashcard(
+        _ flashcard: Flashcard
+    ) {
+
+        flashcardViewModel.searchText = ""
+
+        flashcardViewModel.selectFlashcard(
+            id: flashcard.id
+        )
+
+        selectedTab = 3
+    }
+
+    // =====================================================
+    // GENERATE PERSONALIZED RECOMMENDATIONS
+    // =====================================================
+
+    func generateStudyRecommendations() {
+
+        studyRecommendations =
+            studyRecommendationService
+                .generateRecommendations(
+                    from:
+                        memoryViewModel.memories,
+
+                    flashcards:
+                        flashcardViewModel.flashcards,
+
+                    limit:
+                        5
+                )
+    }
+
+    // =====================================================
+    // TOP RECOMMENDATION
+    // =====================================================
+
+    var topStudyRecommendation:
+        StudyRecommendationService.Recommendation? {
+
+        studyRecommendations.first
+    }
+
+    // =====================================================
+    // START STUDY SESSION
+    // =====================================================
+
+    func startStudySession() {
+
+        studySessionViewModel.startSession()
+    }
+
+    // =====================================================
+    // END STUDY SESSION
+    // =====================================================
+
+    func endStudySession() {
+
+        studySessionViewModel.endSession()
+    }
+
+    // =====================================================
+    // CANCEL STUDY SESSION
+    // =====================================================
+
+    func cancelStudySession() {
+
+        studySessionViewModel.cancelSession()
+    }
+
+    // =====================================================
+    // RECORD FLASHCARD REVIEW
+    // =====================================================
+
+    func recordFlashcardReviewed() {
+
+        studySessionViewModel.recordFlashcardReviewed()
+    }
+
+    // =====================================================
+    // RECORD MEMORY STUDIED
+    // =====================================================
+
+    func recordMemoryStudied() {
+
+        studySessionViewModel.recordMemoryStudied()
+    }
+
+    // =====================================================
+    // RECORD QUIZ COMPLETION
+    // =====================================================
+
+    func recordQuizCompleted() {
+
+        studySessionViewModel.recordQuizCompleted()
     }
 
     // =====================================================
@@ -227,64 +510,63 @@ final class AppState: ObservableObject {
             return
         }
 
-        // =================================================
-        // CREATE QUIZ QUESTIONS
-        // =================================================
+        let questions:
+            [QuizQuestion] =
+                flashcards.map {
+                    flashcard in
 
-        let questions: [QuizQuestion] =
-            flashcards.map { flashcard in
+                    let correctAnswer =
+                        flashcard.answer
 
-                let correctAnswer =
-                    flashcard.answer
+                    let incorrectAnswers = [
 
-                let incorrectAnswers = [
-                    "None of the above.",
-                    "This information is unrelated.",
-                    "There is not enough information."
-                ]
+                        "None of the above.",
 
-                let options =
-                    (
-                        [correctAnswer] +
-                        incorrectAnswers
-                    ).shuffled()
+                        "This information is unrelated.",
 
-                return QuizQuestion(
-                    memoryID:
-                        flashcard.memoryID,
+                        "There is not enough information."
+                    ]
 
-                    question:
-                        flashcard.question,
+                    let options =
+                        (
+                            [correctAnswer] +
+                            incorrectAnswers
+                        )
+                        .shuffled()
 
-                    options:
-                        options,
+                    return QuizQuestion(
 
-                    correctAnswer:
-                        correctAnswer,
+                        memoryID:
+                            flashcard.memoryID,
 
-                    explanation:
-                        "The correct answer is based on your RecalllQ flashcard."
-                )
-            }
+                        question:
+                            flashcard.question,
 
-        // =================================================
-        // CREATE QUIZ
-        // =================================================
+                        options:
+                            options,
+
+                        correctAnswer:
+                            correctAnswer,
+
+                        explanation:
+                            "The correct answer is based on your RecalllQ flashcard."
+                    )
+                }
 
         quizViewModel.createQuiz(
-            title: "RecalllQ Study Quiz",
-            questions: questions
-        )
+            title:
+                "RecalllQ Study Quiz",
 
-        // =================================================
-        // START NEWLY CREATED QUIZ
-        // =================================================
+            questions:
+                questions
+        )
 
         if let quiz =
             quizViewModel.quizzes.first {
 
             quizViewModel.startQuiz(
-                id: quiz.id
+                id:
+                    quiz.id
             )
         }
     }
@@ -305,7 +587,8 @@ final class AppState: ObservableObject {
             quizViewModel.quizzes.first {
 
             quizViewModel.startQuiz(
-                id: quiz.id
+                id:
+                    quiz.id
             )
         }
     }
@@ -321,4 +604,3 @@ final class AppState: ObservableObject {
         )
     }
 }
-

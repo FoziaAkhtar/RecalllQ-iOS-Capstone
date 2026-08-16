@@ -24,7 +24,7 @@ struct EditNoteView: View {
     @Environment(\.dismiss) private var dismiss
 
     // =====================================================
-    // NOTE
+    // NOTE DATA
     // =====================================================
 
     let note: Note
@@ -39,7 +39,7 @@ struct EditNoteView: View {
     @State private var reminderDate: Date
 
     // =====================================================
-    // SAVE CALLBACK
+    // CALLBACK
     // =====================================================
 
     let onSave: (
@@ -49,7 +49,7 @@ struct EditNoteView: View {
     ) -> Void
 
     // =====================================================
-    // INITIALIZER
+    // INIT
     // =====================================================
 
     init(
@@ -100,7 +100,7 @@ struct EditNoteView: View {
             Form {
 
                 // =================================================
-                // STUDY NOTE
+                // NOTE INFORMATION
                 // =================================================
 
                 Section {
@@ -115,15 +115,11 @@ struct EditNoteView: View {
                         text: $content,
                         axis: .vertical
                     )
-                    .lineLimit(
-                        5...10
-                    )
+                    .lineLimit(5...10)
 
                 } header: {
 
-                    Text(
-                        "Study Note"
-                    )
+                    Text("Study Note")
                 }
 
                 // =================================================
@@ -133,8 +129,7 @@ struct EditNoteView: View {
                 Section {
 
                     Toggle(
-                        isOn:
-                            $addReminder
+                        isOn: $addReminder
                     ) {
 
                         Label(
@@ -162,15 +157,13 @@ struct EditNoteView: View {
                         )
                     }
 
-                    if !addReminder &&
-                        note.reminderDate != nil {
+                    if !addReminder,
+                       note.reminderDate != nil {
 
                         Text(
-                            "The existing reminder will be cancelled when you save."
+                            "The existing reminder will be cancelled."
                         )
-                        .font(
-                            .caption
-                        )
+                        .font(.caption)
                         .foregroundColor(
                             RecalllQTheme.secondaryText
                         )
@@ -178,9 +171,7 @@ struct EditNoteView: View {
 
                 } header: {
 
-                    Text(
-                        "Reminder"
-                    )
+                    Text("Reminder")
                 }
 
                 // =================================================
@@ -191,9 +182,7 @@ struct EditNoteView: View {
 
                     HStack {
 
-                        Text(
-                            "Created"
-                        )
+                        Text("Created")
 
                         Spacer()
 
@@ -208,9 +197,7 @@ struct EditNoteView: View {
 
                     HStack {
 
-                        Text(
-                            "Last Updated"
-                        )
+                        Text("Last Updated")
 
                         Spacer()
 
@@ -225,14 +212,12 @@ struct EditNoteView: View {
 
                 } header: {
 
-                    Text(
-                        "Information"
-                    )
+                    Text("Information")
                 }
             }
 
             // =====================================================
-            // NAVIGATION TITLE
+            // NAVIGATION
             // =====================================================
 
             .navigationTitle(
@@ -248,41 +233,27 @@ struct EditNoteView: View {
 
             .toolbar {
 
-                // =================================================
-                // CANCEL
-                // =================================================
-
                 ToolbarItem(
                     placement:
                         .cancellationAction
                 ) {
 
-                    Button(
-                        "Cancel"
-                    ) {
+                    Button("Cancel") {
 
                         dismiss()
                     }
                 }
-
-                // =================================================
-                // SAVE
-                // =================================================
 
                 ToolbarItem(
                     placement:
                         .confirmationAction
                 ) {
 
-                    Button(
-                        "Save"
-                    ) {
+                    Button("Save") {
 
                         saveNote()
                     }
-                    .fontWeight(
-                        .semibold
-                    )
+                    .fontWeight(.semibold)
                     .disabled(
                         title
                             .trimmingCharacters(
@@ -309,19 +280,11 @@ struct EditNoteView: View {
 
     private func saveNote() {
 
-        // =================================================
-        // CLEAN TITLE
-        // =================================================
-
         let cleanTitle =
             title.trimmingCharacters(
                 in:
                     .whitespacesAndNewlines
             )
-
-        // =================================================
-        // CLEAN CONTENT
-        // =================================================
 
         let cleanContent =
             content.trimmingCharacters(
@@ -329,41 +292,23 @@ struct EditNoteView: View {
                     .whitespacesAndNewlines
             )
 
-        // =================================================
-        // VALIDATION
-        // =================================================
-
         guard
             !cleanTitle.isEmpty ||
             !cleanContent.isEmpty
         else {
-
             return
         }
 
-        // =================================================
-        // REMINDER
-        // =================================================
-
-        let newReminderDate:
-            Date? =
-                addReminder
-                ? reminderDate
-                : nil
-
-        // =================================================
-        // SEND CHANGES BACK
-        // =================================================
+        let newReminderDate =
+            addReminder
+            ? reminderDate
+            : nil
 
         onSave(
             cleanTitle,
             cleanContent,
             newReminderDate
         )
-
-        // =================================================
-        // CLOSE VIEW
-        // =================================================
 
         dismiss()
     }
@@ -384,6 +329,5 @@ struct EditNoteView: View {
         )
     ) { _, _, _ in
 
-        // Preview save action
     }
 }

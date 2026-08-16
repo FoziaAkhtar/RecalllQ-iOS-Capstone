@@ -339,7 +339,7 @@ struct MemoriesView: View {
                                 "sparkles"
                         )
                         .foregroundColor(
-                            RecalllQTheme.warning
+                            RecalllQTheme.studyOrange
                         )
                     }
 

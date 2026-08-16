@@ -11,7 +11,7 @@ import Combine
 // - Handles memory creation
 // - Handles memory deletion
 // - Handles search and category filtering
-// - Generates study suggestions
+// - Generates personalized study recommendations
 // - Handles memory persistence
 //
 // AI processing is handled by:
@@ -42,7 +42,7 @@ final class MemoryViewModel: ObservableObject {
     @Published var selectedTag: String = "all"
 
     // =====================================================
-    // AI STUDY SUGGESTIONS
+    // PERSONALIZED STUDY SUGGESTIONS
     // =====================================================
 
     @Published var suggestedMemories: [Memory] = []
@@ -66,8 +66,6 @@ final class MemoryViewModel: ObservableObject {
 
     // =====================================================
     // ADD MEMORY
-    // =====================================================
-    // Creates a structured memory using MemoryEngine.
     // =====================================================
 
     func addMemory(
@@ -97,7 +95,7 @@ final class MemoryViewModel: ObservableObject {
         }
 
         // ---------------------------------------------
-        // Generate AI-style memory
+        // Generate structured memory
         // ---------------------------------------------
 
         let memory =
@@ -122,7 +120,7 @@ final class MemoryViewModel: ObservableObject {
         save()
 
         // ---------------------------------------------
-        // Refresh suggestions
+        // Refresh personalized recommendations
         // ---------------------------------------------
 
         generateSuggestions()
@@ -259,29 +257,176 @@ final class MemoryViewModel: ObservableObject {
     }
 
     // =====================================================
-    // GENERATE STUDY SUGGESTIONS
+    // PERSONALIZED STUDY RECOMMENDATIONS
     // =====================================================
-    // Currently selects the three newest memories.
+    // Calculates a recommendation score for every memory.
     //
-    // This provides the foundation for future intelligent
-    // recommendations and spaced-repetition logic.
+    // Higher score means:
+    // - More important
+    // - Lower confidence
+    // - Older memory that may need review
+    // - Study/exam related
+    //
+    // The top three memories become the user's
+    // personalized recommendations.
     // =====================================================
 
     func generateSuggestions() {
 
-        suggestedMemories =
+        guard !memories.isEmpty else {
+
+            suggestedMemories = []
+
+            return
+        }
+
+        let now = Date()
+
+        let scoredMemories =
             memories
                 .filter {
                     !$0.title.isEmpty ||
                     !$0.content.isEmpty
                 }
+                .map { memory -> (memory: Memory, score: Double) in
+
+                    // =================================================
+                    // IMPORTANCE SCORE
+                    // =================================================
+                    //
+                    // Importance is 1...5.
+                    // Higher importance = higher recommendation.
+                    // =================================================
+
+                    let importanceScore =
+                        Double(memory.importance) * 2.0
+
+                    // =================================================
+                    // CONFIDENCE SCORE
+                    // =================================================
+                    //
+                    // Lower confidence means the student may need
+                    // more review.
+                    //
+                    // Example:
+                    // confidence 0.55 -> strong review boost
+                    // confidence 0.95 -> small review boost
+                    // =================================================
+
+                    let confidenceScore =
+                        (1.0 - memory.confidence) * 6.0
+
+                    // =================================================
+                    // AGE / REVIEW SCORE
+                    // =================================================
+                    //
+                    // Older memories receive a larger boost because
+                    // they may benefit from another review.
+                    // =================================================
+
+                    let ageInDays =
+                        max(
+                            0,
+                            Calendar.current.dateComponents(
+                                [.day],
+                                from: memory.dateCreated,
+                                to: now
+                            ).day ?? 0
+                        )
+
+                    let ageScore =
+                        min(
+                            Double(ageInDays) * 0.25,
+                            4.0
+                        )
+
+                    // =================================================
+                    // STUDY CATEGORY SCORE
+                    // =================================================
+
+                    let studyTags: Set<String> = [
+                        "study",
+                        "exam",
+                        "assignment",
+                        "programming",
+                        "ios",
+                        "school"
+                    ]
+
+                    let matchingTags =
+                        memory.tags.filter {
+                            studyTags.contains(
+                                $0.lowercased()
+                            )
+                        }.count
+
+                    let categoryScore =
+                        Double(matchingTags) * 1.5
+
+                    // =================================================
+                    // RECENCY SCORE
+                    // =================================================
+                    //
+                    // New memories receive a small boost so that
+                    // newly learned material is not ignored.
+                    // =================================================
+
+                    let recencyScore: Double
+
+                    if ageInDays == 0 {
+
+                        recencyScore = 2.0
+
+                    } else if ageInDays <= 2 {
+
+                        recencyScore = 1.5
+
+                    } else if ageInDays <= 7 {
+
+                        recencyScore = 1.0
+
+                    } else {
+
+                        recencyScore = 0.0
+                    }
+
+                    // =================================================
+                    // FINAL PERSONALIZATION SCORE
+                    // =================================================
+
+                    let totalScore =
+                        importanceScore +
+                        confidenceScore +
+                        ageScore +
+                        categoryScore +
+                        recencyScore
+
+                    return (
+                        memory: memory,
+                        score: totalScore
+                    )
+                }
+
+        // =================================================
+        // SORT BY PERSONALIZED SCORE
+        // =================================================
+
+        suggestedMemories =
+            scoredMemories
                 .sorted {
-                    $0.dateCreated >
-                    $1.dateCreated
+
+                    if $0.score != $1.score {
+
+                        return $0.score > $1.score
+                    }
+
+                    // If scores are equal, prefer newer memory.
+                    return $0.memory.dateCreated >
+                        $1.memory.dateCreated
                 }
                 .prefix(3)
                 .map {
-                    $0
+                    $0.memory
                 }
     }
 
@@ -308,3 +453,4 @@ final class MemoryViewModel: ObservableObject {
         )
     }
 }
+

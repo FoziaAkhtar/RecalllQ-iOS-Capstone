@@ -8,6 +8,7 @@ import SwiftUI
 // Main flashcard learning screen for RecalllQ.
 //
 // FEATURES:
+// - Lively RecalllQ background
 // - Flashcard statistics
 // - Search flashcards
 // - Generate flashcards from Memories
@@ -49,7 +50,9 @@ struct FlashcardsView: View {
 
     var body: some View {
 
-        ScrollView {
+        ScrollView(
+            showsIndicators: false
+        ) {
 
             VStack(
                 alignment: .leading,
@@ -70,6 +73,9 @@ struct FlashcardsView: View {
                         Text("Flashcards")
                             .font(.largeTitle)
                             .bold()
+                            .foregroundColor(
+                                RecalllQTheme.primaryText
+                            )
 
                         Text(
                             "Practice what you have learned."
@@ -112,24 +118,36 @@ struct FlashcardsView: View {
                 HStack(spacing: 10) {
 
                     statisticCard(
-                        value: "\(vm.totalFlashcards)",
-                        title: "Cards",
-                        icon: "rectangle.stack.fill",
-                        color: RecalllQTheme.primary
+                        value:
+                            "\(vm.totalFlashcards)",
+                        title:
+                            "Cards",
+                        icon:
+                            "rectangle.stack.fill",
+                        color:
+                            RecalllQTheme.primary
                     )
 
                     statisticCard(
-                        value: "\(vm.masteredFlashcards)",
-                        title: "Mastered",
-                        icon: "checkmark.circle.fill",
-                        color: RecalllQTheme.success
+                        value:
+                            "\(vm.masteredFlashcards)",
+                        title:
+                            "Mastered",
+                        icon:
+                            "checkmark.circle.fill",
+                        color:
+                            RecalllQTheme.success
                     )
 
                     statisticCard(
-                        value: accuracyText,
-                        title: "Accuracy",
-                        icon: "chart.bar.fill",
-                        color: RecalllQTheme.secondary
+                        value:
+                            accuracyText,
+                        title:
+                            "Accuracy",
+                        icon:
+                            "chart.bar.fill",
+                        color:
+                            RecalllQTheme.secondary
                     )
                 }
 
@@ -181,22 +199,32 @@ struct FlashcardsView: View {
                     )
                     .foregroundColor(.white)
                     .background(
+                        LinearGradient(
+                            colors: [
+                                RecalllQTheme.primary,
+                                RecalllQTheme.primary.opacity(0.75)
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .clipShape(
                         RoundedRectangle(
                             cornerRadius:
                                 RecalllQTheme.mediumRadius
                         )
-                        .fill(
-                            RecalllQTheme.primary
-                        )
+                    )
+                    .shadow(
+                        color:
+                            RecalllQTheme.primary.opacity(0.18),
+                        radius: 8,
+                        x: 0,
+                        y: 4
                     )
                 }
 
                 // =================================================
                 // RESET ALL FLASHCARDS
-                // =================================================
-                // This is useful during development/testing.
-                // It removes all saved flashcards and returns
-                // the Cards counter to 0.
                 // =================================================
 
                 if !vm.flashcards.isEmpty {
@@ -255,6 +283,7 @@ struct FlashcardsView: View {
                         ) {
 
                             vm.resetAllFlashcards()
+
                         }
 
                     } message: {
@@ -304,7 +333,7 @@ struct FlashcardsView: View {
                                     "xmark.circle.fill"
                             )
                             .foregroundColor(
-                                .secondary
+                                RecalllQTheme.secondaryText
                             )
                         }
                     }
@@ -316,7 +345,17 @@ struct FlashcardsView: View {
                             RecalllQTheme.mediumRadius
                     )
                     .fill(
-                        RecalllQTheme.blueBackground
+                        RecalllQTheme.cardBackground
+                    )
+                )
+                .overlay(
+                    RoundedRectangle(
+                        cornerRadius:
+                            RecalllQTheme.mediumRadius
+                    )
+                    .stroke(
+                        RecalllQTheme.primary.opacity(0.12),
+                        lineWidth: 1
                     )
                 )
 
@@ -341,11 +380,27 @@ struct FlashcardsView: View {
 
                 if !vm.filteredFlashcards.isEmpty {
 
-                    Text(
-                        "Your Flashcards"
-                    )
-                    .font(.title3)
-                    .bold()
+                    HStack {
+
+                        Text(
+                            "Your Flashcards"
+                        )
+                        .font(.title3)
+                        .bold()
+                        .foregroundColor(
+                            RecalllQTheme.primaryText
+                        )
+
+                        Spacer()
+
+                        Image(
+                            systemName:
+                                "sparkles"
+                        )
+                        .foregroundColor(
+                            RecalllQTheme.smartPurple
+                        )
+                    }
 
                     ForEach(
                         vm.filteredFlashcards
@@ -359,6 +414,20 @@ struct FlashcardsView: View {
             }
             .padding()
         }
+
+        // =====================================================
+        // PAGE BACKGROUND
+        // =====================================================
+
+        .background(
+            RecalllQTheme.background
+                .ignoresSafeArea()
+        )
+
+        // =====================================================
+        // NAVIGATION
+        // =====================================================
+
         .navigationTitle(
             "Flashcards"
         )
@@ -399,21 +468,29 @@ struct FlashcardsView: View {
         ) {
 
             Image(
-                systemName: icon
+                systemName:
+                    icon
             )
             .foregroundColor(
                 color
             )
 
-            Text(value)
-                .font(.headline)
-                .bold()
+            Text(
+                value
+            )
+            .font(.headline)
+            .bold()
+            .foregroundColor(
+                RecalllQTheme.primaryText
+            )
 
-            Text(title)
-                .font(.caption2)
-                .foregroundColor(
-                    RecalllQTheme.secondaryText
-                )
+            Text(
+                title
+            )
+            .font(.caption2)
+            .foregroundColor(
+                RecalllQTheme.secondaryText
+            )
         }
         .frame(
             maxWidth: .infinity
@@ -428,6 +505,16 @@ struct FlashcardsView: View {
                 RecalllQTheme.cardBackground
             )
         )
+        .overlay(
+            RoundedRectangle(
+                cornerRadius:
+                    RecalllQTheme.mediumRadius
+            )
+            .stroke(
+                color.opacity(0.10),
+                lineWidth: 1
+            )
+        )
         .shadow(
             color:
                 Color.black.opacity(
@@ -436,7 +523,8 @@ struct FlashcardsView: View {
             radius:
                 RecalllQTheme.shadowRadius,
             x: 0,
-            y: RecalllQTheme.shadowY
+            y:
+                RecalllQTheme.shadowY
         )
     }
 
@@ -487,17 +575,22 @@ struct FlashcardsView: View {
             // QUESTION
             // ---------------------------------------------
 
-            Text("Question")
-                .font(.caption)
-                .foregroundColor(
-                    RecalllQTheme.secondaryText
-                )
+            Text(
+                "Question"
+            )
+            .font(.caption)
+            .foregroundColor(
+                RecalllQTheme.secondaryText
+            )
 
             Text(
                 card.question
             )
             .font(.title3)
             .bold()
+            .foregroundColor(
+                RecalllQTheme.primaryText
+            )
             .fixedSize(
                 horizontal: false,
                 vertical: true
@@ -511,16 +604,21 @@ struct FlashcardsView: View {
 
                 Divider()
 
-                Text("Answer")
-                    .font(.caption)
-                    .foregroundColor(
-                        RecalllQTheme.secondaryText
-                    )
+                Text(
+                    "Answer"
+                )
+                .font(.caption)
+                .foregroundColor(
+                    RecalllQTheme.secondaryText
+                )
 
                 Text(
                     card.answer
                 )
                 .font(.body)
+                .foregroundColor(
+                    RecalllQTheme.primaryText
+                )
                 .fixedSize(
                     horizontal: false,
                     vertical: true
@@ -542,7 +640,8 @@ struct FlashcardsView: View {
                 HStack(spacing: 8) {
 
                     difficultyButton(
-                        title: "Easy",
+                        title:
+                            "Easy",
                         icon:
                             "face.smiling.fill",
                         color:
@@ -553,7 +652,8 @@ struct FlashcardsView: View {
                     }
 
                     difficultyButton(
-                        title: "Medium",
+                        title:
+                            "Medium",
                         icon:
                             "minus.circle.fill",
                         color:
@@ -564,7 +664,8 @@ struct FlashcardsView: View {
                     }
 
                     difficultyButton(
-                        title: "Hard",
+                        title:
+                            "Hard",
                         icon:
                             "exclamationmark.circle.fill",
                         color:
@@ -612,12 +713,19 @@ struct FlashcardsView: View {
                     )
                     .foregroundColor(.white)
                     .background(
+                        LinearGradient(
+                            colors: [
+                                RecalllQTheme.primary,
+                                RecalllQTheme.primary.opacity(0.75)
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .clipShape(
                         RoundedRectangle(
                             cornerRadius:
                                 RecalllQTheme.mediumRadius
-                        )
-                        .fill(
-                            RecalllQTheme.primary
                         )
                     )
                 }
@@ -699,7 +807,8 @@ struct FlashcardsView: View {
             radius:
                 RecalllQTheme.shadowRadius,
             x: 0,
-            y: RecalllQTheme.shadowY
+            y:
+                RecalllQTheme.shadowY
         )
     }
 
@@ -726,7 +835,8 @@ struct FlashcardsView: View {
             ) {
 
                 Image(
-                    systemName: icon
+                    systemName:
+                        icon
                 )
 
                 Text(
@@ -797,6 +907,9 @@ struct FlashcardsView: View {
                     card.question
                 )
                 .font(.headline)
+                .foregroundColor(
+                    RecalllQTheme.primaryText
+                )
                 .lineLimit(2)
 
                 Text(
@@ -855,6 +968,16 @@ struct FlashcardsView: View {
                 RecalllQTheme.cardBackground
             )
         )
+        .overlay(
+            RoundedRectangle(
+                cornerRadius:
+                    RecalllQTheme.mediumRadius
+            )
+            .stroke(
+                Color.gray.opacity(0.08),
+                lineWidth: 1
+            )
+        )
         .shadow(
             color:
                 Color.black.opacity(
@@ -863,7 +986,8 @@ struct FlashcardsView: View {
             radius:
                 RecalllQTheme.shadowRadius,
             x: 0,
-            y: RecalllQTheme.shadowY
+            y:
+                RecalllQTheme.shadowY
         )
         .contextMenu {
 
@@ -925,6 +1049,9 @@ struct FlashcardsView: View {
                 : "No flashcards found"
             )
             .font(.headline)
+            .foregroundColor(
+                RecalllQTheme.primaryText
+            )
 
             Text(
                 vm.searchText.isEmpty
@@ -962,12 +1089,19 @@ struct FlashcardsView: View {
                     )
                     .foregroundColor(.white)
                     .background(
+                        LinearGradient(
+                            colors: [
+                                RecalllQTheme.primary,
+                                RecalllQTheme.smartPurple
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .clipShape(
                         RoundedRectangle(
                             cornerRadius:
                                 RecalllQTheme.mediumRadius
-                        )
-                        .fill(
-                            RecalllQTheme.primary
                         )
                     )
                 }
@@ -984,9 +1118,18 @@ struct FlashcardsView: View {
                     RecalllQTheme.largeRadius
             )
             .fill(
-                RecalllQTheme.blueBackground
+                RecalllQTheme.cardBackground
+            )
+        )
+        .overlay(
+            RoundedRectangle(
+                cornerRadius:
+                    RecalllQTheme.largeRadius
+            )
+            .stroke(
+                RecalllQTheme.primary.opacity(0.10),
+                lineWidth: 1
             )
         )
     }
 }
-

@@ -17,6 +17,10 @@
 		A496EBC2302F5952005C604F /* ScanReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A496EBC1302F5938005C604F /* ScanReviewView.swift */; };
 		A496EBCA302F6367005C604F /* FlashcardsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A496EBC9302F635D005C604F /* FlashcardsView.swift */; };
 		A496EBD5302F69BB005C604F /* QuizView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A496EBD4302F69B5005C604F /* QuizView.swift */; };
+		A496EBDC3031171A005C604F /* StudyRecommendationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A496EBDB30311708005C604F /* StudyRecommendationCard.swift */; };
+		A496EBE130311DFD005C604F /* StudySession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A496EBE030311DF7005C604F /* StudySession.swift */; };
+		A496EBE330311E8E005C604F /* StudySessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A496EBE230311E81005C604F /* StudySessionView.swift */; };
+		A496EBE530316C17005C604F /* SmartSuggestionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A496EBE430316C0C005C604F /* SmartSuggestionsView.swift */; };
 		A49E31622FEEAD5700483750 /* EditNoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A49E31612FEEAD4500483750 /* EditNoteView.swift */; };
 		A49E31782FEED2C500483750 /* MemoriesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A49E31772FEED2BB00483750 /* MemoriesView.swift */; };
 		A49E31812FEF02B800483750 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A49E31802FEF02AB00483750 /* MainTabView.swift */; };
@@ -35,6 +39,10 @@
 		A496EBC1302F5938005C604F /* ScanReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanReviewView.swift; sourceTree = "<group>"; };
 		A496EBC9302F635D005C604F /* FlashcardsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlashcardsView.swift; sourceTree = "<group>"; };
 		A496EBD4302F69B5005C604F /* QuizView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuizView.swift; sourceTree = "<group>"; };
+		A496EBDB30311708005C604F /* StudyRecommendationCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudyRecommendationCard.swift; sourceTree = "<group>"; };
+		A496EBE030311DF7005C604F /* StudySession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudySession.swift; sourceTree = "<group>"; };
+		A496EBE230311E81005C604F /* StudySessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudySessionView.swift; sourceTree = "<group>"; };
+		A496EBE430316C0C005C604F /* SmartSuggestionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartSuggestionsView.swift; sourceTree = "<group>"; };
 		A49E31612FEEAD4500483750 /* EditNoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditNoteView.swift; sourceTree = "<group>"; };
 		A49E31772FEED2BB00483750 /* MemoriesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoriesView.swift; sourceTree = "<group>"; };
 		A49E31802FEF02AB00483750 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
@@ -79,6 +87,10 @@
 		A40E9D212FEDA71800869607 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				A496EBE430316C0C005C604F /* SmartSuggestionsView.swift */,
+				A496EBE230311E81005C604F /* StudySessionView.swift */,
+				A496EBE030311DF7005C604F /* StudySession.swift */,
+				A496EBDB30311708005C604F /* StudyRecommendationCard.swift */,
 				A496EBD4302F69B5005C604F /* QuizView.swift */,
 				A496EBC9302F635D005C604F /* FlashcardsView.swift */,
 				A496EBC1302F5938005C604F /* ScanReviewView.swift */,
@@ -174,17 +186,21 @@
 			files = (
 				A496EBC2302F5952005C604F /* ScanReviewView.swift in Sources */,
 				A496EBD5302F69BB005C604F /* QuizView.swift in Sources */,
+				A496EBE330311E8E005C604F /* StudySessionView.swift in Sources */,
 				A496EBB8302F5133005C604F /* RecalllQTheme.swift in Sources */,
 				A40E9D2B2FEDA92700869607 /* NotesView.swift in Sources */,
 				A40E9D252FEDA7F000869607 /* DashboardView.swift in Sources */,
 				A49E31862FEF07D700483750 /* ReminderView.swift in Sources */,
 				A40E9D2F2FEDAAEE00869607 /* SearchView.swift in Sources */,
 				A49E31782FEED2C500483750 /* MemoriesView.swift in Sources */,
+				A496EBE130311DFD005C604F /* StudySession.swift in Sources */,
 				A49E31812FEF02B800483750 /* MainTabView.swift in Sources */,
 				A40E9D312FEDAB5100869607 /* SettingsView.swift in Sources */,
 				A49E31622FEEAD5700483750 /* EditNoteView.swift in Sources */,
 				A496EBC0302F54CE005C604F /* DocumentScannerView.swift in Sources */,
+				A496EBDC3031171A005C604F /* StudyRecommendationCard.swift in Sources */,
 				A40E9D232FEDA72F00869607 /* WelcomeView.swift in Sources */,
+				A496EBE530316C17005C604F /* SmartSuggestionsView.swift in Sources */,
 				A496EBCA302F6367005C604F /* FlashcardsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

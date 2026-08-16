@@ -7,12 +7,6 @@ import SwiftUI
 // PURPOSE:
 // Main quiz learning screen for RecalllQ.
 //
-// MATCHES:
-// - QuizViewModel
-// - Quiz
-// - QuizQuestion
-// - AppState
-//
 // FEATURES:
 // - Multiple choice questions
 // - Answer selection
@@ -21,20 +15,21 @@ import SwiftUI
 // - Score tracking
 // - Quiz completion
 // - Restart quiz
-// - Generate quiz from flashcards
+// - Generate quiz
 // - Empty state
+// - Lively RecalllQ UI
 // =====================================================
 
 struct QuizView: View {
 
     // =====================================================
-    // GLOBAL APP STATE
+    // APP STATE
     // =====================================================
 
     @EnvironmentObject var appState: AppState
 
     // =====================================================
-    // QUIZ VIEW MODEL
+    // VIEW MODEL
     // =====================================================
 
     private var vm: QuizViewModel {
@@ -51,76 +46,92 @@ struct QuizView: View {
 
             VStack(
                 alignment: .leading,
-                spacing: 20
+                spacing: 24
             ) {
 
                 // =================================================
                 // HEADER
                 // =================================================
 
-                HStack {
-
-                    VStack(
-                        alignment: .leading,
-                        spacing: 4
-                    ) {
-
-                        Text("Quiz")
-                            .font(.largeTitle)
-                            .bold()
-
-                        Text("Test your knowledge.")
-                            .font(.subheadline)
-                            .foregroundColor(
-                                RecalllQTheme.secondaryText
-                            )
-                    }
-
-                    Spacer()
-
-                    Image(
-                        systemName:
-                            "questionmark.circle.fill"
-                    )
-                    .font(.system(size: 40))
-                    .foregroundColor(
-                        RecalllQTheme.primary
-                    )
-                }
+                header
 
                 // =================================================
-                // EMPTY STATE
+                // CONTENT
                 // =================================================
 
                 if vm.currentQuiz == nil {
 
                     emptyState
 
-                }
-
-                // =================================================
-                // COMPLETED STATE
-                // =================================================
-
-                else if vm.currentQuiz?.isCompleted == true {
+                } else if vm.currentQuiz?.isCompleted == true {
 
                     completedState
 
-                }
-
-                // =================================================
-                // ACTIVE QUIZ
-                // =================================================
-
-                else if let question = vm.currentQuestion {
+                } else if let question = vm.currentQuestion {
 
                     activeQuiz(question)
                 }
             }
             .padding()
         }
+        .background(
+            RecalllQTheme.background
+                .ignoresSafeArea()
+        )
         .navigationTitle("Quiz")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    // =====================================================
+    // HEADER
+    // =====================================================
+
+    private var header: some View {
+
+        HStack {
+
+            VStack(
+                alignment: .leading,
+                spacing: 5
+            ) {
+
+                Text("Quiz")
+                    .font(.largeTitle)
+                    .bold()
+                    .foregroundColor(
+                        RecalllQTheme.primaryText
+                    )
+
+                Text("Test your knowledge.")
+                    .font(.subheadline)
+                    .foregroundColor(
+                        RecalllQTheme.secondaryText
+                    )
+            }
+
+            Spacer()
+
+            ZStack {
+
+                Circle()
+                    .fill(
+                        RecalllQTheme.purpleBackground
+                    )
+                    .frame(
+                        width: 52,
+                        height: 52
+                    )
+
+                Image(
+                    systemName:
+                        "questionmark.circle.fill"
+                )
+                .font(.title2)
+                .foregroundColor(
+                    RecalllQTheme.smartPurple
+                )
+            }
+        }
     }
 
     // =====================================================
@@ -134,99 +145,57 @@ struct QuizView: View {
 
         VStack(
             alignment: .leading,
-            spacing: 18
+            spacing: 20
         ) {
 
             // =================================================
-            // PROGRESS
+            // QUIZ TITLE
             // =================================================
 
-            VStack(
-                alignment: .leading,
-                spacing: 8
-            ) {
+            if let quiz = vm.currentQuiz {
 
-                HStack {
+                VStack(
+                    alignment: .leading,
+                    spacing: 4
+                ) {
+
+                    Text(quiz.title)
+                        .font(.headline)
+                        .foregroundColor(
+                            RecalllQTheme.primaryText
+                        )
 
                     Text(
-                        "Question \(currentQuestionNumber) of \(totalQuestions)"
+                        "\(quiz.answeredQuestions) of \(quiz.totalQuestions) answered"
                     )
                     .font(.caption)
                     .foregroundColor(
                         RecalllQTheme.secondaryText
                     )
-
-                    Spacer()
-
-                    Text(
-                        "\(Int(vm.currentQuiz?.percentage ?? 0))%"
-                    )
-                    .font(.caption)
-                    .bold()
-                    .foregroundColor(
-                        RecalllQTheme.primary
-                    )
                 }
-
-                ProgressView(
-                    value: Double(currentQuestionNumber),
-                    total: Double(totalQuestions)
-                )
-                .tint(
-                    RecalllQTheme.primary
-                )
             }
 
             // =================================================
-            // QUESTION CARD
+            // PROGRESS
             // =================================================
 
-            VStack(
-                alignment: .leading,
-                spacing: 14
-            ) {
-
-                Label(
-                    "Question",
-                    systemImage:
-                        "questionmark.bubble.fill"
-                )
-                .font(.headline)
-                .foregroundColor(
-                    RecalllQTheme.primary
-                )
-
-                Text(question.question)
-                    .font(.title3)
-                    .bold()
-                    .fixedSize(
-                        horizontal: false,
-                        vertical: true
-                    )
-            }
-            .padding(
-                RecalllQTheme.largePadding
-            )
-            .frame(
-                maxWidth: .infinity,
-                alignment: .leading
-            )
-            .background(
-                RoundedRectangle(
-                    cornerRadius:
-                        RecalllQTheme.largeRadius
-                )
-                .fill(
-                    RecalllQTheme.cardBackground
-                )
-            )
+            progressSection
 
             // =================================================
-            // ANSWER OPTIONS
+            // QUESTION
+            // =================================================
+
+            questionCard(question)
+
+            // =================================================
+            // ANSWERS
             // =================================================
 
             Text("Choose an answer")
                 .font(.headline)
+                .foregroundColor(
+                    RecalllQTheme.primaryText
+                )
 
             ForEach(
                 question.options,
@@ -240,107 +209,194 @@ struct QuizView: View {
             }
 
             // =================================================
-            // SHOW RESULT
+            // RESULT
             // =================================================
 
             if vm.showResult {
 
                 resultCard(question)
 
+                nextButton
+
             } else {
 
-                Button {
-
-                    vm.submitAnswer()
-
-                } label: {
-
-                    HStack {
-
-                        Image(
-                            systemName:
-                                "checkmark.circle"
-                        )
-
-                        Text("Submit Answer")
-                            .bold()
-
-                        Spacer()
-
-                        Image(
-                            systemName:
-                                "arrow.right"
-                        )
-                    }
-                    .padding()
-                    .frame(
-                        maxWidth: .infinity
-                    )
-                    .foregroundColor(.white)
-                    .background(
-                        RoundedRectangle(
-                            cornerRadius:
-                                RecalllQTheme.buttonRadius
-                        )
-                        .fill(
-                            RecalllQTheme.primaryButton
-                        )
-                    )
-                }
-                .disabled(
-                    question.selectedAnswer == nil
+                submitButton(
+                    question: question
                 )
-                .opacity(
-                    question.selectedAnswer == nil
-                    ? 0.5
-                    : 1
+            }
+        }
+    }
+
+    // =====================================================
+    // PROGRESS SECTION
+    // =====================================================
+
+    private var progressSection: some View {
+
+        VStack(
+            alignment: .leading,
+            spacing: 8
+        ) {
+
+            HStack {
+
+                Text(
+                    "Question \(currentQuestionNumber) of \(totalQuestions)"
+                )
+                .font(.caption)
+                .foregroundColor(
+                    RecalllQTheme.secondaryText
+                )
+
+                Spacer()
+
+                Text(
+                    "\(Int(vm.scorePercentage))%"
+                )
+                .font(.caption)
+                .bold()
+                .foregroundColor(
+                    RecalllQTheme.smartPurple
                 )
             }
 
-            // =================================================
-            // NEXT QUESTION
-            // =================================================
+            ProgressView(
+                value: progressValue,
+                total: 1
+            )
+            .tint(
+                RecalllQTheme.smartPurple
+            )
+            .scaleEffect(
+                x: 1,
+                y: 1.25,
+                anchor: .center
+            )
+        }
+    }
 
-            if vm.showResult {
+    // =====================================================
+    // QUESTION CARD
+    // =====================================================
 
-                Button {
+    private func questionCard(
+        _ question: QuizQuestion
+    ) -> some View {
 
-                    vm.nextQuestion()
+        VStack(
+            alignment: .leading,
+            spacing: 14
+        ) {
 
-                } label: {
+            HStack {
 
-                    HStack {
+                Image(
+                    systemName:
+                        "questionmark.bubble.fill"
+                )
+                .foregroundColor(
+                    RecalllQTheme.smartPurple
+                )
 
-                        Text(
-                            isLastQuestion
-                            ? "Finish Quiz"
-                            : "Next Question"
-                        )
-                        .bold()
-
-                        Spacer()
-
-                        Image(
-                            systemName:
-                                "arrow.right"
-                        )
-                    }
-                    .padding()
-                    .frame(
-                        maxWidth: .infinity
+                Text("Question")
+                    .font(.headline)
+                    .foregroundColor(
+                        RecalllQTheme.smartPurple
                     )
-                    .foregroundColor(.white)
-                    .background(
-                        RoundedRectangle(
-                            cornerRadius:
-                                RecalllQTheme.buttonRadius
-                        )
-                        .fill(
-                            RecalllQTheme.primaryButton
-                        )
+
+                Spacer()
+
+                Text(
+                    question.difficulty.displayName
+                )
+                .font(.caption)
+                .bold()
+                .padding(
+                    .horizontal,
+                    10
+                )
+                .padding(
+                    .vertical,
+                    5
+                )
+                .background(
+                    difficultyBackground(
+                        question.difficulty
                     )
-                }
+                )
+                .clipShape(
+                    Capsule()
+                )
             }
+
+            Text(question.question)
+                .font(.title3)
+                .bold()
+                .foregroundColor(
+                    RecalllQTheme.primaryText
+                )
+                .fixedSize(
+                    horizontal: false,
+                    vertical: true
+                )
+        }
+        .padding(
+            RecalllQTheme.largePadding
+        )
+        .frame(
+            maxWidth: .infinity,
+            alignment: .leading
+        )
+        .background(
+            RoundedRectangle(
+                cornerRadius:
+                    RecalllQTheme.largeRadius
+            )
+            .fill(
+                RecalllQTheme.cardBackground
+            )
+        )
+        .overlay(
+            RoundedRectangle(
+                cornerRadius:
+                    RecalllQTheme.largeRadius
+            )
+            .stroke(
+                RecalllQTheme.smartPurple.opacity(0.15),
+                lineWidth: 1
+            )
+        )
+        .shadow(
+            color:
+                RecalllQTheme.smartPurple.opacity(0.08),
+            radius: 8,
+            x: 0,
+            y: 4
+        )
+    }
+
+    // =====================================================
+    // DIFFICULTY BACKGROUND
+    // =====================================================
+
+    @ViewBuilder
+    private func difficultyBackground(
+        _ difficulty: QuizQuestion.Difficulty
+    ) -> some View {
+
+        switch difficulty {
+
+        case .easy:
+
+            RecalllQTheme.greenBackground
+
+        case .medium:
+
+            RecalllQTheme.orangeBackground
+
+        case .hard:
+
+            RecalllQTheme.redBackground
         }
     }
 
@@ -354,6 +410,20 @@ struct QuizView: View {
         question: QuizQuestion
     ) -> some View {
 
+        let isSelected =
+            question.selectedAnswer == option
+
+        let isCorrect =
+            question.correctAnswer == option
+
+        let showCorrectAnswer =
+            vm.showResult && isCorrect
+
+        let showWrongAnswer =
+            vm.showResult &&
+            isSelected &&
+            !isCorrect
+
         Button {
 
             if !vm.showResult {
@@ -363,24 +433,86 @@ struct QuizView: View {
 
         } label: {
 
-            HStack {
+            HStack(
+                spacing: 12
+            ) {
+
+                // =================================================
+                // OPTION LETTER
+                // =================================================
+
+                Text(
+                    optionLetter(
+                        option,
+                        question: question
+                    )
+                )
+                .font(.subheadline)
+                .bold()
+                .frame(
+                    width: 30,
+                    height: 30
+                )
+                .background(
+                    Circle()
+                        .fill(
+                            optionCircleColor(
+                                option: option,
+                                question: question
+                            )
+                        )
+                )
+                .foregroundColor(
+                    .white
+                )
+
+                // =================================================
+                // ANSWER TEXT
+                // =================================================
 
                 Text(option)
                     .font(.body)
                     .multilineTextAlignment(
                         .leading
                     )
+                    .foregroundColor(
+                        RecalllQTheme.primaryText
+                    )
 
                 Spacer()
 
-                if question.selectedAnswer == option {
+                // =================================================
+                // RESULT ICON
+                // =================================================
+
+                if showCorrectAnswer {
 
                     Image(
                         systemName:
                             "checkmark.circle.fill"
                     )
                     .foregroundColor(
-                        RecalllQTheme.primary
+                        RecalllQTheme.success
+                    )
+
+                } else if showWrongAnswer {
+
+                    Image(
+                        systemName:
+                            "xmark.circle.fill"
+                    )
+                    .foregroundColor(
+                        RecalllQTheme.error
+                    )
+
+                } else if isSelected {
+
+                    Image(
+                        systemName:
+                            "checkmark.circle.fill"
+                    )
+                    .foregroundColor(
+                        RecalllQTheme.smartPurple
                     )
                 }
             }
@@ -390,14 +522,9 @@ struct QuizView: View {
                 alignment: .leading
             )
             .background(
-                RoundedRectangle(
-                    cornerRadius:
-                        RecalllQTheme.mediumRadius
-                )
-                .fill(
-                    question.selectedAnswer == option
-                    ? RecalllQTheme.blueBackground
-                    : RecalllQTheme.cardBackground
+                answerBackground(
+                    option: option,
+                    question: question
                 )
             )
             .overlay(
@@ -406,10 +533,11 @@ struct QuizView: View {
                         RecalllQTheme.mediumRadius
                 )
                 .stroke(
-                    question.selectedAnswer == option
-                    ? RecalllQTheme.primary
-                    : Color.gray.opacity(0.15),
-                    lineWidth: 1
+                    answerBorderColor(
+                        option: option,
+                        question: question
+                    ),
+                    lineWidth: 1.5
                 )
             )
         }
@@ -418,10 +546,196 @@ struct QuizView: View {
     }
 
     // =====================================================
+    // OPTION LETTER
+    // =====================================================
+
+    private func optionLetter(
+        _ option: String,
+        question: QuizQuestion
+    ) -> String {
+
+        guard let index =
+                question.options.firstIndex(
+                    of: option
+                )
+        else {
+            return "?"
+        }
+
+        let letters = [
+            "A",
+            "B",
+            "C",
+            "D",
+            "E",
+            "F"
+        ]
+
+        if index < letters.count {
+
+            return letters[index]
+        }
+
+        return "?"
+    }
+
+    // =====================================================
+    // OPTION CIRCLE COLOR
+    // =====================================================
+
+    private func optionCircleColor(
+        option: String,
+        question: QuizQuestion
+    ) -> Color {
+
+        if vm.showResult {
+
+            if option == question.correctAnswer {
+
+                return RecalllQTheme.success
+            }
+
+            if option == question.selectedAnswer {
+
+                return RecalllQTheme.error
+            }
+        }
+
+        if option == question.selectedAnswer {
+
+            return RecalllQTheme.smartPurple
+        }
+
+        return RecalllQTheme.secondaryText
+    }
+
+    // =====================================================
+    // ANSWER BACKGROUND
+    // =====================================================
+
+    private func answerBackground(
+        option: String,
+        question: QuizQuestion
+    ) -> Color {
+
+        if vm.showResult {
+
+            if option == question.correctAnswer {
+
+                return RecalllQTheme.greenBackground
+            }
+
+            if option == question.selectedAnswer {
+
+                return RecalllQTheme.redBackground
+            }
+        }
+
+        if option == question.selectedAnswer {
+
+            return RecalllQTheme.purpleBackground
+        }
+
+        return RecalllQTheme.cardBackground
+    }
+
+    // =====================================================
+    // ANSWER BORDER
+    // =====================================================
+
+    private func answerBorderColor(
+        option: String,
+        question: QuizQuestion
+    ) -> Color {
+
+        if vm.showResult {
+
+            if option == question.correctAnswer {
+
+                return RecalllQTheme.success
+            }
+
+            if option == question.selectedAnswer {
+
+                return RecalllQTheme.error
+            }
+        }
+
+        if option == question.selectedAnswer {
+
+            return RecalllQTheme.smartPurple
+        }
+
+        return Color.gray.opacity(0.15)
+    }
+
+    // =====================================================
+    // SUBMIT BUTTON
+    // =====================================================
+
+    private func submitButton(
+        question: QuizQuestion
+    ) -> some View {
+
+        Button {
+
+            vm.submitAnswer()
+
+        } label: {
+
+            HStack {
+
+                Image(
+                    systemName:
+                        "checkmark.circle.fill"
+                )
+
+                Text("Submit Answer")
+                    .bold()
+
+                Spacer()
+
+                Image(
+                    systemName:
+                        "arrow.right"
+                )
+            }
+            .padding()
+            .frame(
+                maxWidth: .infinity
+            )
+            .foregroundColor(.white)
+            .background(
+                LinearGradient(
+                    colors: [
+                        RecalllQTheme.primary,
+                        RecalllQTheme.smartPurple
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .clipShape(
+                RoundedRectangle(
+                    cornerRadius:
+                        RecalllQTheme.buttonRadius
+                )
+            )
+        }
+        .disabled(
+            question.selectedAnswer == nil
+        )
+        .opacity(
+            question.selectedAnswer == nil
+            ? 0.5
+            : 1
+        )
+    }
+
+    // =====================================================
     // RESULT CARD
     // =====================================================
 
-    @ViewBuilder
     private func resultCard(
         _ question: QuizQuestion
     ) -> some View {
@@ -429,7 +743,7 @@ struct QuizView: View {
         let isCorrect =
             question.isCorrect
 
-        VStack(
+        return VStack(
             alignment: .leading,
             spacing: 12
         ) {
@@ -442,10 +756,11 @@ struct QuizView: View {
                         ? "checkmark.circle.fill"
                         : "xmark.circle.fill"
                 )
+                .font(.title2)
                 .foregroundColor(
                     isCorrect
                     ? RecalllQTheme.success
-                    : .red
+                    : RecalllQTheme.error
                 )
 
                 Text(
@@ -458,6 +773,8 @@ struct QuizView: View {
 
                 Spacer()
             }
+
+            Divider()
 
             Text("Correct Answer")
                 .font(.caption)
@@ -479,6 +796,10 @@ struct QuizView: View {
                 .font(.caption)
                 .foregroundColor(
                     RecalllQTheme.secondaryText
+                )
+                .fixedSize(
+                    horizontal: false,
+                    vertical: true
                 )
             }
         }
@@ -503,13 +824,65 @@ struct QuizView: View {
     }
 
     // =====================================================
+    // NEXT BUTTON
+    // =====================================================
+
+    private var nextButton: some View {
+
+        Button {
+
+            vm.nextQuestion()
+
+        } label: {
+
+            HStack {
+
+                Text(
+                    isLastQuestion
+                    ? "Finish Quiz"
+                    : "Next Question"
+                )
+                .bold()
+
+                Spacer()
+
+                Image(
+                    systemName:
+                        "arrow.right"
+                )
+            }
+            .padding()
+            .frame(
+                maxWidth: .infinity
+            )
+            .foregroundColor(.white)
+            .background(
+                LinearGradient(
+                    colors: [
+                        RecalllQTheme.primary,
+                        RecalllQTheme.smartPurple
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .clipShape(
+                RoundedRectangle(
+                    cornerRadius:
+                        RecalllQTheme.buttonRadius
+                )
+            )
+        }
+    }
+
+    // =====================================================
     // COMPLETED STATE
     // =====================================================
 
     private var completedState: some View {
 
         VStack(
-            spacing: 18
+            spacing: 20
         ) {
 
             ZStack {
@@ -519,16 +892,16 @@ struct QuizView: View {
                         RecalllQTheme.greenBackground
                     )
                     .frame(
-                        width: 110,
-                        height: 110
+                        width: 120,
+                        height: 120
                     )
 
                 Image(
                     systemName:
-                        "checkmark"
+                        "checkmark.circle.fill"
                 )
                 .font(
-                    .system(size: 50)
+                    .system(size: 60)
                 )
                 .foregroundColor(
                     RecalllQTheme.success
@@ -540,9 +913,9 @@ struct QuizView: View {
                 .bold()
 
             Text(
-                "You answered \(vm.currentQuiz?.correctAnswers ?? 0) out of \(totalQuestions) correctly."
+                "Great work! You completed the quiz."
             )
-            .font(.headline)
+            .font(.subheadline)
             .foregroundColor(
                 RecalllQTheme.secondaryText
             )
@@ -550,16 +923,50 @@ struct QuizView: View {
                 .center
             )
 
-            Text(
-                "\(Int(vm.currentQuiz?.percentage ?? 0))%"
-            )
-            .font(
-                .system(size: 48)
-            )
-            .bold()
-            .foregroundColor(
-                RecalllQTheme.primary
-            )
+            // =================================================
+            // SCORE
+            // =================================================
+
+            VStack(
+                spacing: 6
+            ) {
+
+                Text(
+                    "\(vm.correctAnswers) / \(totalQuestions)"
+                )
+                .font(
+                    .system(
+                        size: 32,
+                        weight: .bold
+                    )
+                )
+                .foregroundColor(
+                    RecalllQTheme.smartPurple
+                )
+
+                Text(
+                    "\(Int(vm.scorePercentage))%"
+                )
+                .font(
+                    .system(
+                        size: 46,
+                        weight: .bold
+                    )
+                )
+                .foregroundColor(
+                    RecalllQTheme.smartPurple
+                )
+
+                Text("Final Score")
+                    .font(.caption)
+                    .foregroundColor(
+                        RecalllQTheme.secondaryText
+                    )
+            }
+
+            // =================================================
+            // RESTART
+            // =================================================
 
             Button {
 
@@ -583,12 +990,19 @@ struct QuizView: View {
                 .padding()
                 .foregroundColor(.white)
                 .background(
+                    LinearGradient(
+                        colors: [
+                            RecalllQTheme.primary,
+                            RecalllQTheme.smartPurple
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .clipShape(
                     RoundedRectangle(
                         cornerRadius:
                             RecalllQTheme.buttonRadius
-                    )
-                    .fill(
-                        RecalllQTheme.primaryButton
                     )
                 )
             }
@@ -596,6 +1010,7 @@ struct QuizView: View {
         .frame(
             maxWidth: .infinity
         )
+        .padding(.vertical, 20)
     }
 
     // =====================================================
@@ -605,26 +1020,38 @@ struct QuizView: View {
     private var emptyState: some View {
 
         VStack(
-            spacing: 16
+            spacing: 18
         ) {
 
-            Image(
-                systemName:
-                    "questionmark.circle"
-            )
-            .font(
-                .system(size: 60)
-            )
-            .foregroundColor(
-                RecalllQTheme.primary
-            )
+            ZStack {
+
+                Circle()
+                    .fill(
+                        RecalllQTheme.purpleBackground
+                    )
+                    .frame(
+                        width: 110,
+                        height: 110
+                    )
+
+                Image(
+                    systemName:
+                        "questionmark.circle.fill"
+                )
+                .font(
+                    .system(size: 55)
+                )
+                .foregroundColor(
+                    RecalllQTheme.smartPurple
+                )
+            }
 
             Text("No Quiz Available")
                 .font(.title2)
                 .bold()
 
             Text(
-                "Create flashcards first. RecalllQ can then generate a quiz from your flashcards."
+                "Create flashcards or memories first. RecalllQ can then generate a quiz to test your knowledge."
             )
             .font(.subheadline)
             .foregroundColor(
@@ -633,7 +1060,10 @@ struct QuizView: View {
             .multilineTextAlignment(
                 .center
             )
-            .padding(.horizontal)
+            .fixedSize(
+                horizontal: false,
+                vertical: true
+            )
 
             Button {
 
@@ -657,20 +1087,27 @@ struct QuizView: View {
                 .padding()
                 .foregroundColor(.white)
                 .background(
+                    LinearGradient(
+                        colors: [
+                            RecalllQTheme.primary,
+                            RecalllQTheme.smartPurple
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .clipShape(
                     RoundedRectangle(
                         cornerRadius:
                             RecalllQTheme.buttonRadius
                     )
-                    .fill(
-                        RecalllQTheme.primaryButton
-                    )
                 )
             }
-            .padding(.horizontal)
         }
         .frame(
             maxWidth: .infinity
         )
+        .padding(.vertical, 30)
     }
 
     // =====================================================
@@ -692,12 +1129,29 @@ struct QuizView: View {
     }
 
     // =====================================================
+    // PROGRESS
+    // =====================================================
+
+    private var progressValue: Double {
+
+        guard totalQuestions > 0 else {
+            return 0
+        }
+
+        return Double(currentQuestionNumber)
+            / Double(totalQuestions)
+    }
+
+    // =====================================================
     // LAST QUESTION
     // =====================================================
 
     private var isLastQuestion: Bool {
 
-        currentQuestionNumber >= totalQuestions
+        guard totalQuestions > 0 else {
+            return false
+        }
+
+        return currentQuestionNumber >= totalQuestions
     }
 }
-

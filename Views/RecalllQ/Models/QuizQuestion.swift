@@ -9,7 +9,7 @@ import Foundation
 //
 // FLOW:
 //
-// Flashcard / Memory
+// Memory / Flashcard
 //        ↓
 //   QuizQuestion
 //        ↓
@@ -26,7 +26,7 @@ struct QuizQuestion: Identifiable, Codable, Equatable {
     // IDENTITY
     // =====================================================
 
-    var id: UUID
+    var id: UUID = UUID()
 
     // =====================================================
     // SOURCE MEMORY
@@ -84,7 +84,6 @@ struct QuizQuestion: Identifiable, Codable, Equatable {
         explanation: String = "",
         difficulty: Difficulty = .medium
     ) {
-
         self.id = id
         self.memoryID = memoryID
         self.question = question
@@ -104,12 +103,12 @@ struct QuizQuestion: Identifiable, Codable, Equatable {
     }
 
     // =====================================================
-    // CORRECT / INCORRECT
+    // CORRECT ANSWER STATUS
     // =====================================================
 
     var isCorrect: Bool {
 
-        guard let selectedAnswer else {
+        guard let selectedAnswer = selectedAnswer else {
             return false
         }
 
@@ -146,4 +145,3 @@ struct QuizQuestion: Identifiable, Codable, Equatable {
         }
     }
 }
-
