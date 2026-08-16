@@ -5,9 +5,9 @@ import SwiftUI
 // APP ENTRY POINT
 // =====================================================
 // PURPOSE:
-// - Creates global AppState (single source of truth)
-// - Injects it into ALL views
-// - Wires ViewModels together (IMPORTANT FIX)
+// - Creates global AppState
+// - Injects AppState into all views
+// - Provides RecalllQ as the root application
 // =====================================================
 
 @main
@@ -16,18 +16,21 @@ struct RecalllQApp: App {
     // =====================================================
     // GLOBAL APP STATE
     // =====================================================
+
     @StateObject private var appState = AppState()
+
+    // =====================================================
+    // BODY
+    // =====================================================
 
     var body: some Scene {
 
         WindowGroup {
 
-            // =================================================
-            // ROOT VIEW
-            // EVERYTHING IN THE APP STARTS HERE
-            // =================================================
             MainTabView()
-                .environmentObject(appState)
+                .environmentObject(
+                    appState
+                )
         }
     }
 }

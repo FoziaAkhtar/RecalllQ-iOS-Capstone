@@ -7,17 +7,15 @@ import SwiftUI
 // PURPOSE:
 // Main intelligence dashboard for RecalllQ.
 //
-// FEATURES:
-// - Welcome header
-// - AI Memory Assistant
-// - Learning statistics
-// - Flashcard performance
-// - Quiz performance
-// - Memory progress
-// - Personalized recommendations
-// - Smart memory suggestions
-// - Quick study actions
-// - Navigation to Flashcards / Memories / Notes
+// UI/UX POLISH:
+// - More lively colors
+// - Modern gradients
+// - Colorful statistic cards
+// - Improved welcome header
+// - Improved AI assistant card
+// - Colorful progress cards
+// - Modern quick actions
+// - Keeps existing RecalllQ functionality
 // =====================================================
 
 struct DashboardView: View {
@@ -60,7 +58,7 @@ struct DashboardView: View {
 
             VStack(
                 alignment: .leading,
-                spacing: 22
+                spacing: 24
             ) {
 
                 // =================================================
@@ -82,7 +80,9 @@ struct DashboardView: View {
                 sectionHeader(
                     title: "Learning Overview",
                     subtitle: "Your study activity at a glance",
-                    icon: "chart.bar.fill"
+                    icon: "chart.bar.fill",
+                    color: RecalllQTheme.primary,
+                    background: RecalllQTheme.blueBackground
                 )
 
                 learningStats
@@ -100,7 +100,9 @@ struct DashboardView: View {
                 sectionHeader(
                     title: "Study Performance",
                     subtitle: "Track how well you are learning",
-                    icon: "chart.line.uptrend.xyaxis"
+                    icon: "chart.line.uptrend.xyaxis",
+                    color: RecalllQTheme.smartPurple,
+                    background: RecalllQTheme.purpleBackground
                 )
 
                 flashcardPerformanceCard
@@ -115,8 +117,10 @@ struct DashboardView: View {
 
                 sectionHeader(
                     title: "Recommended For You",
-                    subtitle: "RecalllQ's personalized study suggestions",
-                    icon: "sparkles"
+                    subtitle: "Personalized study suggestions",
+                    icon: "sparkles",
+                    color: RecalllQTheme.studyOrange,
+                    background: RecalllQTheme.orangeBackground
                 )
 
                 recommendationsSection
@@ -128,7 +132,9 @@ struct DashboardView: View {
                 sectionHeader(
                     title: "Smart Suggestions",
                     subtitle: "Memories that may need review",
-                    icon: "lightbulb.fill"
+                    icon: "lightbulb.fill",
+                    color: RecalllQTheme.smartPurple,
+                    background: RecalllQTheme.purpleBackground
                 )
 
                 smartSuggestionsSection
@@ -140,7 +146,9 @@ struct DashboardView: View {
                 sectionHeader(
                     title: "Quick Actions",
                     subtitle: "Continue your learning",
-                    icon: "bolt.fill"
+                    icon: "bolt.fill",
+                    color: RecalllQTheme.success,
+                    background: RecalllQTheme.greenBackground
                 )
 
                 quickActions
@@ -172,32 +180,45 @@ struct DashboardView: View {
 
         VStack(
             alignment: .leading,
-            spacing: 8
+            spacing: 14
         ) {
 
             HStack {
 
                 VStack(
                     alignment: .leading,
-                    spacing: 5
+                    spacing: 6
                 ) {
 
                     Text("Welcome back 👋")
                         .font(.subheadline)
+                        .fontWeight(.medium)
                         .foregroundColor(
-                            RecalllQTheme.secondaryText
+                            RecalllQTheme.secondary
                         )
 
                     Text("Let's keep learning.")
                         .font(
                             .system(
-                                size: 30,
+                                size: 32,
                                 weight: .bold
                             )
                         )
                         .foregroundColor(
                             RecalllQTheme.primaryText
                         )
+
+                    Text(
+                        "Your intelligent study companion is ready."
+                    )
+                    .font(.subheadline)
+                    .foregroundColor(
+                        RecalllQTheme.secondaryText
+                    )
+                    .fixedSize(
+                        horizontal: false,
+                        vertical: true
+                    )
                 }
 
                 Spacer()
@@ -206,31 +227,47 @@ struct DashboardView: View {
 
                     Circle()
                         .fill(
-                            RecalllQTheme.blueBackground
+                            LinearGradient(
+                                colors: [
+                                    RecalllQTheme.primary,
+                                    RecalllQTheme.smartPurple
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
                         .frame(
-                            width: 52,
-                            height: 52
+                            width: 64,
+                            height: 64
+                        )
+                        .shadow(
+                            color:
+                                RecalllQTheme.primary.opacity(0.25),
+                            radius: 10,
+                            x: 0,
+                            y: 5
                         )
 
                     Image(
                         systemName:
                             "brain.head.profile"
                     )
-                    .font(.title2)
-                    .foregroundColor(
-                        RecalllQTheme.primary
+                    .font(
+                        .system(size: 28)
+                    )
+                    .foregroundColor(.white)
+
+                    Image(
+                        systemName: "sparkles"
+                    )
+                    .font(.caption)
+                    .foregroundColor(.white)
+                    .offset(
+                        x: 23,
+                        y: -23
                     )
                 }
             }
-
-            Text(
-                "Your intelligent study companion is ready."
-            )
-            .font(.subheadline)
-            .foregroundColor(
-                RecalllQTheme.secondaryText
-            )
         }
     }
 
@@ -242,7 +279,7 @@ struct DashboardView: View {
 
         VStack(
             alignment: .leading,
-            spacing: 16
+            spacing: 18
         ) {
 
             HStack {
@@ -250,14 +287,14 @@ struct DashboardView: View {
                 ZStack {
 
                     RoundedRectangle(
-                        cornerRadius: 16
+                        cornerRadius: 17
                     )
                     .fill(
-                        Color.white.opacity(0.18)
+                        Color.white.opacity(0.20)
                     )
                     .frame(
-                        width: 56,
-                        height: 56
+                        width: 58,
+                        height: 58
                     )
 
                     Image(
@@ -275,6 +312,7 @@ struct DashboardView: View {
 
                     Text("AI Memory Assistant")
                         .font(.headline)
+                        .fontWeight(.bold)
                         .foregroundColor(.white)
 
                     HStack(spacing: 6) {
@@ -291,31 +329,46 @@ struct DashboardView: View {
                         Text("Ready to learn")
                             .font(.caption)
                             .foregroundColor(
-                                .white.opacity(0.9)
+                                .white.opacity(0.92)
                             )
                     }
                 }
 
                 Spacer()
 
-                Image(
-                    systemName:
-                        "sparkles"
-                )
-                .font(.title3)
-                .foregroundColor(
-                    .white.opacity(0.9)
-                )
+                ZStack {
+
+                    Circle()
+                        .fill(
+                            Color.white.opacity(0.15)
+                        )
+                        .frame(
+                            width: 38,
+                            height: 38
+                        )
+
+                    Image(
+                        systemName: "sparkles"
+                    )
+                    .font(.headline)
+                    .foregroundColor(.white)
+                }
             }
 
             Text(assistantMessage)
                 .font(.subheadline)
                 .foregroundColor(
-                    .white.opacity(0.92)
+                    .white.opacity(0.94)
                 )
                 .fixedSize(
                     horizontal: false,
                     vertical: true
+                )
+                .lineSpacing(3)
+
+            Divider()
+                .background(
+                    Color.white.opacity(0.25)
                 )
 
             HStack {
@@ -329,12 +382,13 @@ struct DashboardView: View {
 
                 Label(
                     "\(memoryVM.allTags.count) Topics",
-                    systemImage: "tag"
+                    systemImage: "tag.fill"
                 )
             }
             .font(.caption)
+            .fontWeight(.medium)
             .foregroundColor(
-                .white.opacity(0.85)
+                .white.opacity(0.90)
             )
         }
         .padding(20)
@@ -346,7 +400,8 @@ struct DashboardView: View {
             LinearGradient(
                 colors: [
                     RecalllQTheme.primary,
-                    RecalllQTheme.primary.opacity(0.72)
+                    RecalllQTheme.smartPurple,
+                    RecalllQTheme.secondary
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -354,15 +409,15 @@ struct DashboardView: View {
         )
         .clipShape(
             RoundedRectangle(
-                cornerRadius: 24
+                cornerRadius: 26
             )
         )
         .shadow(
             color:
-                RecalllQTheme.primary.opacity(0.20),
-            radius: 12,
+                RecalllQTheme.primary.opacity(0.25),
+            radius: 14,
             x: 0,
-            y: 6
+            y: 7
         )
     }
 
@@ -414,7 +469,9 @@ struct DashboardView: View {
     private func sectionHeader(
         title: String,
         subtitle: String,
-        icon: String
+        icon: String,
+        color: Color,
+        background: Color
     ) -> some View {
 
         HStack(
@@ -425,33 +482,30 @@ struct DashboardView: View {
             ZStack {
 
                 RoundedRectangle(
-                    cornerRadius: 10
+                    cornerRadius: 11
                 )
-                .fill(
-                    RecalllQTheme.blueBackground
-                )
+                .fill(background)
                 .frame(
-                    width: 36,
-                    height: 36
+                    width: 40,
+                    height: 40
                 )
 
                 Image(
                     systemName: icon
                 )
                 .font(.subheadline)
-                .foregroundColor(
-                    RecalllQTheme.primary
-                )
+                .fontWeight(.bold)
+                .foregroundColor(color)
             }
 
             VStack(
                 alignment: .leading,
-                spacing: 2
+                spacing: 3
             ) {
 
                 Text(title)
                     .font(.title3)
-                    .bold()
+                    .fontWeight(.bold)
                     .foregroundColor(
                         RecalllQTheme.primaryText
                     )
@@ -495,7 +549,9 @@ struct DashboardView: View {
                 icon:
                     "brain.head.profile",
                 color:
-                    RecalllQTheme.primary
+                    RecalllQTheme.primary,
+                background:
+                    RecalllQTheme.blueBackground
             )
 
             dashboardStatCard(
@@ -505,7 +561,9 @@ struct DashboardView: View {
                 icon:
                     "rectangle.on.rectangle",
                 color:
-                    RecalllQTheme.studyOrange
+                    RecalllQTheme.studyOrange,
+                background:
+                    RecalllQTheme.orangeBackground
             )
 
             dashboardStatCard(
@@ -515,7 +573,9 @@ struct DashboardView: View {
                 icon:
                     "checkmark.circle.fill",
                 color:
-                    RecalllQTheme.success
+                    RecalllQTheme.success,
+                background:
+                    RecalllQTheme.greenBackground
             )
 
             dashboardStatCard(
@@ -525,7 +585,9 @@ struct DashboardView: View {
                 icon:
                     "questionmark.circle.fill",
                 color:
-                    RecalllQTheme.secondary
+                    RecalllQTheme.secondary,
+                background:
+                    RecalllQTheme.purpleBackground
             )
         }
     }
@@ -538,7 +600,8 @@ struct DashboardView: View {
         title: String,
         value: String,
         icon: String,
-        color: Color
+        color: Color,
+        background: Color
     ) -> some View {
 
         VStack(
@@ -551,29 +614,38 @@ struct DashboardView: View {
                 ZStack {
 
                     RoundedRectangle(
-                        cornerRadius: 10
+                        cornerRadius: 12
                     )
-                    .fill(
-                        color.opacity(0.12)
-                    )
+                    .fill(background)
                     .frame(
-                        width: 38,
-                        height: 38
+                        width: 42,
+                        height: 42
                     )
 
                     Image(
                         systemName: icon
                     )
+                    .font(.headline)
                     .foregroundColor(color)
                 }
 
                 Spacer()
+
+                Image(
+                    systemName:
+                        "arrow.up.right"
+                )
+                .font(.caption)
+                .fontWeight(.bold)
+                .foregroundColor(
+                    color.opacity(0.65)
+                )
             }
 
             Text(value)
                 .font(
                     .system(
-                        size: 27,
+                        size: 29,
                         weight: .bold
                     )
                 )
@@ -583,6 +655,7 @@ struct DashboardView: View {
 
             Text(title)
                 .font(.caption)
+                .fontWeight(.medium)
                 .foregroundColor(
                     RecalllQTheme.secondaryText
                 )
@@ -590,11 +663,12 @@ struct DashboardView: View {
         .padding(16)
         .frame(
             maxWidth: .infinity,
+            minHeight: 130,
             alignment: .leading
         )
         .background(
             RoundedRectangle(
-                cornerRadius: 18
+                cornerRadius: 19
             )
             .fill(
                 RecalllQTheme.cardBackground
@@ -602,12 +676,19 @@ struct DashboardView: View {
         )
         .overlay(
             RoundedRectangle(
-                cornerRadius: 18
+                cornerRadius: 19
             )
             .stroke(
-                Color.gray.opacity(0.08),
+                color.opacity(0.12),
                 lineWidth: 1
             )
+        )
+        .shadow(
+            color:
+                Color.black.opacity(0.04),
+            radius: 7,
+            x: 0,
+            y: 3
         )
     }
 
@@ -626,8 +707,8 @@ struct DashboardView: View {
                         RecalllQTheme.greenBackground
                     )
                     .frame(
-                        width: 52,
-                        height: 52
+                        width: 54,
+                        height: 54
                     )
 
                 Image(
@@ -635,7 +716,7 @@ struct DashboardView: View {
                         "flame.fill"
                 )
                 .foregroundColor(
-                    RecalllQTheme.success
+                    RecalllQTheme.studyOrange
                 )
                 .font(.title3)
             }
@@ -647,6 +728,7 @@ struct DashboardView: View {
 
                 Text("Keep your momentum")
                     .font(.headline)
+                    .fontWeight(.bold)
                     .foregroundColor(
                         RecalllQTheme.primaryText
                     )
@@ -662,29 +744,57 @@ struct DashboardView: View {
 
             Spacer()
 
-            Text(
-                "\(Int(flashcardVM.overallAccuracy * 100))%"
-            )
-            .font(
-                .system(
-                    size: 20,
-                    weight: .bold
+            VStack(
+                alignment: .trailing,
+                spacing: 2
+            ) {
+
+                Text(
+                    "\(Int(flashcardVM.overallAccuracy * 100))%"
                 )
-            )
-            .foregroundColor(
-                RecalllQTheme.success
-            )
+                .font(
+                    .system(
+                        size: 21,
+                        weight: .bold
+                    )
+                )
+                .foregroundColor(
+                    RecalllQTheme.success
+                )
+
+                Text("accuracy")
+                    .font(.caption2)
+                    .foregroundColor(
+                        RecalllQTheme.secondaryText
+                    )
+            }
         }
         .padding(16)
         .frame(
             maxWidth: .infinity
         )
         .background(
+            LinearGradient(
+                colors: [
+                    RecalllQTheme.greenBackground,
+                    RecalllQTheme.blueBackground
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        )
+        .clipShape(
             RoundedRectangle(
                 cornerRadius: 20
             )
-            .fill(
-                RecalllQTheme.greenBackground
+        )
+        .overlay(
+            RoundedRectangle(
+                cornerRadius: 20
+            )
+            .stroke(
+                RecalllQTheme.success.opacity(0.12),
+                lineWidth: 1
             )
         )
     }
@@ -713,6 +823,7 @@ struct DashboardView: View {
                             "rectangle.on.rectangle"
                     )
                     .font(.headline)
+                    .fontWeight(.bold)
                     .foregroundColor(
                         RecalllQTheme.primaryText
                     )
@@ -752,13 +863,17 @@ struct DashboardView: View {
             )
             .scaleEffect(
                 x: 1,
-                y: 1.3
+                y: 1.4
             )
 
             Text(flashcardPerformanceMessage)
                 .font(.caption)
                 .foregroundColor(
                     RecalllQTheme.secondaryText
+                )
+                .fixedSize(
+                    horizontal: false,
+                    vertical: true
                 )
         }
         .padding(18)
@@ -767,11 +882,27 @@ struct DashboardView: View {
             alignment: .leading
         )
         .background(
-            RoundedRectangle(
-                cornerRadius: 20
+            LinearGradient(
+                colors: [
+                    RecalllQTheme.blueBackground,
+                    RecalllQTheme.purpleBackground
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
             )
-            .fill(
-                RecalllQTheme.blueBackground
+        )
+        .clipShape(
+            RoundedRectangle(
+                cornerRadius: 21
+            )
+        )
+        .overlay(
+            RoundedRectangle(
+                cornerRadius: 21
+            )
+            .stroke(
+                RecalllQTheme.primary.opacity(0.12),
+                lineWidth: 1
             )
         )
     }
@@ -834,6 +965,7 @@ struct DashboardView: View {
                             "questionmark.circle.fill"
                     )
                     .font(.headline)
+                    .fontWeight(.bold)
                     .foregroundColor(
                         RecalllQTheme.primaryText
                     )
@@ -873,13 +1005,17 @@ struct DashboardView: View {
             )
             .scaleEffect(
                 x: 1,
-                y: 1.3
+                y: 1.4
             )
 
             Text(quizPerformanceMessage)
                 .font(.caption)
                 .foregroundColor(
                     RecalllQTheme.secondaryText
+                )
+                .fixedSize(
+                    horizontal: false,
+                    vertical: true
                 )
         }
         .padding(18)
@@ -888,11 +1024,27 @@ struct DashboardView: View {
             alignment: .leading
         )
         .background(
-            RoundedRectangle(
-                cornerRadius: 20
+            LinearGradient(
+                colors: [
+                    RecalllQTheme.orangeBackground,
+                    RecalllQTheme.redBackground
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
             )
-            .fill(
-                RecalllQTheme.orangeBackground
+        )
+        .clipShape(
+            RoundedRectangle(
+                cornerRadius: 21
+            )
+        )
+        .overlay(
+            RoundedRectangle(
+                cornerRadius: 21
+            )
+            .stroke(
+                RecalllQTheme.studyOrange.opacity(0.12),
+                lineWidth: 1
             )
         )
     }
@@ -965,6 +1117,7 @@ struct DashboardView: View {
                             "brain.head.profile"
                     )
                     .font(.headline)
+                    .fontWeight(.bold)
                     .foregroundColor(
                         RecalllQTheme.primaryText
                     )
@@ -1003,7 +1156,7 @@ struct DashboardView: View {
             )
             .scaleEffect(
                 x: 1,
-                y: 1.3
+                y: 1.4
             )
 
             Text(
@@ -1022,11 +1175,27 @@ struct DashboardView: View {
             alignment: .leading
         )
         .background(
-            RoundedRectangle(
-                cornerRadius: 20
+            LinearGradient(
+                colors: [
+                    RecalllQTheme.greenBackground,
+                    RecalllQTheme.blueBackground
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
             )
-            .fill(
-                RecalllQTheme.greenBackground
+        )
+        .clipShape(
+            RoundedRectangle(
+                cornerRadius: 21
+            )
+        )
+        .overlay(
+            RoundedRectangle(
+                cornerRadius: 21
+            )
+            .stroke(
+                RecalllQTheme.success.opacity(0.12),
+                lineWidth: 1
             )
         )
     }
@@ -1076,8 +1245,8 @@ struct DashboardView: View {
                         RecalllQTheme.orangeBackground
                     )
                     .frame(
-                        width: 58,
-                        height: 58
+                        width: 62,
+                        height: 62
                     )
 
                 Image(
@@ -1094,6 +1263,7 @@ struct DashboardView: View {
                 "Recommendations coming soon"
             )
             .font(.headline)
+            .fontWeight(.bold)
             .foregroundColor(
                 RecalllQTheme.primaryText
             )
@@ -1112,13 +1282,22 @@ struct DashboardView: View {
         .frame(
             maxWidth: .infinity
         )
-        .padding(22)
+        .padding(24)
         .background(
             RoundedRectangle(
-                cornerRadius: 20
+                cornerRadius: 21
             )
             .fill(
                 RecalllQTheme.cardBackground
+            )
+        )
+        .overlay(
+            RoundedRectangle(
+                cornerRadius: 21
+            )
+            .stroke(
+                RecalllQTheme.studyOrange.opacity(0.12),
+                lineWidth: 1
             )
         )
     }
@@ -1135,19 +1314,32 @@ struct DashboardView: View {
 
                 VStack(spacing: 14) {
 
-                    Image(
-                        systemName:
-                            "lightbulb.fill"
-                    )
-                    .font(.largeTitle)
-                    .foregroundColor(
-                        RecalllQTheme.studyOrange
-                    )
+                    ZStack {
+
+                        Circle()
+                            .fill(
+                                RecalllQTheme.purpleBackground
+                            )
+                            .frame(
+                                width: 62,
+                                height: 62
+                            )
+
+                        Image(
+                            systemName:
+                                "lightbulb.fill"
+                        )
+                        .font(.title2)
+                        .foregroundColor(
+                            RecalllQTheme.smartPurple
+                        )
+                    }
 
                     Text(
                         "Suggestions coming soon"
                     )
                     .font(.headline)
+                    .fontWeight(.bold)
                     .foregroundColor(
                         RecalllQTheme.primaryText
                     )
@@ -1166,13 +1358,13 @@ struct DashboardView: View {
                 .frame(
                     maxWidth: .infinity
                 )
-                .padding(22)
+                .padding(24)
                 .background(
                     RoundedRectangle(
-                        cornerRadius: 20
+                        cornerRadius: 21
                     )
                     .fill(
-                        RecalllQTheme.orangeBackground
+                        RecalllQTheme.purpleBackground
                     )
                 )
 
@@ -1193,14 +1385,15 @@ struct DashboardView: View {
     // =====================================================
     // SMART MEMORY CARD
     // =====================================================
-    // FIX:
-    // The old version called:
+    // IMPORTANT:
+    // We intentionally navigate to FlashcardsView.
+    //
+    // We DO NOT call:
     //
     // appState.openFlashcard(for: memory)
     //
-    // But openFlashcard expects a Flashcard, not Memory.
-    //
-    // This version navigates to FlashcardsView instead.
+    // because openFlashcard expects a Flashcard,
+    // while this object is a Memory.
     // =====================================================
 
     private func smartMemoryCard(
@@ -1225,11 +1418,11 @@ struct DashboardView: View {
 
                     Circle()
                         .fill(
-                            RecalllQTheme.orangeBackground
+                            RecalllQTheme.purpleBackground
                         )
                         .frame(
-                            width: 44,
-                            height: 44
+                            width: 46,
+                            height: 46
                         )
 
                     Image(
@@ -1237,7 +1430,7 @@ struct DashboardView: View {
                             "brain"
                     )
                     .foregroundColor(
-                        RecalllQTheme.studyOrange
+                        RecalllQTheme.smartPurple
                     )
                 }
 
@@ -1250,6 +1443,7 @@ struct DashboardView: View {
                         memory.title
                     )
                     .font(.headline)
+                    .fontWeight(.bold)
                     .foregroundColor(
                         RecalllQTheme.primaryText
                     )
@@ -1258,8 +1452,9 @@ struct DashboardView: View {
                         "Suggested review"
                     )
                     .font(.caption)
+                    .fontWeight(.semibold)
                     .foregroundColor(
-                        RecalllQTheme.studyOrange
+                        RecalllQTheme.smartPurple
                     )
 
                     Text(
@@ -1277,14 +1472,27 @@ struct DashboardView: View {
 
                 Spacer()
 
-                Image(
-                    systemName:
-                        "chevron.right"
-                )
-                .font(.caption)
-                .foregroundColor(
-                    RecalllQTheme.secondaryText
-                )
+                ZStack {
+
+                    Circle()
+                        .fill(
+                            RecalllQTheme.purpleBackground
+                        )
+                        .frame(
+                            width: 30,
+                            height: 30
+                        )
+
+                    Image(
+                        systemName:
+                            "chevron.right"
+                    )
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(
+                        RecalllQTheme.smartPurple
+                    )
+                }
             }
             .padding(16)
             .frame(
@@ -1293,7 +1501,7 @@ struct DashboardView: View {
             )
             .background(
                 RoundedRectangle(
-                    cornerRadius: 18
+                    cornerRadius: 19
                 )
                 .fill(
                     RecalllQTheme.cardBackground
@@ -1301,12 +1509,19 @@ struct DashboardView: View {
             )
             .overlay(
                 RoundedRectangle(
-                    cornerRadius: 18
+                    cornerRadius: 19
                 )
                 .stroke(
-                    RecalllQTheme.studyOrange.opacity(0.12),
+                    RecalllQTheme.smartPurple.opacity(0.15),
                     lineWidth: 1
                 )
+            )
+            .shadow(
+                color:
+                    Color.black.opacity(0.035),
+                radius: 6,
+                x: 0,
+                y: 3
             )
         }
         .buttonStyle(.plain)
@@ -1341,7 +1556,9 @@ struct DashboardView: View {
                     icon:
                         "timer",
                     color:
-                        RecalllQTheme.primary
+                        RecalllQTheme.primary,
+                    gradientEnd:
+                        RecalllQTheme.smartPurple
                 )
             }
             .buttonStyle(.plain)
@@ -1367,7 +1584,9 @@ struct DashboardView: View {
                     icon:
                         "rectangle.on.rectangle",
                     color:
-                        RecalllQTheme.studyOrange
+                        RecalllQTheme.studyOrange,
+                    gradientEnd:
+                        RecalllQTheme.warning
                 )
             }
             .buttonStyle(.plain)
@@ -1393,7 +1612,9 @@ struct DashboardView: View {
                     icon:
                         "note.text",
                     color:
-                        RecalllQTheme.secondary
+                        RecalllQTheme.secondary,
+                    gradientEnd:
+                        RecalllQTheme.smartPurple
                 )
             }
             .buttonStyle(.plain)
@@ -1419,7 +1640,9 @@ struct DashboardView: View {
                     icon:
                         "brain.head.profile",
                     color:
-                        RecalllQTheme.success
+                        RecalllQTheme.success,
+                    gradientEnd:
+                        RecalllQTheme.primary
                 )
             }
             .buttonStyle(.plain)
@@ -1434,7 +1657,8 @@ struct DashboardView: View {
         title: String,
         subtitle: String,
         icon: String,
-        color: Color
+        color: Color,
+        gradientEnd: Color
     ) -> some View {
 
         HStack(spacing: 14) {
@@ -1442,33 +1666,38 @@ struct DashboardView: View {
             ZStack {
 
                 RoundedRectangle(
-                    cornerRadius: 13
+                    cornerRadius: 14
                 )
                 .fill(
-                    Color.white.opacity(0.18)
+                    Color.white.opacity(0.20)
                 )
                 .frame(
-                    width: 48,
-                    height: 48
+                    width: 50,
+                    height: 50
                 )
 
                 Image(
                     systemName: icon
                 )
                 .font(.title3)
+                .foregroundColor(.white)
             }
 
             VStack(
                 alignment: .leading,
-                spacing: 3
+                spacing: 4
             ) {
 
                 Text(title)
                     .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
 
                 Text(subtitle)
                     .font(.caption)
-                    .opacity(0.9)
+                    .foregroundColor(
+                        .white.opacity(0.90)
+                    )
                     .multilineTextAlignment(
                         .leading
                     )
@@ -1476,30 +1705,52 @@ struct DashboardView: View {
 
             Spacer()
 
-            Image(
-                systemName:
-                    "arrow.up.right"
-            )
-            .font(.subheadline)
+            ZStack {
+
+                Circle()
+                    .fill(
+                        Color.white.opacity(0.16)
+                    )
+                    .frame(
+                        width: 32,
+                        height: 32
+                    )
+
+                Image(
+                    systemName:
+                        "arrow.up.right"
+                )
+                .font(.caption)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+            }
         }
         .padding(16)
         .frame(
             maxWidth: .infinity,
             alignment: .leading
         )
-        .foregroundColor(.white)
         .background(
-            RoundedRectangle(
-                cornerRadius: 20
+            LinearGradient(
+                colors: [
+                    color,
+                    gradientEnd
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
             )
-            .fill(color)
+        )
+        .clipShape(
+            RoundedRectangle(
+                cornerRadius: 21
+            )
         )
         .shadow(
             color:
-                color.opacity(0.15),
-            radius: 8,
+                color.opacity(0.20),
+            radius: 9,
             x: 0,
-            y: 4
+            y: 5
         )
     }
 }

@@ -11,7 +11,8 @@ import Combine
 // FEATURES:
 // - Start study session
 // - End study session
-// - Track study duration
+// - Cancel study session
+// - LIVE timer that updates every second
 // - Track flashcards reviewed
 // - Track quizzes completed
 // - Track memories studied
@@ -20,6 +21,7 @@ import Combine
 // - Calculate total study time
 // - Calculate today's study time
 // - Show recent study activity
+// - Reset study history
 // =====================================================
 
 final class StudySessionViewModel: ObservableObject {
@@ -28,21 +30,29 @@ final class StudySessionViewModel: ObservableObject {
     // MAIN STATE
     // =====================================================
 
-    @Published var sessions: [StudySession] = []
+    @Published private(set) var sessions: [StudySession] = []
 
     // =====================================================
     // ACTIVE SESSION
     // =====================================================
 
-    @Published var activeSession: StudySession?
+    @Published private(set) var activeSession: StudySession?
+
+    @Published private(set) var isStudying: Bool = false
+
+    @Published private(set) var currentSessionStartDate: Date?
 
     // =====================================================
-    // TIMER STATE
+    // LIVE TIMER
+    // =====================================================
+    // IMPORTANT:
+    // This value changes every second.
+    // Because it is @Published, SwiftUI updates the UI.
     // =====================================================
 
-    @Published var isStudying: Bool = false
+    @Published private(set) var elapsedSessionTime: TimeInterval = 0
 
-    @Published var currentSessionStartDate: Date?
+    private var timer: Timer?
 
     // =====================================================
     // STORAGE
@@ -58,6 +68,15 @@ final class StudySessionViewModel: ObservableObject {
     init() {
 
         loadSessions()
+    }
+
+    // =====================================================
+    // DEINIT
+    // =====================================================
+
+    deinit {
+
+        stopTimer()
     }
 
     // =====================================================
@@ -79,22 +98,101 @@ final class StudySessionViewModel: ObservableObject {
             return
         }
 
+        let startDate = Date()
+
         let session =
             StudySession(
-                startDate: Date()
+                startDate: startDate
             )
 
         activeSession = session
 
         currentSessionStartDate =
-            session.startDate
+            startDate
+
+        elapsedSessionTime = 0
 
         isStudying = true
 
+        // -------------------------------------------------
+        // START LIVE TIMER
+        // -------------------------------------------------
+
+        startTimer()
+
         print("========================================")
         print("📚 STUDY SESSION STARTED")
-        print("Start: \(session.startDate)")
+        print("Start: \(startDate)")
         print("========================================")
+    }
+
+    // =====================================================
+    // START TIMER
+    // =====================================================
+
+    private func startTimer() {
+
+        // Remove any existing timer first.
+        stopTimer()
+
+        // -------------------------------------------------
+        // Timer fires every 1 second.
+        // -------------------------------------------------
+
+        timer =
+            Timer.scheduledTimer(
+                withTimeInterval: 1.0,
+                repeats: true
+            ) { [weak self] _ in
+
+                guard let self = self else {
+                    return
+                }
+
+                self.updateElapsedTime()
+            }
+
+        // Make timer continue while scrolling/UI is busy.
+        RunLoop.main.add(
+            timer!,
+            forMode: .common
+        )
+
+        // Update immediately.
+        updateElapsedTime()
+    }
+
+    // =====================================================
+    // UPDATE ELAPSED TIME
+    // =====================================================
+
+    private func updateElapsedTime() {
+
+        guard
+            let startDate =
+                currentSessionStartDate,
+            isStudying
+        else {
+
+            return
+        }
+
+        elapsedSessionTime =
+            max(
+                Date().timeIntervalSince(startDate),
+                0
+            )
+    }
+
+    // =====================================================
+    // STOP TIMER
+    // =====================================================
+
+    private func stopTimer() {
+
+        timer?.invalidate()
+
+        timer = nil
     }
 
     // =====================================================
@@ -115,15 +213,22 @@ final class StudySessionViewModel: ObservableObject {
         }
 
         // -------------------------------------------------
+        // Stop live timer
+        // -------------------------------------------------
+
+        stopTimer()
+
+        // -------------------------------------------------
         // End date
         // -------------------------------------------------
 
         let endDate = Date()
 
-        session.endDate = endDate
+        session.endDate =
+            endDate
 
         // -------------------------------------------------
-        // Calculate duration
+        // Calculate final duration
         // -------------------------------------------------
 
         let duration =
@@ -152,16 +257,21 @@ final class StudySessionViewModel: ObservableObject {
         // Reset active session
         // -------------------------------------------------
 
-        activeSession = nil
-
-        currentSessionStartDate = nil
-
-        isStudying = false
+        clearActiveSession()
 
         print("========================================")
         print("✅ STUDY SESSION COMPLETED")
         print(
             "Duration: \(formatDuration(session.duration))"
+        )
+        print(
+            "Flashcards: \(session.flashcardsReviewed)"
+        )
+        print(
+            "Memories: \(session.memoriesStudied)"
+        )
+        print(
+            "Quizzes: \(session.quizzesCompleted)"
         )
         print("========================================")
     }
@@ -172,15 +282,35 @@ final class StudySessionViewModel: ObservableObject {
 
     func cancelSession() {
 
-        activeSession = nil
+        guard isStudying else {
 
-        currentSessionStartDate = nil
+            return
+        }
 
-        isStudying = false
+        stopTimer()
+
+        clearActiveSession()
 
         print(
             "🛑 Study session cancelled."
         )
+    }
+
+    // =====================================================
+    // CLEAR ACTIVE SESSION
+    // =====================================================
+
+    private func clearActiveSession() {
+
+        activeSession = nil
+
+        currentSessionStartDate = nil
+
+        elapsedSessionTime = 0
+
+        isStudying = false
+
+        stopTimer()
     }
 
     // =====================================================
@@ -192,6 +322,10 @@ final class StudySessionViewModel: ObservableObject {
         guard
             var session = activeSession
         else {
+
+            print(
+                "⚠️ No active session for flashcard activity."
+            )
 
             return
         }
@@ -215,6 +349,10 @@ final class StudySessionViewModel: ObservableObject {
             var session = activeSession
         else {
 
+            print(
+                "⚠️ No active session for quiz activity."
+            )
+
             return
         }
 
@@ -237,6 +375,10 @@ final class StudySessionViewModel: ObservableObject {
             var session = activeSession
         else {
 
+            print(
+                "⚠️ No active session for memory activity."
+            )
+
             return
         }
 
@@ -255,10 +397,9 @@ final class StudySessionViewModel: ObservableObject {
 
     var totalStudyTime: TimeInterval {
 
-        sessions.reduce(0) {
+        sessions.reduce(0) { total, session in
 
-            $0 + $1.duration
-
+            total + session.duration
         }
     }
 
@@ -272,18 +413,16 @@ final class StudySessionViewModel: ObservableObject {
             Calendar.current
 
         return sessions
-            .filter {
+            .filter { session in
 
                 calendar.isDate(
-                    $0.startDate,
+                    session.startDate,
                     inSameDayAs: Date()
                 )
-
             }
-            .reduce(0) {
+            .reduce(0) { total, session in
 
-                $0 + $1.duration
-
+                total + session.duration
             }
     }
 
@@ -302,10 +441,9 @@ final class StudySessionViewModel: ObservableObject {
 
     var totalFlashcardsReviewed: Int {
 
-        sessions.reduce(0) {
+        sessions.reduce(0) { total, session in
 
-            $0 + $1.flashcardsReviewed
-
+            total + session.flashcardsReviewed
         }
     }
 
@@ -315,10 +453,9 @@ final class StudySessionViewModel: ObservableObject {
 
     var totalQuizzesCompleted: Int {
 
-        sessions.reduce(0) {
+        sessions.reduce(0) { total, session in
 
-            $0 + $1.quizzesCompleted
-
+            total + session.quizzesCompleted
         }
     }
 
@@ -328,10 +465,9 @@ final class StudySessionViewModel: ObservableObject {
 
     var totalMemoriesStudied: Int {
 
-        sessions.reduce(0) {
+        sessions.reduce(0) { total, session in
 
-            $0 + $1.memoriesStudied
-
+            total + session.memoriesStudied
         }
     }
 
@@ -369,6 +505,51 @@ final class StudySessionViewModel: ObservableObject {
     }
 
     // =====================================================
+    // FORMATTED ACTIVE SESSION TIME
+    // =====================================================
+    // This now reads the @Published timer value.
+    // The UI will update every second.
+    // =====================================================
+
+    var formattedActiveSessionTime: String {
+
+        let totalSeconds =
+            max(
+                Int(elapsedSessionTime),
+                0
+            )
+
+        let hours =
+            totalSeconds / 3600
+
+        let minutes =
+            (
+                totalSeconds % 3600
+            ) / 60
+
+        let seconds =
+            totalSeconds % 60
+
+        if hours > 0 {
+
+            return String(
+                format:
+                    "%02d:%02d:%02d",
+                hours,
+                minutes,
+                seconds
+            )
+        }
+
+        return String(
+            format:
+                "%02d:%02d",
+            minutes,
+            seconds
+        )
+    }
+
+    // =====================================================
     // FORMAT DURATION
     // =====================================================
 
@@ -377,11 +558,9 @@ final class StudySessionViewModel: ObservableObject {
     ) -> String {
 
         let totalSeconds =
-            Int(
-                max(
-                    duration,
-                    0
-                )
+            max(
+                Int(duration),
+                0
             )
 
         let hours =
@@ -403,7 +582,6 @@ final class StudySessionViewModel: ObservableObject {
                 hours,
                 minutes
             )
-
         }
 
         if minutes > 0 {
@@ -486,6 +664,10 @@ final class StudySessionViewModel: ObservableObject {
                         data
                 )
 
+            sessions.sort {
+                $0.startDate > $1.startDate
+            }
+
             print(
                 "✅ Loaded \(sessions.count) study sessions."
             )
@@ -506,13 +688,11 @@ final class StudySessionViewModel: ObservableObject {
 
     func resetAllSessions() {
 
+        stopTimer()
+
         sessions.removeAll()
 
-        activeSession = nil
-
-        currentSessionStartDate = nil
-
-        isStudying = false
+        clearActiveSession()
 
         UserDefaults.standard.removeObject(
             forKey:

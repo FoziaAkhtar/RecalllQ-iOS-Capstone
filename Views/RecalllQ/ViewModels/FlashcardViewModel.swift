@@ -19,9 +19,18 @@ import Combine
 // - Spaced repetition
 // - Previous / Next navigation
 // - Smart Suggestion integration
+// - Study Session integration
 // =====================================================
 
 final class FlashcardViewModel: ObservableObject {
+
+    // =====================================================
+    // APP STATE
+    // =====================================================
+
+    // Weak reference prevents a retain cycle because
+    // AppState owns this ViewModel.
+    weak var appState: AppState?
 
     // =====================================================
     // MAIN STATE
@@ -493,6 +502,10 @@ final class FlashcardViewModel: ObservableObject {
             return
         }
 
+        // -------------------------------------------------
+        // Update review statistics
+        // -------------------------------------------------
+
         flashcards[originalIndex]
             .difficulty =
                 difficulty
@@ -517,7 +530,31 @@ final class FlashcardViewModel: ObservableObject {
                         difficulty
                 )
 
+        // -------------------------------------------------
+        // Save flashcard
+        // -------------------------------------------------
+
         saveFlashcards()
+
+        // -------------------------------------------------
+        // STUDY SESSION INTEGRATION
+        // -------------------------------------------------
+        // Every completed review counts as one reviewed
+        // flashcard for the active study session.
+        //
+        // AppState's StudySessionViewModel safely ignores
+        // this if no study session is currently active.
+        // -------------------------------------------------
+
+        appState?.recordFlashcardReviewed()
+
+        print(
+            "📚 Study Session updated: flashcard reviewed."
+        )
+
+        // -------------------------------------------------
+        // Move to next card
+        // -------------------------------------------------
 
         moveToNextCard()
     }

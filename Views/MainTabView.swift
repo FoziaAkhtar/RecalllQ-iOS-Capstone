@@ -12,15 +12,7 @@ import SwiftUI
 // 1 = Notes
 // 2 = Memories
 // 3 = Flashcards
-//
-// SMART NAVIGATION:
-// Dashboard Smart Suggestion
-//        ↓
-// AppState
-//        ↓
-// selectedTab = 3
-//        ↓
-// Flashcards tab opens
+// 4 = Quiz
 // =====================================================
 
 struct MainTabView: View {
@@ -38,8 +30,7 @@ struct MainTabView: View {
     var body: some View {
 
         TabView(
-            selection:
-                $appState.selectedTab
+            selection: $appState.selectedTab
         ) {
 
             // =================================================
@@ -49,16 +40,13 @@ struct MainTabView: View {
             NavigationStack {
 
                 DashboardView()
-                    .environmentObject(
-                        appState
-                    )
+                    .environmentObject(appState)
             }
             .tabItem {
 
                 Label(
                     "Dashboard",
-                    systemImage:
-                        "brain.head.profile"
+                    systemImage: "brain.head.profile"
                 )
             }
             .tag(0)
@@ -70,16 +58,13 @@ struct MainTabView: View {
             NavigationStack {
 
                 NotesView()
-                    .environmentObject(
-                        appState
-                    )
+                    .environmentObject(appState)
             }
             .tabItem {
 
                 Label(
                     "Notes",
-                    systemImage:
-                        "note.text"
+                    systemImage: "note.text"
                 )
             }
             .tag(1)
@@ -91,16 +76,13 @@ struct MainTabView: View {
             NavigationStack {
 
                 MemoriesView()
-                    .environmentObject(
-                        appState
-                    )
+                    .environmentObject(appState)
             }
             .tabItem {
 
                 Label(
                     "Memories",
-                    systemImage:
-                        "sparkles"
+                    systemImage: "sparkles"
                 )
             }
             .tag(2)
@@ -112,19 +94,34 @@ struct MainTabView: View {
             NavigationStack {
 
                 FlashcardsView()
-                    .environmentObject(
-                        appState
-                    )
+                    .environmentObject(appState)
             }
             .tabItem {
 
                 Label(
                     "Flashcards",
-                    systemImage:
-                        "rectangle.on.rectangle"
+                    systemImage: "rectangle.on.rectangle"
                 )
             }
             .tag(3)
+
+            // =================================================
+            // QUIZ
+            // =================================================
+
+            NavigationStack {
+
+                QuizView()
+                    .environmentObject(appState)
+            }
+            .tabItem {
+
+                Label(
+                    "Quiz",
+                    systemImage: "questionmark.circle.fill"
+                )
+            }
+            .tag(4)
         }
     }
 }

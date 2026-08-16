@@ -8,7 +8,6 @@ import SwiftUI
 // Main flashcard learning screen for RecalllQ.
 //
 // FEATURES:
-// - Lively RecalllQ background
 // - Flashcard statistics
 // - Search flashcards
 // - Generate flashcards from Memories
@@ -19,7 +18,12 @@ import SwiftUI
 // - Previous / Next navigation
 // - Progress tracking
 // - Delete flashcards
-// - Empty state
+// - Study session integration
+//
+// STUDY SESSION INTEGRATION:
+// - FlashcardViewModel records completed reviews
+// - Each Easy / Medium / Hard review counts once
+// - Prevents duplicate Study Session counting
 // =====================================================
 
 struct FlashcardsView: View {
@@ -542,9 +546,9 @@ struct FlashcardsView: View {
             spacing: 16
         ) {
 
-            // ---------------------------------------------
+            // =================================================
             // STUDY HEADER
-            // ---------------------------------------------
+            // =================================================
 
             HStack {
 
@@ -571,9 +575,9 @@ struct FlashcardsView: View {
 
             Divider()
 
-            // ---------------------------------------------
+            // =================================================
             // QUESTION
-            // ---------------------------------------------
+            // =================================================
 
             Text(
                 "Question"
@@ -596,9 +600,9 @@ struct FlashcardsView: View {
                 vertical: true
             )
 
-            // ---------------------------------------------
+            // =================================================
             // ANSWER
-            // ---------------------------------------------
+            // =================================================
 
             if vm.isShowingAnswer {
 
@@ -624,9 +628,9 @@ struct FlashcardsView: View {
                     vertical: true
                 )
 
-                // -----------------------------------------
+                // =================================================
                 // DIFFICULTY
-                // -----------------------------------------
+                // =================================================
 
                 Text(
                     "How difficult was this?"
@@ -639,6 +643,10 @@ struct FlashcardsView: View {
 
                 HStack(spacing: 8) {
 
+                    // =================================================
+                    // EASY
+                    // =================================================
+
                     difficultyButton(
                         title:
                             "Easy",
@@ -649,7 +657,12 @@ struct FlashcardsView: View {
                     ) {
 
                         vm.markEasy()
+
                     }
+
+                    // =================================================
+                    // MEDIUM
+                    // =================================================
 
                     difficultyButton(
                         title:
@@ -661,7 +674,12 @@ struct FlashcardsView: View {
                     ) {
 
                         vm.markMedium()
+
                     }
+
+                    // =================================================
+                    // HARD
+                    // =================================================
 
                     difficultyButton(
                         title:
@@ -673,14 +691,15 @@ struct FlashcardsView: View {
                     ) {
 
                         vm.markHard()
+
                     }
                 }
 
             } else {
 
-                // -----------------------------------------
+                // =================================================
                 // SHOW ANSWER
-                // -----------------------------------------
+                // =================================================
 
                 Button {
 
@@ -731,9 +750,9 @@ struct FlashcardsView: View {
                 }
             }
 
-            // ---------------------------------------------
+            // =================================================
             // NAVIGATION
-            // ---------------------------------------------
+            // =================================================
 
             HStack {
 

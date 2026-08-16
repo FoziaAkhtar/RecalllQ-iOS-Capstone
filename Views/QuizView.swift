@@ -8,6 +8,9 @@ import SwiftUI
 // Main quiz learning screen for RecalllQ.
 //
 // FEATURES:
+// - AI quiz generation
+// - Generate quiz from Memory
+// - Select number of questions
 // - Multiple choice questions
 // - Answer selection
 // - Correct / incorrect results
@@ -15,8 +18,9 @@ import SwiftUI
 // - Score tracking
 // - Quiz completion
 // - Restart quiz
-// - Generate quiz
 // - Empty state
+// - API loading state
+// - API error handling
 // - Lively RecalllQ UI
 // =====================================================
 
@@ -35,6 +39,38 @@ struct QuizView: View {
     private var vm: QuizViewModel {
         appState.quizViewModel
     }
+
+    // =====================================================
+    // API SERVICE
+    // =====================================================
+
+    private let quizAPIService = QuizAPIService()
+
+    // =====================================================
+    // AI GENERATION STATE
+    // =====================================================
+
+    @State private var isGeneratingQuiz = false
+
+    @State private var apiErrorMessage: String?
+
+    // =====================================================
+    // SELECTED MEMORY
+    // =====================================================
+
+    @State private var selectedMemoryID: UUID?
+
+    // =====================================================
+    // NUMBER OF QUESTIONS
+    // =====================================================
+
+    @State private var numberOfQuestions: Int = 5
+
+    // =====================================================
+    // SHOW GENERATOR
+    // =====================================================
+
+    @State private var showGenerator = false
 
     // =====================================================
     // BODY
@@ -56,10 +92,25 @@ struct QuizView: View {
                 header
 
                 // =================================================
+                // API ERROR
+                // =================================================
+
+                if let apiErrorMessage {
+
+                    errorCard(
+                        message: apiErrorMessage
+                    )
+                }
+
+                // =================================================
                 // CONTENT
                 // =================================================
 
-                if vm.currentQuiz == nil {
+                if isGeneratingQuiz {
+
+                    generatingState
+
+                } else if vm.currentQuiz == nil {
 
                     emptyState
 
@@ -80,6 +131,12 @@ struct QuizView: View {
         )
         .navigationTitle("Quiz")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(
+            isPresented: $showGenerator
+        ) {
+
+            quizGeneratorSheet
+        }
     }
 
     // =====================================================
@@ -102,7 +159,7 @@ struct QuizView: View {
                         RecalllQTheme.primaryText
                     )
 
-                Text("Test your knowledge.")
+                Text("Test your knowledge with AI.")
                     .font(.subheadline)
                     .foregroundColor(
                         RecalllQTheme.secondaryText
@@ -124,7 +181,7 @@ struct QuizView: View {
 
                 Image(
                     systemName:
-                        "questionmark.circle.fill"
+                        "sparkles"
                 )
                 .font(.title2)
                 .foregroundColor(
@@ -222,6 +279,34 @@ struct QuizView: View {
 
                 submitButton(
                     question: question
+                )
+            }
+
+            // =================================================
+            // EXIT
+            // =================================================
+
+            Button {
+
+                vm.exitQuiz()
+
+            } label: {
+
+                HStack {
+
+                    Image(
+                        systemName:
+                            "xmark.circle"
+                    )
+
+                    Text("Exit Quiz")
+                }
+                .font(.subheadline)
+                .foregroundColor(
+                    RecalllQTheme.secondaryText
+                )
+                .frame(
+                    maxWidth: .infinity
                 )
             }
         }
@@ -437,10 +522,6 @@ struct QuizView: View {
                 spacing: 12
             ) {
 
-                // =================================================
-                // OPTION LETTER
-                // =================================================
-
                 Text(
                     optionLetter(
                         option,
@@ -466,10 +547,6 @@ struct QuizView: View {
                     .white
                 )
 
-                // =================================================
-                // ANSWER TEXT
-                // =================================================
-
                 Text(option)
                     .font(.body)
                     .multilineTextAlignment(
@@ -480,10 +557,6 @@ struct QuizView: View {
                     )
 
                 Spacer()
-
-                // =================================================
-                // RESULT ICON
-                // =================================================
 
                 if showCorrectAnswer {
 
@@ -571,12 +644,9 @@ struct QuizView: View {
             "F"
         ]
 
-        if index < letters.count {
-
-            return letters[index]
-        }
-
-        return "?"
+        return index < letters.count
+            ? letters[index]
+            : "?"
     }
 
     // =====================================================
@@ -923,10 +993,6 @@ struct QuizView: View {
                 .center
             )
 
-            // =================================================
-            // SCORE
-            // =================================================
-
             VStack(
                 spacing: 6
             ) {
@@ -1006,6 +1072,45 @@ struct QuizView: View {
                     )
                 )
             }
+
+            // =================================================
+            // NEW AI QUIZ
+            // =================================================
+
+            Button {
+
+                vm.exitQuiz()
+                showGenerator = true
+
+            } label: {
+
+                HStack {
+
+                    Image(
+                        systemName:
+                            "sparkles"
+                    )
+
+                    Text("Generate Another AI Quiz")
+                        .bold()
+                }
+                .frame(
+                    maxWidth: .infinity
+                )
+                .padding()
+                .foregroundColor(
+                    RecalllQTheme.smartPurple
+                )
+                .background(
+                    RecalllQTheme.purpleBackground
+                )
+                .clipShape(
+                    RoundedRectangle(
+                        cornerRadius:
+                            RecalllQTheme.buttonRadius
+                    )
+                )
+            }
         }
         .frame(
             maxWidth: .infinity
@@ -1036,7 +1141,7 @@ struct QuizView: View {
 
                 Image(
                     systemName:
-                        "questionmark.circle.fill"
+                        "sparkles"
                 )
                 .font(
                     .system(size: 55)
@@ -1046,12 +1151,12 @@ struct QuizView: View {
                 )
             }
 
-            Text("No Quiz Available")
+            Text("Create an AI Quiz")
                 .font(.title2)
                 .bold()
 
             Text(
-                "Create flashcards or memories first. RecalllQ can then generate a quiz to test your knowledge."
+                "Choose one of your Memories and RecalllQ will use AI to generate multiple-choice questions."
             )
             .font(.subheadline)
             .foregroundColor(
@@ -1067,7 +1172,8 @@ struct QuizView: View {
 
             Button {
 
-                appState.startQuiz()
+                apiErrorMessage = nil
+                showGenerator = true
 
             } label: {
 
@@ -1078,7 +1184,7 @@ struct QuizView: View {
                             "sparkles"
                     )
 
-                    Text("Generate Quiz")
+                    Text("Generate AI Quiz")
                         .bold()
                 }
                 .frame(
@@ -1108,6 +1214,387 @@ struct QuizView: View {
             maxWidth: .infinity
         )
         .padding(.vertical, 30)
+    }
+
+    // =====================================================
+    // GENERATING STATE
+    // =====================================================
+
+    private var generatingState: some View {
+
+        VStack(
+            spacing: 20
+        ) {
+
+            ZStack {
+
+                Circle()
+                    .fill(
+                        RecalllQTheme.purpleBackground
+                    )
+                    .frame(
+                        width: 110,
+                        height: 110
+                    )
+
+                ProgressView()
+                    .scaleEffect(1.5)
+                    .tint(
+                        RecalllQTheme.smartPurple
+                    )
+            }
+
+            Text("Generating Your Quiz...")
+                .font(.title2)
+                .bold()
+
+            Text(
+                "RecalllQ AI is creating questions from your memory."
+            )
+            .font(.subheadline)
+            .foregroundColor(
+                RecalllQTheme.secondaryText
+            )
+            .multilineTextAlignment(
+                .center
+            )
+
+            Text("Please wait...")
+                .font(.caption)
+                .foregroundColor(
+                    RecalllQTheme.secondaryText
+                )
+        }
+        .frame(
+            maxWidth: .infinity
+        )
+        .padding(.vertical, 60)
+    }
+
+    // =====================================================
+    // ERROR CARD
+    // =====================================================
+
+    private func errorCard(
+        message: String
+    ) -> some View {
+
+        HStack(
+            alignment: .top,
+            spacing: 12
+        ) {
+
+            Image(
+                systemName:
+                    "exclamationmark.triangle.fill"
+            )
+            .foregroundColor(
+                RecalllQTheme.error
+            )
+
+            VStack(
+                alignment: .leading,
+                spacing: 4
+            ) {
+
+                Text("Quiz Generation Failed")
+                    .font(.headline)
+
+                Text(message)
+                    .font(.caption)
+                    .foregroundColor(
+                        RecalllQTheme.secondaryText
+                    )
+            }
+
+            Spacer()
+        }
+        .padding()
+        .background(
+            RecalllQTheme.redBackground
+        )
+        .clipShape(
+            RoundedRectangle(
+                cornerRadius:
+                    RecalllQTheme.mediumRadius
+            )
+        )
+    }
+
+    // =====================================================
+    // QUIZ GENERATOR SHEET
+    // =====================================================
+
+    private var quizGeneratorSheet: some View {
+
+        NavigationStack {
+
+            Form {
+
+                // =================================================
+                // MEMORY SELECTION
+                // =================================================
+
+                Section(
+                    header:
+                        Text("Select Memory")
+                ) {
+
+                    let memories =
+                        appState.memoryViewModel.memories
+
+                    if memories.isEmpty {
+
+                        Text(
+                            "No memories available. Create a Memory first."
+                        )
+                        .foregroundColor(
+                            RecalllQTheme.secondaryText
+                        )
+
+                    } else {
+
+                        Picker(
+                            "Memory",
+                            selection:
+                                Binding(
+                                    get: {
+                                        selectedMemoryID
+                                        ?? memories.first?.id
+                                        ?? UUID()
+                                    },
+                                    set: {
+                                        selectedMemoryID = $0
+                                    }
+                                )
+                        ) {
+
+                            ForEach(
+                                memories
+                            ) { memory in
+
+                                Text(
+                                    memory.title
+                                )
+                                .tag(
+                                    memory.id
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // =================================================
+                // NUMBER OF QUESTIONS
+                // =================================================
+
+                Section(
+                    header:
+                        Text("Number of Questions")
+                ) {
+
+                    Picker(
+                        "Questions",
+                        selection:
+                            $numberOfQuestions
+                    ) {
+
+                        Text("3 Questions")
+                            .tag(3)
+
+                        Text("5 Questions")
+                            .tag(5)
+
+                        Text("10 Questions")
+                            .tag(10)
+                    }
+                    .pickerStyle(
+                        .segmented
+                    )
+                }
+
+                // =================================================
+                // INFORMATION
+                // =================================================
+
+                Section {
+
+                    HStack(
+                        alignment: .top,
+                        spacing: 12
+                    ) {
+
+                        Image(
+                            systemName:
+                                "sparkles"
+                        )
+                        .foregroundColor(
+                            RecalllQTheme.smartPurple
+                        )
+
+                        Text(
+                            "RecalllQ AI will create multiple-choice questions using only the selected Memory."
+                        )
+                        .font(.subheadline)
+                    }
+                }
+            }
+            .navigationTitle("AI Quiz Generator")
+            .navigationBarTitleDisplayMode(
+                .inline
+            )
+            .toolbar {
+
+                ToolbarItem(
+                    placement: .cancellationAction
+                ) {
+
+                    Button("Cancel") {
+
+                        showGenerator = false
+                    }
+                }
+
+                ToolbarItem(
+                    placement: .confirmationAction
+                ) {
+
+                    Button {
+
+                        generateAIQuiz()
+
+                    } label: {
+
+                        Text("Generate")
+                            .bold()
+                    }
+                    .disabled(
+                        appState.memoryViewModel.memories.isEmpty
+                    )
+                }
+            }
+            .onAppear {
+
+                if selectedMemoryID == nil {
+
+                    selectedMemoryID =
+                        appState
+                            .memoryViewModel
+                            .memories
+                            .first?
+                            .id
+                }
+            }
+        }
+    }
+
+    // =====================================================
+    // GENERATE AI QUIZ
+    // =====================================================
+
+    private func generateAIQuiz() {
+
+        guard
+            let memoryID = selectedMemoryID
+        else {
+
+            apiErrorMessage =
+                "Please select a Memory first."
+
+            showGenerator = false
+
+            return
+        }
+
+        guard
+            let memory =
+                appState
+                    .memoryViewModel
+                    .memories
+                    .first(
+                        where: {
+                            $0.id == memoryID
+                        }
+                    )
+        else {
+
+            apiErrorMessage =
+                "The selected Memory could not be found."
+
+            showGenerator = false
+
+            return
+        }
+
+        showGenerator = false
+
+        apiErrorMessage = nil
+
+        isGeneratingQuiz = true
+
+        Task {
+
+            do {
+
+                let questions =
+                    try await quizAPIService.generateQuiz(
+                        from:
+                            memory,
+                        numberOfQuestions:
+                            numberOfQuestions
+                    )
+
+                await MainActor.run {
+
+                    let quizTitle =
+                        "\(memory.title) AI Quiz"
+
+                    vm.createQuiz(
+                        title:
+                            quizTitle,
+                        questions:
+                            questions,
+                        memoryID:
+                            memory.id
+                    )
+
+                    if let quiz =
+                        vm.quizzes.first(
+                            where: {
+                                $0.memoryID == memory.id &&
+                                $0.title == quizTitle
+                            }
+                        ) {
+
+                        vm.startQuiz(
+                            id:
+                                quiz.id
+                        )
+                    }
+
+                    isGeneratingQuiz = false
+                }
+
+            } catch {
+
+                await MainActor.run {
+
+                    isGeneratingQuiz = false
+
+                    if let apiError =
+                        error as? QuizAPIService.QuizAPIError {
+
+                        apiErrorMessage =
+                            apiError.localizedDescription
+
+                    } else {
+
+                        apiErrorMessage =
+                            error.localizedDescription
+                    }
+                }
+            }
+        }
     }
 
     // =====================================================
