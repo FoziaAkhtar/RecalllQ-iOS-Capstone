@@ -24,8 +24,9 @@ import Foundation
 //
 // IMPORTANT:
 //
-// The OpenAI API key is NOT stored in this file.
-// The key remains on the backend inside .env.
+// The OpenAI API key is NEVER stored in this iOS app.
+// It remains securely on the backend inside .env.
+//
 // =====================================================
 
 final class AIService {
@@ -35,7 +36,6 @@ final class AIService {
     // =====================================================
 
     struct AIMemoryResponse: Codable {
-
         let summary: String
         let tags: [String]
         let confidence: Double
@@ -47,7 +47,6 @@ final class AIService {
     // =====================================================
 
     private struct MemoryRequest: Codable {
-
         let title: String
         let content: String
     }
@@ -95,14 +94,19 @@ final class AIService {
     }
 
     // =====================================================
-    // BACKEND URL
+    // BACKEND CONFIGURATION
     // =====================================================
     //
-    // For the iOS Simulator running on the same Mac:
+    // IMPORTANT:
     //
-    // 127.0.0.1 points to your Mac.
+    // For the iOS Simulator running on the same Mac,
+    // 127.0.0.1 points to the Mac running FastAPI.
     //
-    // FastAPI endpoint:
+    // Backend:
+    //
+    // http://127.0.0.1:8000
+    //
+    // Memory endpoint:
     //
     // http://127.0.0.1:8000/api/memory
     //
@@ -130,7 +134,7 @@ final class AIService {
         print("========================================")
         print("✅ AIService initialized")
         print("🤖 RecalllQ backend connection configured")
-        print("🌐 http://127.0.0.1:8000/api/memory")
+        print("🌐 \(apiURL)")
         print("========================================")
     }
 
@@ -139,15 +143,6 @@ final class AIService {
     // =====================================================
     //
     // Sends a student's note to the RecalllQ backend.
-    //
-    // Backend returns:
-    //
-    // {
-    //     "summary": "...",
-    //     "tags": ["swift", "ios"],
-    //     "confidence": 0.92,
-    //     "importance": 4
-    // }
     //
     // =====================================================
 
@@ -207,10 +202,7 @@ final class AIService {
         // CREATE REQUEST
         // =================================================
 
-        var request =
-            URLRequest(
-                url: url
-            )
+        var request = URLRequest(url: url)
 
         request.httpMethod = "POST"
 
@@ -224,8 +216,10 @@ final class AIService {
             forHTTPHeaderField: "Accept"
         )
 
+        request.timeoutInterval = 30
+
         // =================================================
-        // REQUEST BODY
+        // CREATE REQUEST BODY
         // =================================================
 
         let requestBody =
@@ -305,23 +299,17 @@ final class AIService {
             )
 
             // =================================================
-            // CHECK STATUS CODE
+            // SUCCESS RESPONSE
             // =================================================
 
-            guard
-                (200...299).contains(
-                    httpResponse.statusCode
-                )
-            else {
+            guard (200...299).contains(
+                httpResponse.statusCode
+            ) else {
 
                 print(
                     "❌ AIService HTTP error:",
                     httpResponse.statusCode
                 )
-
-                // -----------------------------------------
-                // Print backend response for debugging
-                // -----------------------------------------
 
                 if let serverMessage =
                     String(
@@ -370,7 +358,7 @@ final class AIService {
             }
 
             // =================================================
-            // DECODE AI RESPONSE
+            // DECODE RESPONSE
             // =================================================
 
             do {
@@ -452,13 +440,10 @@ final class AIService {
                     AIMemoryResponse(
                         summary:
                             cleanedSummary,
-
                         tags:
                             cleanedTags,
-
                         confidence:
                             validatedConfidence,
-
                         importance:
                             validatedImportance
                     )
@@ -523,3 +508,4 @@ final class AIService {
         }
     }
 }
+
