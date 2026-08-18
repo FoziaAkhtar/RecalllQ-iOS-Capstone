@@ -5,25 +5,30 @@ import Foundation
 // SERVICE: QuizAPIService
 // =====================================================
 // PURPOSE:
-// Generates high-quality quiz questions from RecalllQ
-// Memories using the OpenAI Responses API.
+// Generates high-quality quiz questions for RecalllQ
+// using the OpenAI Responses API.
 //
 // FEATURES:
 // - Real OpenAI API integration
 // - GPT-5.6
+// - Structured JSON output
 // - Multiple-choice questions
+// - Exactly 4 answer options
 // - Easy / Medium / Hard difficulty
-// - Explanations
-// - JSON response parsing
-// - Local fallback
+// - Educational explanations
+// - Strong response validation
+// - Local fallback when API is unavailable
+// - Compatible with QuizViewModel
+// - Compatible with QuizQuestion
 //
-// DEVELOPMENT NOTE:
-// The API key is read from UserDefaults using:
-//
+// API KEY:
+// UserDefaults key:
 // "OPENAI_API_KEY"
 //
-// For a production application, use a secure backend
-// instead of storing an API key inside the iOS app.
+// IMPORTANT:
+// Storing an OpenAI API key directly in an iOS application
+// is acceptable for a classroom/capstone prototype,
+// but production applications should use a secure backend.
 // =====================================================
 
 final class QuizAPIService {
@@ -87,24 +92,28 @@ final class QuizAPIService {
     // =====================================================
 
     private struct APIResponse: Decodable {
+
         let output: [OutputItem]?
     }
 
     private struct OutputItem: Decodable {
+
         let type: String?
         let content: [OutputContent]?
     }
 
     private struct OutputContent: Decodable {
+
         let type: String?
         let text: String?
     }
 
     // =====================================================
-    // AI QUIZ MODELS
+    // AI QUIZ RESPONSE MODELS
     // =====================================================
 
     private struct AIQuizResponse: Decodable {
+
         let questions: [AIQuestion]
     }
 
@@ -131,7 +140,8 @@ final class QuizAPIService {
     }
 
     // =====================================================
-    // PUBLIC: GENERATE QUIZ
+    // PUBLIC:
+    // GENERATE QUIZ
     // =====================================================
 
     func generateQuiz(
@@ -159,14 +169,20 @@ final class QuizAPIService {
             )
 
         // -------------------------------------------------
-        // VALIDATE MEMORY
+        // VALIDATE TITLE
         // -------------------------------------------------
 
         guard !title.isEmpty else {
+
             throw QuizAPIError.emptyMemory
         }
 
+        // -------------------------------------------------
+        // VALIDATE CONTENT
+        // -------------------------------------------------
+
         guard !content.isEmpty || !summary.isEmpty else {
+
             throw QuizAPIError.emptyMemory
         }
 
@@ -224,8 +240,10 @@ final class QuizAPIService {
 
             print("========================================")
             print("🤖 OPENAI QUIZ GENERATION")
+            print("========================================")
             print("Memory: \(title)")
-            print("Questions: \(count)")
+            print("Questions requested: \(count)")
+            print("Model: \(model)")
             print("========================================")
 
             let questions = try await generateUsingOpenAI(
@@ -236,6 +254,7 @@ final class QuizAPIService {
             )
 
             guard !questions.isEmpty else {
+
                 throw QuizAPIError.emptyQuestions
             }
 
@@ -248,17 +267,28 @@ final class QuizAPIService {
 
         } catch {
 
+            // -------------------------------------------------
+            // LOCAL FALLBACK
+            // -------------------------------------------------
+
             print("========================================")
-            print("⚠️ OPENAI API FAILED")
+            print("⚠️ OPENAI GENERATION FAILED")
             print("Reason: \(error.localizedDescription)")
-            print("🧠 Using local fallback.")
+            print("🧠 Creating local fallback quiz.")
             print("========================================")
 
-            return createLocalQuiz(
+            let fallbackQuestions = createLocalQuiz(
                 memory: memory,
                 sourceText: sourceText,
                 numberOfQuestions: count
             )
+
+            guard !fallbackQuestions.isEmpty else {
+
+                throw error
+            }
+
+            return fallbackQuestions
         }
     }
 
@@ -273,17 +303,17 @@ final class QuizAPIService {
         apiKey: String
     ) async throws -> [QuizQuestion] {
 
-        // -------------------------------------------------
-        // PROMPT
-        // -------------------------------------------------
+        // =================================================
+        // SYSTEM / INSTRUCTION PROMPT
+        // =================================================
 
         let prompt = """
         You are the AI Quiz Generator for RecalllQ,
         an academic learning and memory assistant.
 
-        Create exactly \(numberOfQuestions) high-quality
-        multiple-choice questions using ONLY the
-        information provided below.
+        Your job is to create a high-quality multiple-choice
+        quiz using ONLY the academic information supplied
+        in the Memory.
 
         MEMORY TITLE:
         \(memory.title)
@@ -295,72 +325,180 @@ final class QuizAPIService {
 
         1. Create exactly \(numberOfQuestions) questions.
 
-        2. Each question must test understanding of
-           the supplied academic information.
+        2. Every question must test understanding of the
+           supplied information.
 
-        3. Each question must contain exactly
-           4 answer options.
+        3. Every question must contain exactly 4 answer
+           options.
 
         4. There must be exactly ONE correct answer.
 
-        5. Incorrect options must be plausible
-           distractors.
+        5. Incorrect answers must be plausible distractors.
 
-        6. Do NOT use:
-           - None of the above
+        6. Do not invent facts that are not supported by
+           the supplied Memory.
+
+        7. Do not use:
            - All of the above
+           - None of the above
            - This information is unrelated
            - There is not enough information
 
-        7. Provide a short educational explanation.
+        8. Provide a short educational explanation for
+           every question.
 
-        8. Difficulty must be exactly one of:
+        9. Difficulty must be exactly one of:
            easy
            medium
            hard
 
-        9. Do not invent facts.
+        10. Questions should be useful for studying and
+            academic exam preparation.
 
-        10. Questions should be useful for studying
-            and exam preparation.
+        11. The correctAnswer must exactly match one of
+            the four options.
 
-        Return ONLY JSON using this exact structure:
+        12. Make the questions meaningfully different from
+            one another.
 
-        {
-          "questions": [
-            {
-              "question": "Question text",
-              "options": [
-                "Option A",
-                "Option B",
-                "Option C",
-                "Option D"
-              ],
-              "correctAnswer": "Exact correct option",
-              "explanation": "Short educational explanation",
-              "difficulty": "medium"
-            }
-          ]
-        }
+        13. Avoid repeating the same question structure
+            unnecessarily.
+
+        14. Return ONLY the requested structured data.
         """
 
-        // -------------------------------------------------
-        // REQUEST BODY
-        // -------------------------------------------------
+        // =================================================
+        // STRUCTURED OUTPUT SCHEMA
+        // =================================================
+        //
+        // This tells the Responses API exactly what shape
+        // the AI response must have.
+        // =================================================
 
-        let inputObject: [String: Any] = [
-            "model": model,
-            "input": prompt
+        let questionSchema: [String: Any] = [
+
+            "type": "object",
+
+            "properties": [
+
+                "question": [
+                    "type": "string"
+                ],
+
+                "options": [
+                    "type": "array",
+
+                    "items": [
+                        "type": "string"
+                    ],
+
+                    "minItems": 4,
+                    "maxItems": 4
+                ],
+
+                "correctAnswer": [
+                    "type": "string"
+                ],
+
+                "explanation": [
+                    "type": "string"
+                ],
+
+                "difficulty": [
+                    "type": "string",
+
+                    "enum": [
+                        "easy",
+                        "medium",
+                        "hard"
+                    ]
+                ]
+            ],
+
+            "required": [
+                "question",
+                "options",
+                "correctAnswer",
+                "explanation",
+                "difficulty"
+            ],
+
+            "additionalProperties": false
         ]
 
-        let body = try JSONSerialization.data(
-            withJSONObject: inputObject,
-            options: []
-        )
+        let quizSchema: [String: Any] = [
 
-        // -------------------------------------------------
-        // REQUEST
-        // -------------------------------------------------
+            "type": "object",
+
+            "properties": [
+
+                "questions": [
+
+                    "type": "array",
+
+                    "items": questionSchema,
+
+                    "minItems": numberOfQuestions,
+                    "maxItems": numberOfQuestions
+                ]
+            ],
+
+            "required": [
+                "questions"
+            ],
+
+            "additionalProperties": false
+        ]
+
+        // =================================================
+        // REQUEST BODY
+        // =================================================
+
+        let textConfiguration: [String: Any] = [
+
+            "format": [
+
+                "type": "json_schema",
+
+                "name": "recalliq_quiz",
+
+                "strict": true,
+
+                "schema": quizSchema
+            ]
+        ]
+
+        let inputObject: [String: Any] = [
+
+            "model": model,
+
+            "input": prompt,
+
+            "text": textConfiguration
+        ]
+
+        // =================================================
+        // SERIALIZE REQUEST
+        // =================================================
+
+        let body: Data
+
+        do {
+
+            body = try JSONSerialization.data(
+                withJSONObject: inputObject,
+                options: []
+            )
+
+        } catch {
+
+            print("❌ Could not create request JSON.")
+            throw QuizAPIError.invalidData
+        }
+
+        // =================================================
+        // CREATE REQUEST
+        // =================================================
 
         var request = URLRequest(
             url: apiURL
@@ -382,9 +520,9 @@ final class QuizAPIService {
 
         request.timeoutInterval = 60
 
-        // -------------------------------------------------
+        // =================================================
         // NETWORK CALL
-        // -------------------------------------------------
+        // =================================================
 
         let data: Data
         let response: URLResponse
@@ -397,16 +535,15 @@ final class QuizAPIService {
 
         } catch {
 
-            print(
-                "❌ Network error: \(error.localizedDescription)"
-            )
+            print("❌ Network error:")
+            print(error.localizedDescription)
 
             throw QuizAPIError.networkError
         }
 
-        // -------------------------------------------------
+        // =================================================
         // HTTP RESPONSE
-        // -------------------------------------------------
+        // =================================================
 
         guard let httpResponse = response as? HTTPURLResponse else {
 
@@ -417,33 +554,30 @@ final class QuizAPIService {
             "🌐 OpenAI HTTP status: \(httpResponse.statusCode)"
         )
 
-        // -------------------------------------------------
+        // =================================================
         // API ERROR
-        // -------------------------------------------------
+        // =================================================
 
         guard (200...299).contains(
             httpResponse.statusCode
         ) else {
 
-            let message = String(
+            let serverMessage = String(
                 data: data,
                 encoding: .utf8
             ) ?? "Unknown OpenAI API error."
 
-            print(
-                "❌ OpenAI response:"
-            )
-
-            print(message)
+            print("❌ OpenAI API response:")
+            print(serverMessage)
 
             throw QuizAPIError.apiError(
                 "OpenAI API error (\(httpResponse.statusCode))."
             )
         }
 
-        // -------------------------------------------------
-        // DECODE RESPONSE
-        // -------------------------------------------------
+        // =================================================
+        // DECODE OPENAI RESPONSE
+        // =================================================
 
         let decodedResponse: APIResponse
 
@@ -457,17 +591,25 @@ final class QuizAPIService {
         } catch {
 
             print(
-                "❌ Could not decode OpenAI response:"
+                "❌ Could not decode OpenAI response."
             )
 
             print(error)
 
+            let rawResponse = String(
+                data: data,
+                encoding: .utf8
+            ) ?? ""
+
+            print("Raw response:")
+            print(rawResponse)
+
             throw QuizAPIError.invalidResponse
         }
 
-        // -------------------------------------------------
+        // =================================================
         // FIND OUTPUT TEXT
-        // -------------------------------------------------
+        // =================================================
 
         var outputText: String?
 
@@ -483,6 +625,7 @@ final class QuizAPIService {
                    let text = contentItem.text {
 
                     outputText = text
+
                     break
                 }
             }
@@ -492,20 +635,25 @@ final class QuizAPIService {
             }
         }
 
-        guard let outputText else {
+        // =================================================
+        // VALIDATE OUTPUT
+        // =================================================
 
-            print(
-                "❌ No output text found."
-            )
+        guard let outputText,
+              !outputText.trimmingCharacters(
+                in: .whitespacesAndNewlines
+              ).isEmpty else {
+
+            print("❌ OpenAI returned no output text.")
 
             throw QuizAPIError.invalidResponse
         }
 
-        print("✅ OpenAI returned quiz data.")
+        print("✅ OpenAI returned structured quiz data.")
 
-        // -------------------------------------------------
+        // =================================================
         // CLEAN JSON
-        // -------------------------------------------------
+        // =================================================
 
         let cleanedJSON = cleanJSON(
             outputText
@@ -518,9 +666,9 @@ final class QuizAPIService {
             throw QuizAPIError.invalidData
         }
 
-        // -------------------------------------------------
-        // DECODE QUIZ JSON
-        // -------------------------------------------------
+        // =================================================
+        // DECODE QUIZ
+        // =================================================
 
         let aiQuiz: AIQuizResponse
 
@@ -533,17 +681,29 @@ final class QuizAPIService {
 
         } catch {
 
-            print("❌ AI JSON decoding failed.")
+            print("❌ AI quiz JSON decoding failed.")
 
             print("AI output:")
             print(outputText)
 
+            print("Decoding error:")
+            print(error)
+
             throw QuizAPIError.invalidData
         }
 
-        // -------------------------------------------------
+        // =================================================
+        // VALIDATE QUESTION COUNT
+        // =================================================
+
+        guard !aiQuiz.questions.isEmpty else {
+
+            throw QuizAPIError.emptyQuestions
+        }
+
+        // =================================================
         // CONVERT AI QUESTIONS
-        // -------------------------------------------------
+        // =================================================
 
         var quizQuestions: [QuizQuestion] = []
 
@@ -554,7 +714,8 @@ final class QuizAPIService {
                     in: .whitespacesAndNewlines
                 )
 
-            let options = aiQuestion.options.map {
+            let cleanedOptions = aiQuestion.options.map {
+
                 $0.trimmingCharacters(
                     in: .whitespacesAndNewlines
                 )
@@ -570,46 +731,101 @@ final class QuizAPIService {
                     in: .whitespacesAndNewlines
                 )
 
-            // -------------------------------------------------
-            // VALIDATION
-            // -------------------------------------------------
+            // =================================================
+            // BASIC VALIDATION
+            // =================================================
 
             guard !questionText.isEmpty else {
+
+                print("⚠️ Skipping empty question.")
                 continue
             }
 
-            guard options.count == 4 else {
+            guard cleanedOptions.count == 4 else {
+
+                print(
+                    "⚠️ Skipping question with \(cleanedOptions.count) options."
+                )
+
                 continue
             }
 
-            guard options.allSatisfy({
+            guard cleanedOptions.allSatisfy({
                 !$0.isEmpty
             }) else {
+
+                print(
+                    "⚠️ Skipping question containing empty options."
+                )
+
                 continue
             }
 
-            guard options.contains(correctAnswer) else {
+            // =================================================
+            // DUPLICATE OPTION VALIDATION
+            // =================================================
+
+            let normalizedOptions = cleanedOptions.map {
+                $0.lowercased()
+                    .trimmingCharacters(
+                        in: .whitespacesAndNewlines
+                    )
+            }
+
+            guard Set(normalizedOptions).count == 4 else {
+
+                print(
+                    "⚠️ Skipping question with duplicate options."
+                )
+
                 continue
             }
 
-            // -------------------------------------------------
+            // =================================================
+            // CORRECT ANSWER VALIDATION
+            // =================================================
+
+            guard cleanedOptions.contains(correctAnswer) else {
+
+                print(
+                    "⚠️ Skipping question because correct answer is not an option."
+                )
+
+                continue
+            }
+
+            // =================================================
+            // EXPLANATION
+            // =================================================
+
+            let finalExplanation = explanation.isEmpty
+                ? "This answer is supported by the information stored in the RecalllQ Memory."
+                : explanation
+
+            // =================================================
             // DIFFICULTY
-            // -------------------------------------------------
+            // =================================================
 
             let difficulty = convertDifficulty(
                 aiQuestion.difficulty
             )
 
-            // -------------------------------------------------
+            // =================================================
             // CREATE APP QUESTION
-            // -------------------------------------------------
+            // =================================================
 
             let question = QuizQuestion(
+
                 memoryID: memory.id,
+
                 question: questionText,
-                options: options.shuffled(),
+
+                options: cleanedOptions.shuffled(),
+
                 correctAnswer: correctAnswer,
-                explanation: explanation,
+
+                explanation: finalExplanation,
+
                 difficulty: difficulty
             )
 
@@ -618,18 +834,18 @@ final class QuizAPIService {
             )
         }
 
-        // -------------------------------------------------
-        // VALIDATE QUESTIONS
-        // -------------------------------------------------
+        // =================================================
+        // FINAL VALIDATION
+        // =================================================
 
         guard !quizQuestions.isEmpty else {
 
             throw QuizAPIError.emptyQuestions
         }
 
-        // -------------------------------------------------
+        // =================================================
         // RETURN REQUESTED NUMBER
-        // -------------------------------------------------
+        // =================================================
 
         return Array(
             quizQuestions.prefix(
@@ -651,7 +867,9 @@ final class QuizAPIService {
                 in: .whitespacesAndNewlines
             )
 
-        // Remove ```json
+        // -------------------------------------------------
+        // Remove Markdown JSON fence
+        // -------------------------------------------------
 
         if cleaned.hasPrefix("```json") {
 
@@ -662,7 +880,9 @@ final class QuizAPIService {
             )
         }
 
-        // Remove ```
+        // -------------------------------------------------
+        // Remove generic Markdown fence
+        // -------------------------------------------------
 
         if cleaned.hasPrefix("```") {
 
@@ -672,6 +892,10 @@ final class QuizAPIService {
                 )
             )
         }
+
+        // -------------------------------------------------
+        // Remove closing fence
+        // -------------------------------------------------
 
         if cleaned.hasSuffix("```") {
 
@@ -703,18 +927,29 @@ final class QuizAPIService {
             ) {
 
         case "easy":
+
             return .easy
 
         case "hard":
+
             return .hard
 
         default:
+
             return .medium
         }
     }
 
     // =====================================================
     // LOCAL FALLBACK
+    // =====================================================
+    //
+    // Used when:
+    // - No API key exists
+    // - Network fails
+    // - OpenAI returns an error
+    // - OpenAI returns invalid data
+    //
     // =====================================================
 
     private func createLocalQuiz(
@@ -731,41 +966,56 @@ final class QuizAPIService {
             )
 
         guard !correctAnswer.isEmpty else {
+
             return []
         }
 
-        let questionTemplates = [
+        // -------------------------------------------------
+        // Local question templates
+        // -------------------------------------------------
+
+        let questionTemplates: [
+            (String, QuizQuestion.Difficulty)
+        ] = [
 
             (
                 "What is the main idea of \(memory.title)?",
-                QuizQuestion.Difficulty.medium
+                .medium
             ),
 
             (
                 "Which statement best represents the information in \(memory.title)?",
-                QuizQuestion.Difficulty.medium
+                .medium
             ),
 
             (
                 "What should you remember about \(memory.title)?",
-                QuizQuestion.Difficulty.easy
+                .easy
             ),
 
             (
                 "Which answer best summarizes \(memory.title)?",
-                QuizQuestion.Difficulty.medium
+                .medium
             ),
 
             (
                 "What important information does \(memory.title) contain?",
-                QuizQuestion.Difficulty.hard
+                .hard
             )
         ]
 
+        // -------------------------------------------------
+        // Number of questions
+        // -------------------------------------------------
+
         let count = min(
-            numberOfQuestions,
+            max(numberOfQuestions, 1),
             questionTemplates.count
         )
+
+        // -------------------------------------------------
+        // Create questions
+        // -------------------------------------------------
 
         for index in 0..<count {
 
@@ -777,7 +1027,7 @@ final class QuizAPIService {
 
                 question: template.0,
 
-                options: makeOptions(
+                options: makeLocalOptions(
                     correctAnswer: correctAnswer
                 ),
 
@@ -805,7 +1055,7 @@ final class QuizAPIService {
     // LOCAL OPTIONS
     // =====================================================
 
-    private func makeOptions(
+    private func makeLocalOptions(
         correctAnswer: String
     ) -> [String] {
 

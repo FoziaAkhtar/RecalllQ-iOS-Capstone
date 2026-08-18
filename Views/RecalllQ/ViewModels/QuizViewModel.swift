@@ -6,24 +6,26 @@ import Combine
 // VIEWMODEL: QuizViewModel
 // =====================================================
 // PURPOSE:
-// Controls the RecalllQ quiz system.
+// Controls the complete RecalllQ quiz system.
 //
 // FEATURES:
 // - Create quizzes
 // - Create quizzes from Memories
-// - Generate AI quizzes from Memories
-// - Local fallback when AI API is unavailable
+// - Generate AI quizzes
+// - OpenAI / QuizAPIService integration
+// - Local fallback quizzes
 // - Start quizzes
 // - Select answers
 // - Submit answers
 // - Track score
 // - Move between questions
-// - Complete quiz
-// - Restart quiz
+// - Complete quizzes
+// - Restart quizzes
 // - Delete quizzes
 // - Save quizzes locally
 // - Load quizzes locally
 // - Study Session integration
+// - Quiz statistics
 // =====================================================
 
 @MainActor
@@ -79,6 +81,11 @@ final class QuizViewModel: ObservableObject {
 
     init() {
         loadQuizzes()
+
+        print("========================================")
+        print("🧠 QuizViewModel initialized")
+        print("📚 Saved quizzes: \(quizzes.count)")
+        print("========================================")
     }
 
     // =====================================================
@@ -96,13 +103,12 @@ final class QuizViewModel: ObservableObject {
             return
         }
 
-        let cleanedTitle =
-            title.trimmingCharacters(
+        let cleanedTitle = title
+            .trimmingCharacters(
                 in: .whitespacesAndNewlines
             )
 
-        let finalTitle =
-            cleanedTitle.isEmpty
+        let finalTitle = cleanedTitle.isEmpty
             ? "Untitled Quiz"
             : cleanedTitle
 
@@ -119,7 +125,11 @@ final class QuizViewModel: ObservableObject {
 
         saveQuizzes()
 
-        print("✅ Quiz created: \(finalTitle)")
+        print("========================================")
+        print("✅ QUIZ CREATED")
+        print("Title: \(finalTitle)")
+        print("Questions: \(questions.count)")
+        print("========================================")
     }
 
     // =====================================================
@@ -130,64 +140,49 @@ final class QuizViewModel: ObservableObject {
         _ memory: Memory
     ) {
 
-        let correctAnswer =
-            memory.summary.trimmingCharacters(
+        let answer = memory.summary
+            .trimmingCharacters(
                 in: .whitespacesAndNewlines
-            ).isEmpty
-            ? memory.content
-            : memory.summary
-
-        guard !correctAnswer.isEmpty else {
-
-            print(
-                "❌ Cannot create quiz: memory has no usable answer."
             )
 
+        let finalAnswer = answer.isEmpty
+            ? memory.content.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+            : answer
+
+        guard !finalAnswer.isEmpty else {
+            print(
+                "❌ Cannot create quiz: memory has no usable information."
+            )
             return
         }
 
         let question = QuizQuestion(
-
-            memoryID:
-                memory.id,
+            memoryID: memory.id,
 
             question:
                 "What is the main idea of \(memory.title)?",
 
-            options: [
+            options: makeLocalOptions(
+                correctAnswer: finalAnswer
+            ),
 
-                correctAnswer,
-
-                "This information is unrelated.",
-
-                "There is not enough information.",
-
-                "None of the above."
-
-            ].shuffled(),
-
-            correctAnswer:
-                correctAnswer,
+            correctAnswer: finalAnswer,
 
             explanation:
-                "The correct answer is based on the Memory created by RecalllQ."
+                "The correct answer is based on the information stored in this RecalllQ Memory."
         )
 
         createQuiz(
-
-            title:
-                "\(memory.title) Quiz",
-
-            questions:
-                [question],
-
-            memoryID:
-                memory.id
+            title: "\(memory.title) Quiz",
+            questions: [question],
+            memoryID: memory.id
         )
     }
 
     // =====================================================
-    // CREATE QUIZZES FROM MEMORIES
+    // CREATE QUIZZES FROM MULTIPLE MEMORIES
     // =====================================================
 
     func createFromMemories(
@@ -195,19 +190,14 @@ final class QuizViewModel: ObservableObject {
     ) {
 
         guard !memories.isEmpty else {
-
             print(
                 "❌ No memories available for quizzes."
             )
-
             return
         }
 
         for memory in memories {
-
-            createFromMemory(
-                memory
-            )
+            createFromMemory(memory)
         }
 
         print(
@@ -218,13 +208,6 @@ final class QuizViewModel: ObservableObject {
     // =====================================================
     // GENERATE AI QUIZ FROM MEMORY
     // =====================================================
-    // IMPORTANT:
-    // If the API is unavailable or the API key is missing,
-    // RecalllQ automatically creates a LOCAL quiz.
-    //
-    // This means the Quiz feature never becomes unusable
-    // simply because an API key has not been configured.
-    // =====================================================
 
     func generateAIQuizFromMemory(
         _ memory: Memory,
@@ -232,37 +215,54 @@ final class QuizViewModel: ObservableObject {
     ) async {
 
         guard !isGeneratingAIQuiz else {
-
             print(
                 "⚠️ AI quiz generation is already running."
             )
-
             return
         }
 
         guard numberOfQuestions > 0 else {
-
             aiQuizError =
                 "Please generate at least one question."
-
             return
         }
 
-        guard !memory.title
+        let title = memory.title
             .trimmingCharacters(
                 in: .whitespacesAndNewlines
             )
-            .isEmpty
-        else {
 
+        let content = memory.content
+            .trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+
+        let summary = memory.summary
+            .trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+
+        // -------------------------------------------------
+        // VALIDATE TITLE
+        // -------------------------------------------------
+
+        guard !title.isEmpty else {
             aiQuizError =
                 "This memory does not have a title."
+            return
+        }
 
+        // -------------------------------------------------
+        // VALIDATE CONTENT
+        // -------------------------------------------------
+
+        guard !content.isEmpty || !summary.isEmpty else {
+            aiQuizError =
+                "This memory does not contain enough information to create a quiz."
             return
         }
 
         isGeneratingAIQuiz = true
-
         aiQuizError = nil
 
         defer {
@@ -270,95 +270,113 @@ final class QuizViewModel: ObservableObject {
         }
 
         print("========================================")
-        print("🤖 GENERATING QUIZ")
-        print("Memory: \(memory.title)")
+        print("🤖 AI QUIZ GENERATION")
+        print("========================================")
+        print("Memory: \(title)")
         print("Questions requested: \(numberOfQuestions)")
         print("========================================")
 
         do {
 
-            // -------------------------------------------------
-            // TRY AI API
-            // -------------------------------------------------
+            // =================================================
+            // GENERATE USING QUIZ API SERVICE
+            // =================================================
 
             let generatedQuestions =
                 try await quizAPIService.generateQuiz(
-                    from:
-                        memory,
-
-                    numberOfQuestions:
-                        numberOfQuestions
+                    from: memory,
+                    numberOfQuestions: numberOfQuestions
                 )
 
             guard !generatedQuestions.isEmpty else {
-
                 throw QuizAPIService.QuizAPIError.emptyQuestions
             }
 
-            // -------------------------------------------------
-            // CREATE AI QUIZ
-            // -------------------------------------------------
+            // =================================================
+            // CREATE QUIZ
+            // =================================================
 
             createQuiz(
-
-                title:
-                    "\(memory.title) AI Quiz",
-
-                questions:
-                    generatedQuestions,
-
-                memoryID:
-                    memory.id
+                title: "\(title) AI Quiz",
+                questions: generatedQuestions,
+                memoryID: memory.id
             )
 
-            print(
-                "✅ AI quiz created with \(generatedQuestions.count) questions."
-            )
+            aiQuizError = nil
+
+            print("========================================")
+            print("✅ AI QUIZ CREATED")
+            print("Questions: \(generatedQuestions.count)")
+            print("========================================")
 
         } catch {
 
             // =================================================
-            // API FAILED
-            // =================================================
-            // Instead of showing an error and leaving the user
-            // without a quiz, create a local quiz.
+            // LOCAL FALLBACK
             // =================================================
 
-            print(
-                "⚠️ AI API unavailable."
-            )
-
-            print(
-                "⚠️ Reason: \(error.localizedDescription)"
-            )
-
-            print(
-                "🧠 Creating local fallback quiz..."
-            )
+            print("========================================")
+            print("⚠️ AI QUIZ GENERATION FAILED")
+            print("Reason: \(error.localizedDescription)")
+            print("🧠 Creating local fallback quiz...")
+            print("========================================")
 
             createLocalFallbackQuiz(
-
-                from:
-                    memory,
-
-                numberOfQuestions:
-                    numberOfQuestions
+                from: memory,
+                numberOfQuestions: numberOfQuestions
             )
-
-            // -------------------------------------------------
-            // Clear API error because the fallback succeeded.
-            // -------------------------------------------------
-
-            aiQuizError = nil
         }
     }
 
     // =====================================================
-    // LOCAL FALLBACK QUIZ
+    // GENERATE AI QUIZ FROM MULTIPLE MEMORIES
     // =====================================================
-    // Creates multiple questions from one Memory.
-    //
-    // This allows the app to work without an API key.
+
+    func generateAIQuizFromMemories(
+        _ memories: [Memory],
+        numberOfQuestions: Int = 5
+    ) async {
+
+        guard !memories.isEmpty else {
+            aiQuizError =
+                "No memories are available for the quiz."
+            return
+        }
+
+        guard !isGeneratingAIQuiz else {
+            print(
+                "⚠️ AI quiz generation is already running."
+            )
+            return
+        }
+
+        guard numberOfQuestions > 0 else {
+            aiQuizError =
+                "Please generate at least one question."
+            return
+        }
+
+        // -------------------------------------------------
+        // CURRENT QUIZ SERVICE GENERATES FROM ONE MEMORY.
+        //
+        // We use the first valid memory so the AI receives
+        // a focused and reliable source.
+        // -------------------------------------------------
+
+        guard let memory = memories.first else {
+            aiQuizError =
+                "No valid memory was found."
+            return
+        }
+
+        await generateAIQuizFromMemory(
+            memory,
+            numberOfQuestions: numberOfQuestions
+        )
+    }
+
+    // =====================================================
+    // LOCAL FALLBACK QUIZ
     // =====================================================
 
     private func createLocalFallbackQuiz(
@@ -368,16 +386,19 @@ final class QuizViewModel: ObservableObject {
 
         var questions: [QuizQuestion] = []
 
-        let answer =
-            memory.summary
-                .trimmingCharacters(
-                    in: .whitespacesAndNewlines
-                )
+        let summary = memory.summary
+            .trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
 
-        let finalAnswer =
-            answer.isEmpty
-            ? memory.content
-            : answer
+        let content = memory.content
+            .trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+
+        let finalAnswer = summary.isEmpty
+            ? content
+            : summary
 
         guard !finalAnswer.isEmpty else {
 
@@ -389,53 +410,65 @@ final class QuizViewModel: ObservableObject {
 
         let questionTemplates = [
 
-            "What is the main idea of \(memory.title)?",
+            (
+                "What is the main idea of \(memory.title)?",
+                QuizQuestion.Difficulty.medium
+            ),
 
-            "What is the most important information about \(memory.title)?",
+            (
+                "What is the most important information about \(memory.title)?",
+                QuizQuestion.Difficulty.medium
+            ),
 
-            "Which statement best describes \(memory.title)?",
+            (
+                "Which statement best describes \(memory.title)?",
+                QuizQuestion.Difficulty.easy
+            ),
 
-            "What should you remember about \(memory.title)?",
+            (
+                "What should you remember about \(memory.title)?",
+                QuizQuestion.Difficulty.easy
+            ),
 
-            "What does the memory explain about \(memory.title)?"
-
+            (
+                "What does the memory explain about \(memory.title)?",
+                QuizQuestion.Difficulty.hard
+            )
         ]
 
-        let count =
-            min(
-                numberOfQuestions,
-                questionTemplates.count
-            )
+        let count = min(
+            max(numberOfQuestions, 1),
+            questionTemplates.count
+        )
 
         for index in 0..<count {
 
-            let question =
-                QuizQuestion(
+            let template =
+                questionTemplates[index]
 
-                    memoryID:
-                        memory.id,
+            let question = QuizQuestion(
 
-                    question:
-                        questionTemplates[index],
+                memoryID:
+                    memory.id,
 
-                    options: [
+                question:
+                    template.0,
 
-                        finalAnswer,
+                options:
+                    makeLocalOptions(
+                        correctAnswer:
+                            finalAnswer
+                    ),
 
-                        "This information is unrelated to the topic.",
+                correctAnswer:
+                    finalAnswer,
 
-                        "The memory does not contain this information.",
+                explanation:
+                    "This answer is based on the information stored in your RecalllQ Memory.",
 
-                        "None of the above."
-
-                    ].shuffled(),
-
-                    correctAnswer:
-                        finalAnswer,
-
-                    explanation:
-                        "This answer is based on the information stored in your RecalllQ memory."
-                )
+                difficulty:
+                    template.1
+            )
 
             questions.append(
                 question
@@ -451,7 +484,6 @@ final class QuizViewModel: ObservableObject {
         }
 
         createQuiz(
-
             title:
                 "\(memory.title) Study Quiz",
 
@@ -462,52 +494,34 @@ final class QuizViewModel: ObservableObject {
                 memory.id
         )
 
+        aiQuizError = nil
+
         print(
             "✅ Local fallback quiz created with \(questions.count) questions."
         )
     }
 
     // =====================================================
-    // GENERATE AI QUIZ FROM MEMORIES
+    // LOCAL OPTIONS
     // =====================================================
 
-    func generateAIQuizFromMemories(
-        _ memories: [Memory],
-        numberOfQuestions: Int = 5
-    ) async {
+    private func makeLocalOptions(
+        correctAnswer: String
+    ) -> [String] {
 
-        guard !memories.isEmpty else {
+        let incorrectAnswers = [
 
-            aiQuizError =
-                "No memories are available for the quiz."
+            "This information describes a different academic topic.",
 
-            return
-        }
+            "This statement does not match the information in the memory.",
 
-        guard !isGeneratingAIQuiz else {
-            return
-        }
+            "This interpretation is not supported by the memory."
+        ]
 
-        guard numberOfQuestions > 0 else {
-
-            aiQuizError =
-                "Please generate at least one question."
-
-            return
-        }
-
-        // -------------------------------------------------
-        // Try the first memory.
-        // -------------------------------------------------
-
-        if let firstMemory = memories.first {
-
-            await generateAIQuizFromMemory(
-                firstMemory,
-                numberOfQuestions:
-                    numberOfQuestions
-            )
-        }
+        return (
+            [correctAnswer] +
+            incorrectAnswers
+        ).shuffled()
     }
 
     // =====================================================
@@ -515,7 +529,6 @@ final class QuizViewModel: ObservableObject {
     // =====================================================
 
     func clearAIQuizError() {
-
         aiQuizError = nil
     }
 
@@ -545,14 +558,13 @@ final class QuizViewModel: ObservableObject {
         var quiz =
             existingQuiz
 
-        quiz.currentQuestionIndex =
-            0
+        // -------------------------------------------------
+        // RESET QUIZ STATE
+        // -------------------------------------------------
 
-        quiz.isCompleted =
-            false
-
-        quiz.score =
-            0
+        quiz.currentQuestionIndex = 0
+        quiz.isCompleted = false
+        quiz.score = 0
 
         for index in quiz.questions.indices {
 
@@ -631,7 +643,6 @@ final class QuizViewModel: ObservableObject {
     // =====================================================
 
     var currentIndex: Int {
-
         currentQuiz?.currentQuestionIndex ?? 0
     }
 
@@ -653,7 +664,6 @@ final class QuizViewModel: ObservableObject {
     // =====================================================
 
     var totalQuestions: Int {
-
         currentQuiz?.totalQuestions ?? 0
     }
 
@@ -662,7 +672,6 @@ final class QuizViewModel: ObservableObject {
     // =====================================================
 
     var questions: [QuizQuestion] {
-
         currentQuiz?.questions ?? []
     }
 
@@ -671,7 +680,6 @@ final class QuizViewModel: ObservableObject {
     // =====================================================
 
     var answeredQuestions: Int {
-
         currentQuiz?.answeredQuestions ?? 0
     }
 
@@ -680,7 +688,6 @@ final class QuizViewModel: ObservableObject {
     // =====================================================
 
     var correctAnswers: Int {
-
         currentQuiz?.correctAnswers ?? 0
     }
 
@@ -689,7 +696,6 @@ final class QuizViewModel: ObservableObject {
     // =====================================================
 
     var incorrectAnswers: Int {
-
         currentQuiz?.incorrectAnswers ?? 0
     }
 
@@ -698,7 +704,6 @@ final class QuizViewModel: ObservableObject {
     // =====================================================
 
     var score: Int {
-
         currentQuiz?.score ?? 0
     }
 
@@ -707,7 +712,6 @@ final class QuizViewModel: ObservableObject {
     // =====================================================
 
     var scorePercentage: Double {
-
         currentQuiz?.percentage ?? 0
     }
 
@@ -716,7 +720,6 @@ final class QuizViewModel: ObservableObject {
     // =====================================================
 
     var progress: Double {
-
         currentQuiz?.progress ?? 0
     }
 
@@ -725,7 +728,6 @@ final class QuizViewModel: ObservableObject {
     // =====================================================
 
     var isQuizComplete: Bool {
-
         currentQuiz?.isCompleted ?? false
     }
 
@@ -734,7 +736,6 @@ final class QuizViewModel: ObservableObject {
     // =====================================================
 
     var isLastQuestion: Bool {
-
         currentQuiz?.isLastQuestion ?? false
     }
 
@@ -743,7 +744,6 @@ final class QuizViewModel: ObservableObject {
     // =====================================================
 
     var hasAnsweredCurrentQuestion: Bool {
-
         currentQuiz?.hasAnsweredCurrentQuestion ?? false
     }
 
@@ -779,8 +779,17 @@ final class QuizViewModel: ObservableObject {
             return
         }
 
+        let cleanedAnswer =
+            answer.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+
+        guard !cleanedAnswer.isEmpty else {
+            return
+        }
+
         quiz.questions[index].selectedAnswer =
-            answer
+            cleanedAnswer
 
         currentQuiz =
             quiz
@@ -871,10 +880,11 @@ final class QuizViewModel: ObservableObject {
             return
         }
 
+        let currentIndex =
+            quiz.currentQuestionIndex
+
         guard
-            quiz.questions[
-                quiz.currentQuestionIndex
-            ].isAnswered
+            quiz.questions[currentIndex].isAnswered
         else {
 
             print(
@@ -883,9 +893,6 @@ final class QuizViewModel: ObservableObject {
 
             return
         }
-
-        let currentIndex =
-            quiz.currentQuestionIndex
 
         // =================================================
         // FINISH QUIZ
@@ -965,7 +972,6 @@ final class QuizViewModel: ObservableObject {
     // =====================================================
 
     func restartQuiz() {
-
         resetCurrentQuiz()
     }
 
@@ -1040,7 +1046,6 @@ final class QuizViewModel: ObservableObject {
     // =====================================================
 
     var totalQuizzes: Int {
-
         quizzes.count
     }
 
@@ -1096,7 +1101,8 @@ final class QuizViewModel: ObservableObject {
             return 0
         }
 
-        return Double(totalCorrect)
+        return
+            Double(totalCorrect)
             / Double(totalQuestions)
             * 100
     }
@@ -1125,7 +1131,8 @@ final class QuizViewModel: ObservableObject {
         let total =
             percentages.reduce(0, +)
 
-        return total /
+        return
+            total /
             Double(percentages.count)
     }
 
@@ -1202,6 +1209,10 @@ final class QuizViewModel: ObservableObject {
                     storageKey
             )
 
+            print(
+                "💾 Saved \(quizzes.count) quizzes."
+            )
+
         } catch {
 
             print(
@@ -1261,3 +1272,4 @@ final class QuizViewModel: ObservableObject {
         }
     }
 }
+

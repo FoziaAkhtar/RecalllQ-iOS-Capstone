@@ -76,7 +76,7 @@ final class AppState: ObservableObject {
     // AppState does NOT automatically authenticate the user.
     //
     // LoginView must successfully validate credentials first.
-    //
+
     @Published var isAuthenticated: Bool = false
 
     // =====================================================
@@ -95,11 +95,19 @@ final class AppState: ObservableObject {
     // MEMORY ENGINE
     // =====================================================
 
+    // Local AI-like memory generation.
+    //
+    // This allows RecalllQ to continue working even when
+    // the online AI service is unavailable.
+
     let memoryEngine: MemoryEngine
 
     // =====================================================
     // AI SERVICE
     // =====================================================
+
+    // Connects the iOS application to the RecalllQ
+    // FastAPI backend.
 
     let aiService: AIService
 
@@ -114,6 +122,8 @@ final class AppState: ObservableObject {
     // QUIZ API SERVICE
     // =====================================================
 
+    // Handles AI quiz generation through the backend.
+
     let quizAPIService: QuizAPIService
 
     // =====================================================
@@ -121,6 +131,7 @@ final class AppState: ObservableObject {
     // =====================================================
 
     @Published var isGeneratingQuiz: Bool = false
+
     @Published var quizGenerationError: String?
 
     // =====================================================
@@ -128,6 +139,7 @@ final class AppState: ObservableObject {
     // =====================================================
 
     @Published var isGeneratingMemory: Bool = false
+
     @Published var memoryGenerationError: String?
 
     // =====================================================
@@ -174,9 +186,12 @@ final class AppState: ObservableObject {
         // =================================================
 
         self.memoryEngine = MemoryEngine()
+
         self.aiService = AIService()
+
         self.studyRecommendationService =
             StudyRecommendationService()
+
         self.quizAPIService = QuizAPIService()
 
         // =================================================
@@ -261,10 +276,29 @@ final class AppState: ObservableObject {
     // CREATE MEMORY FROM NOTE
     // =====================================================
 
+    // Converts a student's note into a structured RecalllQ
+    // memory.
+    //
+    // First attempt:
+    //
+    // iOS → AIService → FastAPI → OpenAI
+    //
+    // If OpenAI is unavailable:
+    //
+    // FastAPI → local fallback
+    //
+    // If the backend itself is unavailable:
+    //
+    // AIService → local MemoryEngine
+
     func createMemoryFromNote(
         title: String,
         content: String
     ) {
+
+        // =================================================
+        // CLEAN INPUT
+        // =================================================
 
         let cleanedTitle =
             title.trimmingCharacters(
@@ -323,29 +357,17 @@ final class AppState: ObservableObject {
 
             do {
 
-                print(
-                    "========================================"
-                )
+                print("========================================")
+                print("🤖 RECALLlQ AI MEMORY PIPELINE")
+                print("========================================")
 
-                print(
-                    "🤖 RECALLIQ AI MEMORY PIPELINE"
-                )
-
-                print(
-                    "========================================"
-                )
-
-                print(
-                    "Title: \(cleanedTitle)"
-                )
+                print("Title: \(cleanedTitle)")
 
                 print(
                     "Attempting AI memory generation..."
                 )
 
-                print(
-                    "========================================"
-                )
+                print("========================================")
 
                 // =============================================
                 // CALL AI SERVICE
@@ -411,41 +433,22 @@ final class AppState: ObservableObject {
                 isGeneratingMemory = false
                 memoryGenerationError = nil
 
-                print(
-                    "========================================"
-                )
+                // =============================================
+                // SUCCESS LOG
+                // =============================================
 
-                print(
-                    "✅ AI MEMORY CREATED"
-                )
+                print("========================================")
+                print("✅ AI MEMORY CREATED")
+                print("========================================")
 
-                print(
-                    "Memory: \(memory.title)"
-                )
+                print("Memory:", memory.title)
+                print("Source:", memory.source)
+                print("Summary:", memory.summary)
+                print("Tags:", memory.tags)
+                print("Confidence:", memory.confidence)
+                print("Importance:", memory.importance)
 
-                print(
-                    "Source: \(memory.source)"
-                )
-
-                print(
-                    "Summary: \(memory.summary)"
-                )
-
-                print(
-                    "Tags: \(memory.tags)"
-                )
-
-                print(
-                    "Confidence: \(memory.confidence)"
-                )
-
-                print(
-                    "Importance: \(memory.importance)"
-                )
-
-                print(
-                    "========================================"
-                )
+                print("========================================")
 
             } catch {
 
@@ -453,25 +456,20 @@ final class AppState: ObservableObject {
                 // AI FAILED
                 // =============================================
 
-                print(
-                    "========================================"
-                )
-
-                print(
-                    "⚠️ AI MEMORY GENERATION FAILED"
-                )
+                print("========================================")
+                print("⚠️ AI MEMORY GENERATION FAILED")
+                print("========================================")
 
                 print(
                     "Using local MemoryEngine fallback."
                 )
 
                 print(
-                    "Reason: \(error.localizedDescription)"
+                    "Reason:",
+                    error.localizedDescription
                 )
 
-                print(
-                    "========================================"
-                )
+                print("========================================")
 
                 // =============================================
                 // LOCAL FALLBACK
@@ -520,27 +518,29 @@ final class AppState: ObservableObject {
                 // =============================================
 
                 isGeneratingMemory = false
+
+                // We do not display an error because the
+                // local fallback successfully created the
+                // memory.
+
                 memoryGenerationError = nil
 
-                print(
-                    "========================================"
-                )
+                // =============================================
+                // SUCCESSFUL FALLBACK LOG
+                // =============================================
 
-                print(
-                    "✅ LOCAL MEMORY CREATED"
-                )
+                print("========================================")
+                print("✅ LOCAL MEMORY CREATED")
+                print("========================================")
 
-                print(
-                    "Memory: \(memory.title)"
-                )
+                print("Memory:", memory.title)
+                print("Source:", memory.source)
+                print("Summary:", memory.summary)
+                print("Tags:", memory.tags)
+                print("Confidence:", memory.confidence)
+                print("Importance:", memory.importance)
 
-                print(
-                    "Source: \(memory.source)"
-                )
-
-                print(
-                    "========================================"
-                )
+                print("========================================")
             }
         }
     }
@@ -590,6 +590,8 @@ final class AppState: ObservableObject {
         _ memory: Memory
     ) {
 
+        // Check whether a flashcard already exists.
+
         if let existingFlashcard =
             flashcardViewModel.flashcardForMemory(
                 memory.id
@@ -603,9 +605,13 @@ final class AppState: ObservableObject {
 
         } else {
 
+            // Create a new flashcard.
+
             flashcardViewModel.createFromMemory(
                 memory
             )
+
+            // Try to find the newly created flashcard.
 
             if let newFlashcard =
                 flashcardViewModel.flashcardForMemory(
@@ -627,6 +633,8 @@ final class AppState: ObservableObject {
                 return
             }
         }
+
+        // Switch to Flashcards tab.
 
         selectedTab = 3
     }
@@ -744,6 +752,10 @@ final class AppState: ObservableObject {
             return
         }
 
+        // =================================================
+        // CREATE QUESTIONS
+        // =================================================
+
         let questions: [QuizQuestion] =
             flashcards.map { flashcard in
 
@@ -751,8 +763,11 @@ final class AppState: ObservableObject {
                     flashcard.answer
 
                 let incorrectAnswers = [
+
                     "None of the above.",
+
                     "This information is unrelated.",
+
                     "There is not enough information."
                 ]
 
@@ -764,19 +779,36 @@ final class AppState: ObservableObject {
                     .shuffled()
 
                 return QuizQuestion(
-                    memoryID: flashcard.memoryID,
-                    question: flashcard.question,
-                    options: options,
-                    correctAnswer: correctAnswer,
+
+                    memoryID:
+                        flashcard.memoryID,
+
+                    question:
+                        flashcard.question,
+
+                    options:
+                        options,
+
+                    correctAnswer:
+                        correctAnswer,
+
                     explanation:
                         "The correct answer is based on your RecalllQ flashcard."
                 )
             }
 
+        // =================================================
+        // CREATE QUIZ
+        // =================================================
+
         quizViewModel.createQuiz(
             title: "RecalllQ Study Quiz",
             questions: questions
         )
+
+        // =================================================
+        // START QUIZ
+        // =================================================
 
         if let quiz =
             quizViewModel.quizzes.first {
@@ -798,6 +830,8 @@ final class AppState: ObservableObject {
         numberOfQuestions: Int = 5
     ) {
 
+        // Prevent multiple simultaneous requests.
+
         guard !isGeneratingQuiz else {
 
             print(
@@ -806,6 +840,8 @@ final class AppState: ObservableObject {
 
             return
         }
+
+        // Limit the number of questions.
 
         let questionCount =
             max(
@@ -823,11 +859,19 @@ final class AppState: ObservableObject {
 
             do {
 
+                // =============================================
+                // CALL QUIZ API
+                // =============================================
+
                 let questions =
                     try await quizAPIService.generateQuiz(
                         from: memory,
                         numberOfQuestions: questionCount
                     )
+
+                // =============================================
+                // VALIDATE QUESTIONS
+                // =============================================
 
                 guard !questions.isEmpty else {
 
@@ -836,11 +880,19 @@ final class AppState: ObservableObject {
                         .emptyQuestions
                 }
 
+                // =============================================
+                // CREATE QUIZ
+                // =============================================
+
                 quizViewModel.createQuiz(
                     title: "\(memory.title) AI Quiz",
                     questions: questions,
                     memoryID: memory.id
                 )
+
+                // =============================================
+                // FIND QUIZ
+                // =============================================
 
                 guard let quiz =
                     quizViewModel.quizzes.first else {
@@ -849,6 +901,10 @@ final class AppState: ObservableObject {
                         .QuizAPIError
                         .invalidData
                 }
+
+                // =============================================
+                // START QUIZ
+                // =============================================
 
                 quizViewModel.startQuiz(
                     id: quiz.id
@@ -860,6 +916,21 @@ final class AppState: ObservableObject {
                 quizGenerationError = nil
 
             } catch {
+
+                // =============================================
+                // QUIZ GENERATION FAILED
+                // =============================================
+
+                print("========================================")
+                print("❌ AI QUIZ GENERATION FAILED")
+                print("========================================")
+
+                print(
+                    "Reason:",
+                    error.localizedDescription
+                )
+
+                print("========================================")
 
                 isGeneratingQuiz = false
 
@@ -973,21 +1044,15 @@ final class AppState: ObservableObject {
 
         selectedTab = 0
 
-        print(
-            "========================================"
-        )
-
-        print(
-            "✅ USER AUTHENTICATED"
-        )
+        print("========================================")
+        print("✅ USER AUTHENTICATED")
+        print("========================================")
 
         print(
             "➡️ MainTabView is now active."
         )
 
-        print(
-            "========================================"
-        )
+        print("========================================")
     }
 
     // =====================================================
@@ -1000,21 +1065,14 @@ final class AppState: ObservableObject {
 
         selectedTab = 0
 
-        print(
-            "========================================"
-        )
-
-        print(
-            "👋 USER LOGGED OUT"
-        )
+        print("========================================")
+        print("👋 USER LOGGED OUT")
+        print("========================================")
 
         print(
             "➡️ Returning to WelcomeView."
         )
 
-        print(
-            "========================================"
-        )
+        print("========================================")
     }
 }
-
