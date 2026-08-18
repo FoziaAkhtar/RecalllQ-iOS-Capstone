@@ -1,19 +1,33 @@
 
 import SwiftUI
 
-// ========================================
-// SETTINGS VIEW
-// ========================================
+// =====================================================
+// VIEW: SettingsView
+// =====================================================
 // PURPOSE:
-// - App settings screen
+// - Professional RecalllQ settings screen
 // - AI configuration
-// - OpenAI API key management
-// - App information
+// - AI Memory Engine information
 // - Account information
-// - Feature information
-// - Reset options
 // - Sign out
-// ========================================
+// - App information
+// - Feature overview
+// - Protected reset-data action
+//
+// AUTHENTICATION:
+// SettingsView uses the global AppState.
+//
+// Sign Out:
+// SettingsView
+//      ↓
+// appState.logout()
+//      ↓
+// isAuthenticated = false
+//      ↓
+// RecalllQApp
+//      ↓
+// WelcomeView
+// =====================================================
 
 struct SettingsView: View {
 
@@ -30,6 +44,12 @@ struct SettingsView: View {
     @State private var showSignOutConfirmation = false
 
     // =====================================================
+    // RESET DATA CONFIRMATION
+    // =====================================================
+
+    @State private var showResetConfirmation = false
+
+    // =====================================================
     // BODY
     // =====================================================
 
@@ -39,36 +59,343 @@ struct SettingsView: View {
 
             Form {
 
-                // ========================================
+                // =====================================================
                 // AI & INTELLIGENCE
-                // ========================================
+                // =====================================================
 
-                Section(header: Text("AI & Intelligence")) {
+                Section {
+
+                    // -------------------------------------------------
+                    // OPENAI API KEY
+                    // -------------------------------------------------
 
                     NavigationLink {
-
                         APIKeySettingsView()
+                    } label: {
+
+                        settingsRow(
+                            icon: "key.fill",
+                            title: "OpenAI API Key",
+                            description: "Configure AI-powered quiz generation",
+                            color: RecalllQTheme.smartPurple
+                        )
+                    }
+
+                    // -------------------------------------------------
+                    // AI MEMORY ENGINE
+                    // -------------------------------------------------
+
+                    settingsRow(
+                        icon: "brain.head.profile",
+                        title: "AI Memory Engine",
+                        description: "Converts notes into structured memories",
+                        color: RecalllQTheme.smartPurple
+                    )
+
+                    // -------------------------------------------------
+                    // AI QUIZ GENERATION
+                    // -------------------------------------------------
+
+                    settingsRow(
+                        icon: "sparkles",
+                        title: "AI Quiz Generation",
+                        description: "Create quizzes from your learning memories",
+                        color: RecalllQTheme.primary
+                    )
+                } header: {
+
+                    Text("AI & Intelligence")
+
+                } footer: {
+
+                    Text(
+                        "RecalllQ uses AI to transform your study material into useful learning resources."
+                    )
+                }
+
+                // =====================================================
+                // ACCOUNT
+                // =====================================================
+
+                Section {
+
+                    // -------------------------------------------------
+                    // USER PROFILE
+                    // -------------------------------------------------
+
+                    HStack(spacing: 12) {
+
+                        Image(
+                            systemName: "person.circle.fill"
+                        )
+                        .font(.title3)
+                        .foregroundColor(
+                            RecalllQTheme.primary
+                        )
+
+                        VStack(
+                            alignment: .leading,
+                            spacing: 3
+                        ) {
+
+                            Text("User Profile")
+                                .font(.body)
+                                .fontWeight(.medium)
+                                .foregroundColor(
+                                    RecalllQTheme.primaryText
+                                )
+
+                            Text("Your RecalllQ account")
+                                .font(.caption)
+                                .foregroundColor(
+                                    RecalllQTheme.secondaryText
+                                )
+                        }
+
+                        Spacer()
+
+                        HStack(spacing: 5) {
+
+                            Circle()
+                                .fill(
+                                    RecalllQTheme.success
+                                )
+                                .frame(
+                                    width: 8,
+                                    height: 8
+                                )
+
+                            Text("Active")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(
+                                    RecalllQTheme.success
+                                )
+                        }
+                    }
+
+                    // -------------------------------------------------
+                    // SIGN OUT
+                    // -------------------------------------------------
+
+                    Button {
+
+                        showSignOutConfirmation = true
 
                     } label: {
 
                         HStack(spacing: 12) {
 
-                            Image(systemName: "key.fill")
-                                .foregroundColor(
-                                    RecalllQTheme.smartPurple
+                            ZStack {
+
+                                RoundedRectangle(
+                                    cornerRadius: 8
                                 )
+                                .fill(
+                                    RecalllQTheme.error
+                                        .opacity(0.10)
+                                )
+                                .frame(
+                                    width: 36,
+                                    height: 36
+                                )
+
+                                Image(
+                                    systemName:
+                                        "rectangle.portrait.and.arrow.right"
+                                )
+                                .font(.body)
+                                .foregroundColor(
+                                    RecalllQTheme.error
+                                )
+                            }
 
                             VStack(
                                 alignment: .leading,
                                 spacing: 3
                             ) {
 
-                                Text("OpenAI API Key")
+                                Text("Sign Out")
                                     .font(.body)
-                                    .fontWeight(.medium)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(
+                                        RecalllQTheme.error
+                                    )
 
                                 Text(
-                                    "Configure AI-powered quiz generation"
+                                    "Return to the RecalllQ welcome screen"
+                                )
+                                .font(.caption)
+                                .foregroundColor(
+                                    RecalllQTheme.secondaryText
+                                )
+                            }
+
+                            Spacer()
+
+                            Image(
+                                systemName: "chevron.right"
+                            )
+                            .font(
+                                .caption.weight(.semibold)
+                            )
+                            .foregroundColor(
+                                RecalllQTheme.error
+                                    .opacity(0.7)
+                            )
+                        }
+                    }
+                    .buttonStyle(.plain)
+
+                } header: {
+
+                    Text("Account")
+
+                } footer: {
+
+                    Text(
+                        "Signing out will not delete your saved learning data."
+                    )
+                }
+
+                // =====================================================
+                // APP INFORMATION
+                // =====================================================
+
+                Section {
+
+                    informationRow(
+                        title: "App Name",
+                        value: "RecalllQ"
+                    )
+
+                    informationRow(
+                        title: "Version",
+                        value: "1.0"
+                    )
+
+                    informationRow(
+                        title: "Platform",
+                        value: "iOS"
+                    )
+
+                    informationRow(
+                        title: "AI Integration",
+                        value: "Enabled"
+                    )
+
+                } header: {
+
+                    Text("App Information")
+                }
+
+                // =====================================================
+                // FEATURES
+                // =====================================================
+
+                Section {
+
+                    featureRow(
+                        icon: "brain.head.profile",
+                        title: "AI Memory Engine"
+                    )
+
+                    featureRow(
+                        icon: "note.text",
+                        title: "Smart Notes"
+                    )
+
+                    featureRow(
+                        icon: "rectangle.on.rectangle",
+                        title: "Flashcards"
+                    )
+
+                    featureRow(
+                        icon: "questionmark.circle.fill",
+                        title: "AI Quiz Generation"
+                    )
+
+                    featureRow(
+                        icon: "bell.fill",
+                        title: "Reminder System"
+                    )
+
+                    featureRow(
+                        icon: "book.fill",
+                        title: "Study Sessions"
+                    )
+
+                    featureRow(
+                        icon: "chart.bar.fill",
+                        title: "Learning Progress"
+                    )
+
+                    featureRow(
+                        icon: "lightbulb.fill",
+                        title: "Personalized Recommendations"
+                    )
+
+                } header: {
+
+                    Text("Features")
+
+                } footer: {
+
+                    Text(
+                        "RecalllQ combines AI memory organization with active learning tools to help students study more effectively."
+                    )
+                }
+
+                // =====================================================
+                // DANGER ZONE
+                // =====================================================
+
+                Section {
+
+                    Button {
+
+                        showResetConfirmation = true
+
+                    } label: {
+
+                        HStack(spacing: 12) {
+
+                            ZStack {
+
+                                RoundedRectangle(
+                                    cornerRadius: 8
+                                )
+                                .fill(
+                                    RecalllQTheme.error
+                                        .opacity(0.10)
+                                )
+                                .frame(
+                                    width: 36,
+                                    height: 36
+                                )
+
+                                Image(
+                                    systemName: "trash.fill"
+                                )
+                                .foregroundColor(
+                                    RecalllQTheme.error
+                                )
+                            }
+
+                            VStack(
+                                alignment: .leading,
+                                spacing: 3
+                            ) {
+
+                                Text("Reset Learning Data")
+                                    .font(.body)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(
+                                        RecalllQTheme.error
+                                    )
+
+                                Text(
+                                    "Delete saved notes, memories and quizzes"
                                 )
                                 .font(.caption)
                                 .foregroundColor(
@@ -79,188 +406,33 @@ struct SettingsView: View {
                             Spacer()
                         }
                     }
+                    .buttonStyle(.plain)
 
-                    HStack(spacing: 12) {
+                } header: {
 
-                        Image(
-                            systemName: "brain.head.profile"
-                        )
+                    Text("Danger Zone")
                         .foregroundColor(
-                            RecalllQTheme.smartPurple
+                            RecalllQTheme.error
                         )
 
-                        VStack(
-                            alignment: .leading,
-                            spacing: 3
-                        ) {
+                } footer: {
 
-                            Text("AI Memory Engine")
-                                .font(.body)
-                                .fontWeight(.medium)
-
-                            Text(
-                                "Converts notes into structured memories"
-                            )
-                            .font(.caption)
-                            .foregroundColor(
-                                RecalllQTheme.secondaryText
-                            )
-                        }
-
-                        Spacer()
-                    }
-                }
-
-                // ========================================
-                // APP INFO
-                // ========================================
-
-                Section(header: Text("App Info")) {
-
-                    HStack {
-
-                        Text("App Name")
-
-                        Spacer()
-
-                        Text(appName)
-                            .foregroundColor(.gray)
-                    }
-
-                    HStack {
-
-                        Text("Version")
-
-                        Spacer()
-
-                        Text(appVersion)
-                            .foregroundColor(.gray)
-                    }
-                }
-
-                // ========================================
-                // ACCOUNT
-                // ========================================
-
-                Section(header: Text("Account")) {
-
-                    HStack(spacing: 12) {
-
-                        Image(
-                            systemName: "person.circle.fill"
-                        )
-                        .foregroundColor(
-                            RecalllQTheme.primary
-                        )
-
-                        Text("User Profile")
-
-                        Spacer()
-
-                        Text("Active")
-                            .font(.caption)
-                            .foregroundColor(
-                                RecalllQTheme.success
-                            )
-                    }
-
-                    // ========================================
-                    // SIGN OUT BUTTON
-                    // ========================================
-
-                    Button {
-
-                        showSignOutConfirmation = true
-
-                    } label: {
-
-                        HStack(spacing: 12) {
-
-                            Image(
-                                systemName: "rectangle.portrait.and.arrow.right"
-                            )
-                            .foregroundColor(
-                                RecalllQTheme.error
-                            )
-
-                            Text("Sign Out")
-                                .foregroundColor(
-                                    RecalllQTheme.error
-                                )
-
-                            Spacer()
-                        }
-                    }
-                }
-
-                // ========================================
-                // FEATURES
-                // ========================================
-
-                Section(header: Text("Features")) {
-
-                    Label(
-                        "AI Memory Engine",
-                        systemImage: "brain.head.profile"
+                    Text(
+                        "This action removes locally saved learning data from RecalllQ. Your account will remain active."
                     )
-
-                    Label(
-                        "Smart Notes",
-                        systemImage: "note.text"
-                    )
-
-                    Label(
-                        "Flashcards",
-                        systemImage: "rectangle.on.rectangle"
-                    )
-
-                    Label(
-                        "AI Quiz Generation",
-                        systemImage: "questionmark.circle.fill"
-                    )
-
-                    Label(
-                        "Reminder System",
-                        systemImage: "bell.fill"
-                    )
-
-                    Label(
-                        "Study Sessions",
-                        systemImage: "book.fill"
-                    )
-                }
-
-                // ========================================
-                // DEBUG
-                // ========================================
-
-                Section(header: Text("Debug")) {
-
-                    Button(
-                        role: .destructive
-                    ) {
-
-                        resetAppData()
-
-                    } label: {
-
-                        HStack {
-
-                            Image(
-                                systemName: "trash.fill"
-                            )
-
-                            Text("Reset App Data")
-                        }
-                    }
                 }
             }
 
-            .navigationTitle("Settings")
+            // =====================================================
+            // NAVIGATION TITLE
+            // =====================================================
 
-            // ========================================
+            .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.large)
+
+            // =====================================================
             // SIGN OUT CONFIRMATION
-            // ========================================
+            // =====================================================
 
             .confirmationDialog(
                 "Sign Out of RecalllQ?",
@@ -273,7 +445,31 @@ struct SettingsView: View {
                     role: .destructive
                 ) {
 
+                    print(
+                        "========================================"
+                    )
+
+                    print(
+                        "👋 SIGNING OUT OF RECALLIQ"
+                    )
+
+                    print(
+                        "========================================"
+                    )
+
                     appState.logout()
+
+                    print(
+                        "✅ AppState.isAuthenticated = \(appState.isAuthenticated)"
+                    )
+
+                    print(
+                        "➡️ Returning to WelcomeView"
+                    )
+
+                    print(
+                        "========================================"
+                    )
                 }
 
                 Button(
@@ -284,43 +480,213 @@ struct SettingsView: View {
             } message: {
 
                 Text(
-                    "You will be returned to the RecalllQ welcome screen."
+                    "You will be returned to the RecalllQ welcome screen. Your saved learning data will remain on this device."
+                )
+            }
+
+            // =====================================================
+            // RESET DATA CONFIRMATION
+            // =====================================================
+
+            .confirmationDialog(
+                "Reset RecalllQ Learning Data?",
+                isPresented: $showResetConfirmation,
+                titleVisibility: .visible
+            ) {
+
+                Button(
+                    "Reset Learning Data",
+                    role: .destructive
+                ) {
+
+                    resetAppData()
+                }
+
+                Button(
+                    "Cancel",
+                    role: .cancel
+                ) { }
+
+            } message: {
+
+                Text(
+                    "This will delete your saved notes, memories and quizzes from this device. This action cannot be undone."
                 )
             }
         }
     }
 
     // =====================================================
-    // APP INFO
+    // SETTINGS ROW
     // =====================================================
 
-    private var appName: String {
-        "RecalllQ"
-    }
+    @ViewBuilder
+    private func settingsRow(
+        icon: String,
+        title: String,
+        description: String,
+        color: Color
+    ) -> some View {
 
-    private var appVersion: String {
-        "1.0"
+        HStack(spacing: 12) {
+
+            ZStack {
+
+                RoundedRectangle(
+                    cornerRadius: 8
+                )
+                .fill(
+                    color.opacity(0.10)
+                )
+                .frame(
+                    width: 36,
+                    height: 36
+                )
+
+                Image(
+                    systemName: icon
+                )
+                .font(.body)
+                .foregroundColor(color)
+            }
+
+            VStack(
+                alignment: .leading,
+                spacing: 3
+            ) {
+
+                Text(title)
+                    .font(.body)
+                    .fontWeight(.medium)
+                    .foregroundColor(
+                        RecalllQTheme.primaryText
+                    )
+
+                Text(description)
+                    .font(.caption)
+                    .foregroundColor(
+                        RecalllQTheme.secondaryText
+                    )
+            }
+
+            Spacer()
+        }
     }
 
     // =====================================================
-    // RESET FUNCTION
+    // INFORMATION ROW
+    // =====================================================
+
+    @ViewBuilder
+    private func informationRow(
+        title: String,
+        value: String
+    ) -> some View {
+
+        HStack {
+
+            Text(title)
+                .foregroundColor(
+                    RecalllQTheme.primaryText
+                )
+
+            Spacer()
+
+            Text(value)
+                .foregroundColor(
+                    RecalllQTheme.secondaryText
+                )
+        }
+    }
+
+    // =====================================================
+    // FEATURE ROW
+    // =====================================================
+
+    @ViewBuilder
+    private func featureRow(
+        icon: String,
+        title: String
+    ) -> some View {
+
+        HStack(spacing: 12) {
+
+            Image(
+                systemName: icon
+            )
+            .frame(
+                width: 24
+            )
+            .foregroundColor(
+                RecalllQTheme.primary
+            )
+
+            Text(title)
+                .foregroundColor(
+                    RecalllQTheme.primaryText
+                )
+
+            Spacer()
+
+            Image(
+                systemName: "checkmark.circle.fill"
+            )
+            .font(.caption)
+            .foregroundColor(
+                RecalllQTheme.success
+            )
+        }
+    }
+
+    // =====================================================
+    // RESET APP DATA
     // =====================================================
 
     private func resetAppData() {
 
-        appState.notesViewModel.notes.removeAll()
+        print(
+            "========================================"
+        )
 
-        appState.memoryViewModel.memories.removeAll()
+        print(
+            "🗑️ RESETTING RECALLIQ LEARNING DATA"
+        )
+
+        print(
+            "========================================"
+        )
+
+        // -------------------------------------------------
+        // REMOVE NOTES
+        // -------------------------------------------------
+
+        appState.notesViewModel.notes.removeAll()
 
         UserDefaults.standard.removeObject(
             forKey: "saved_notes"
         )
 
+        // -------------------------------------------------
+        // REMOVE MEMORIES
+        // -------------------------------------------------
+
+        appState.memoryViewModel.memories.removeAll()
+
+        // -------------------------------------------------
+        // REMOVE QUIZZES
+        // -------------------------------------------------
+
         UserDefaults.standard.removeObject(
             forKey: "saved_quizzes"
         )
 
-        print("🗑️ RecalllQ app data reset.")
+        print(
+            "✅ RecalllQ learning data reset."
+        )
+
+        print(
+            "========================================"
+        )
     }
 }
 
@@ -331,5 +697,7 @@ struct SettingsView: View {
 #Preview {
 
     SettingsView()
-        .environmentObject(AppState())
+        .environmentObject(
+            AppState()
+        )
 }
