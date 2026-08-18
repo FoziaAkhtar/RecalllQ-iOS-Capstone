@@ -12,13 +12,13 @@ import SwiftUI
 // - Start study session
 // - End study session
 // - Cancel study session
-// - LIVE timer
+// - Live timer
 // - Current session statistics
 // - Today's study time
 // - Total study time
 // - Session history
 // - Flashcard / Memory / Quiz tracking
-// - RecalllQ UI/UX styling
+// - RecalllQ branded UI/UX
 // =====================================================
 
 struct StudySessionView: View {
@@ -42,45 +42,35 @@ struct StudySessionView: View {
     // =====================================================
 
     var body: some View {
-
         ScrollView(showsIndicators: false) {
-
             VStack(
                 alignment: .leading,
-                spacing: 22
+                spacing: 24
             ) {
 
-                // =================================================
-                // HEADER
-                // =================================================
-
+                // Header
                 header
 
-                // =================================================
-                // CURRENT SESSION
-                // =================================================
-
+                // Main study session
                 currentSessionCard
 
-                // =================================================
-                // STATISTICS
-                // =================================================
-
+                // Statistics
                 statisticsSection
 
-                // =================================================
-                // RECENT ACTIVITY
-                // =================================================
-
+                // Recent activity
                 recentActivitySection
+
+                Spacer(minLength: 20)
             }
-            .padding()
+            .padding(.horizontal, 18)
+            .padding(.top, 12)
+            .padding(.bottom, 30)
         }
         .background(
             RecalllQTheme.background
                 .ignoresSafeArea()
         )
-        .navigationTitle("Study")
+        .navigationTitle("Study Session")
         .navigationBarTitleDisplayMode(.inline)
     }
 
@@ -89,23 +79,27 @@ struct StudySessionView: View {
     // =====================================================
 
     private var header: some View {
-
-        HStack {
+        HStack(spacing: 16) {
 
             VStack(
                 alignment: .leading,
                 spacing: 6
             ) {
-
                 Text("Study Session")
-                    .font(.largeTitle)
-                    .bold()
+                    .font(
+                        .system(
+                            size: 30,
+                            weight: .bold
+                        )
+                    )
                     .foregroundColor(
                         RecalllQTheme.primaryText
                     )
 
                 Text(
-                    "Focus on learning while RecalllQ tracks your progress."
+                    studyVM.isStudying
+                    ? "Stay focused and build your learning momentum."
+                    : "Focus on learning while RecalllQ tracks your progress."
                 )
                 .font(.subheadline)
                 .foregroundColor(
@@ -120,7 +114,6 @@ struct StudySessionView: View {
             Spacer()
 
             ZStack {
-
                 Circle()
                     .fill(
                         studyVM.isStudying
@@ -128,8 +121,8 @@ struct StudySessionView: View {
                         : RecalllQTheme.blueBackground
                     )
                     .frame(
-                        width: 52,
-                        height: 52
+                        width: 56,
+                        height: 56
                     )
 
                 Image(
@@ -144,6 +137,18 @@ struct StudySessionView: View {
                     ? RecalllQTheme.success
                     : RecalllQTheme.primary
                 )
+
+                if studyVM.isStudying {
+                    Circle()
+                        .stroke(
+                            RecalllQTheme.success.opacity(0.35),
+                            lineWidth: 2
+                        )
+                        .frame(
+                            width: 64,
+                            height: 64
+                        )
+                }
             }
         }
     }
@@ -153,24 +158,94 @@ struct StudySessionView: View {
     // =====================================================
 
     private var currentSessionCard: some View {
-
-        VStack(spacing: 18) {
+        VStack(spacing: 20) {
 
             // =================================================
-            // STATUS ICON
+            // SESSION STATUS
+            // =================================================
+
+            HStack {
+                HStack(spacing: 8) {
+
+                    Circle()
+                        .fill(
+                            studyVM.isStudying
+                            ? RecalllQTheme.success
+                            : RecalllQTheme.primary
+                        )
+                        .frame(
+                            width: 9,
+                            height: 9
+                        )
+
+                    Text(
+                        studyVM.isStudying
+                        ? "SESSION ACTIVE"
+                        : "READY TO STUDY"
+                    )
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .tracking(1.1)
+                    .foregroundColor(
+                        studyVM.isStudying
+                        ? RecalllQTheme.success
+                        : RecalllQTheme.primary
+                    )
+                }
+
+                Spacer()
+
+                Image(
+                    systemName:
+                        studyVM.isStudying
+                        ? "sparkles"
+                        : "book.fill"
+                )
+                .font(.caption)
+                .foregroundColor(
+                    studyVM.isStudying
+                    ? RecalllQTheme.smartPurple
+                    : RecalllQTheme.primary
+                )
+            }
+
+            // =================================================
+            // MAIN ICON
             // =================================================
 
             ZStack {
 
                 Circle()
                     .fill(
-                        studyVM.isStudying
-                        ? RecalllQTheme.greenBackground
-                        : RecalllQTheme.blueBackground
+                        LinearGradient(
+                            colors: studyVM.isStudying
+                                ? [
+                                    RecalllQTheme.greenBackground,
+                                    RecalllQTheme.blueBackground
+                                ]
+                                : [
+                                    RecalllQTheme.blueBackground,
+                                    RecalllQTheme.purpleBackground
+                                ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
                     )
                     .frame(
-                        width: 92,
-                        height: 92
+                        width: 104,
+                        height: 104
+                    )
+
+                Circle()
+                    .stroke(
+                        studyVM.isStudying
+                        ? RecalllQTheme.success.opacity(0.22)
+                        : RecalllQTheme.primary.opacity(0.16),
+                        lineWidth: 2
+                    )
+                    .frame(
+                        width: 116,
+                        height: 116
                     )
 
                 Image(
@@ -180,7 +255,7 @@ struct StudySessionView: View {
                         : "book.closed.fill"
                 )
                 .font(
-                    .system(size: 38)
+                    .system(size: 42)
                 )
                 .foregroundColor(
                     studyVM.isStudying
@@ -188,77 +263,100 @@ struct StudySessionView: View {
                     : RecalllQTheme.primary
                 )
             }
+            .padding(.top, 4)
 
             // =================================================
-            // STATUS
+            // TITLE
             // =================================================
 
-            VStack(spacing: 5) {
+            VStack(spacing: 6) {
 
                 Text(
                     studyVM.isStudying
-                    ? "Study Session Active"
-                    : "Ready to Study?"
+                    ? "Keep Going!"
+                    : "Ready to Learn?"
                 )
-                .font(.title2)
-                .bold()
+                .font(
+                    .system(
+                        size: 25,
+                        weight: .bold
+                    )
+                )
                 .foregroundColor(
                     RecalllQTheme.primaryText
                 )
 
                 Text(
                     studyVM.isStudying
-                    ? "Keep going — you're making progress."
-                    : "Start a session and let RecalllQ track your learning."
+                    ? "You're building stronger recall with every minute."
+                    : "Start a focused session and let RecalllQ track your learning."
                 )
-                .font(.caption)
+                .font(.subheadline)
                 .foregroundColor(
                     RecalllQTheme.secondaryText
                 )
                 .multilineTextAlignment(.center)
+                .fixedSize(
+                    horizontal: false,
+                    vertical: true
+                )
             }
 
             // =================================================
             // TIMER
             // =================================================
 
-            Text(
-                studyVM.isStudying
-                ? studyVM.formattedActiveSessionTime
-                : "00:00"
-            )
-            .font(
-                .system(
-                    size: 42,
-                    weight: .bold,
-                    design: .monospaced
+            VStack(spacing: 5) {
+
+                Text(
+                    studyVM.isStudying
+                    ? studyVM.formattedActiveSessionTime
+                    : "00:00"
                 )
-            )
-            .foregroundColor(
-                studyVM.isStudying
-                ? RecalllQTheme.primary
-                : RecalllQTheme.secondaryText
-            )
-            .animation(
-                .none,
-                value:
-                    studyVM.formattedActiveSessionTime
-            )
+                .font(
+                    .system(
+                        size: 48,
+                        weight: .bold,
+                        design: .monospaced
+                    )
+                )
+                .foregroundColor(
+                    studyVM.isStudying
+                    ? RecalllQTheme.primary
+                    : RecalllQTheme.secondaryText
+                )
+                .minimumScaleFactor(0.7)
+                .animation(
+                    .none,
+                    value:
+                        studyVM.formattedActiveSessionTime
+                )
+
+                Text(
+                    studyVM.isStudying
+                    ? "SESSION TIME"
+                    : "READY"
+                )
+                .font(.caption2)
+                .fontWeight(.bold)
+                .tracking(1)
+                .foregroundColor(
+                    RecalllQTheme.secondaryText
+                )
+            }
 
             // =================================================
-            // ACTIVE SESSION STATS
+            // ACTIVE SESSION STATISTICS
             // =================================================
 
-            if let session =
-                studyVM.activeSession {
+            if let session = studyVM.activeSession {
 
                 HStack(spacing: 10) {
 
                     sessionStat(
                         value:
                             "\(session.flashcardsReviewed)",
-                        title:
-                            "Flashcards",
+                        title: "Flashcards",
                         icon:
                             "rectangle.on.rectangle"
                     )
@@ -266,8 +364,7 @@ struct StudySessionView: View {
                     sessionStat(
                         value:
                             "\(session.memoriesStudied)",
-                        title:
-                            "Memories",
+                        title: "Memories",
                         icon:
                             "brain.head.profile"
                     )
@@ -275,49 +372,41 @@ struct StudySessionView: View {
                     sessionStat(
                         value:
                             "\(session.quizzesCompleted)",
-                        title:
-                            "Quizzes",
+                        title: "Quizzes",
                         icon:
-                            "questionmark.circle"
+                            "questionmark.circle.fill"
                     )
                 }
-                .padding(.top, 4)
             }
 
             // =================================================
-            // ACTION BUTTONS
+            // ACTIONS
             // =================================================
 
             if studyVM.isStudying {
 
                 Button {
-
                     appState.endStudySession()
-
                 } label: {
-
-                    HStack {
+                    HStack(spacing: 12) {
 
                         Image(
-                            systemName:
-                                "stop.fill"
+                            systemName: "stop.fill"
                         )
 
-                        Text(
-                            "End Study Session"
-                        )
-                        .bold()
+                        Text("End Study Session")
+                            .fontWeight(.bold)
 
                         Spacer()
 
                         Image(
-                            systemName:
-                                "checkmark"
+                            systemName: "checkmark"
                         )
                     }
-                    .padding()
+                    .padding(.horizontal, 18)
                     .frame(
-                        maxWidth: .infinity
+                        maxWidth: .infinity,
+                        minHeight: 54
                     )
                     .foregroundColor(.white)
                     .background(
@@ -336,58 +425,56 @@ struct StudySessionView: View {
                                 RecalllQTheme.buttonRadius
                         )
                     )
+                    .shadow(
+                        color:
+                            RecalllQTheme.studyOrange.opacity(0.20),
+                        radius: 8,
+                        x: 0,
+                        y: 4
+                    )
                 }
+                .buttonStyle(.plain)
 
                 Button {
-
                     appState.cancelStudySession()
-
                 } label: {
-
-                    Text(
-                        "Cancel Session"
-                    )
-                    .font(.subheadline)
-                    .bold()
-                    .frame(
-                        maxWidth: .infinity
-                    )
-                    .padding(.vertical, 8)
-                    .foregroundColor(
-                        RecalllQTheme.secondaryText
-                    )
+                    Text("Cancel Session")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(
+                            RecalllQTheme.secondaryText
+                        )
+                        .frame(
+                            maxWidth: .infinity
+                        )
+                        .padding(.vertical, 5)
                 }
+                .buttonStyle(.plain)
 
             } else {
 
                 Button {
-
                     appState.startStudySession()
-
                 } label: {
-
-                    HStack {
+                    HStack(spacing: 12) {
 
                         Image(
-                            systemName:
-                                "play.fill"
+                            systemName: "play.fill"
                         )
 
-                        Text(
-                            "Start Study Session"
-                        )
-                        .bold()
+                        Text("Start Study Session")
+                            .fontWeight(.bold)
 
                         Spacer()
 
                         Image(
-                            systemName:
-                                "arrow.right"
+                            systemName: "arrow.right"
                         )
                     }
-                    .padding()
+                    .padding(.horizontal, 18)
                     .frame(
-                        maxWidth: .infinity
+                        maxWidth: .infinity,
+                        minHeight: 54
                     )
                     .foregroundColor(.white)
                     .background(
@@ -406,12 +493,18 @@ struct StudySessionView: View {
                                 RecalllQTheme.buttonRadius
                         )
                     )
+                    .shadow(
+                        color:
+                            RecalllQTheme.primary.opacity(0.22),
+                        radius: 9,
+                        x: 0,
+                        y: 5
+                    )
                 }
+                .buttonStyle(.plain)
             }
         }
-        .padding(
-            RecalllQTheme.largePadding
-        )
+        .padding(22)
         .frame(
             maxWidth: .infinity
         )
@@ -421,9 +514,20 @@ struct StudySessionView: View {
                     RecalllQTheme.largeRadius
             )
             .fill(
-                studyVM.isStudying
-                ? RecalllQTheme.greenBackground
-                : RecalllQTheme.blueBackground
+                LinearGradient(
+                    colors:
+                        studyVM.isStudying
+                        ? [
+                            RecalllQTheme.greenBackground,
+                            RecalllQTheme.blueBackground
+                        ]
+                        : [
+                            RecalllQTheme.blueBackground,
+                            RecalllQTheme.purpleBackground
+                        ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
             )
         )
         .overlay(
@@ -465,16 +569,20 @@ struct StudySessionView: View {
         VStack(spacing: 6) {
 
             Image(
-                systemName:
-                    icon
+                systemName: icon
             )
+            .font(.subheadline)
             .foregroundColor(
                 RecalllQTheme.primary
             )
 
             Text(value)
-                .font(.headline)
-                .bold()
+                .font(
+                    .system(
+                        size: 18,
+                        weight: .bold
+                    )
+                )
                 .foregroundColor(
                     RecalllQTheme.primaryText
                 )
@@ -488,7 +596,7 @@ struct StudySessionView: View {
         .frame(
             maxWidth: .infinity
         )
-        .padding(.vertical, 10)
+        .padding(.vertical, 12)
         .background(
             RoundedRectangle(
                 cornerRadius:
@@ -496,7 +604,7 @@ struct StudySessionView: View {
             )
             .fill(
                 RecalllQTheme.cardBackground
-                    .opacity(0.8)
+                    .opacity(0.82)
             )
         )
     }
@@ -509,57 +617,129 @@ struct StudySessionView: View {
 
         VStack(
             alignment: .leading,
-            spacing: 12
+            spacing: 14
         ) {
 
-            Text("Study Statistics")
-                .font(.title3)
-                .bold()
-                .foregroundColor(
-                    RecalllQTheme.primaryText
-                )
+            sectionHeader(
+                title: "Study Statistics",
+                subtitle:
+                    "Track your learning consistency",
+                icon: "chart.bar.fill",
+                color:
+                    RecalllQTheme.primary,
+                background:
+                    RecalllQTheme.blueBackground
+            )
 
-            HStack(spacing: 10) {
+            HStack(spacing: 12) {
 
                 statisticCard(
-                    title:
-                        "Today",
+                    title: "Today",
                     value:
                         studyVM.formattedTodayStudyTime,
-                    icon:
-                        "calendar"
+                    icon: "calendar",
+                    color:
+                        RecalllQTheme.primary,
+                    background:
+                        RecalllQTheme.blueBackground
                 )
 
                 statisticCard(
-                    title:
-                        "Total",
+                    title: "Total",
                     value:
                         studyVM.formattedTotalStudyTime,
-                    icon:
-                        "clock.fill"
+                    icon: "clock.fill",
+                    color:
+                        RecalllQTheme.smartPurple,
+                    background:
+                        RecalllQTheme.purpleBackground
                 )
             }
 
-            HStack(spacing: 10) {
+            HStack(spacing: 12) {
 
                 statisticCard(
-                    title:
-                        "Sessions",
+                    title: "Sessions",
                     value:
                         "\(studyVM.totalSessions)",
-                    icon:
-                        "books.vertical.fill"
+                    icon: "books.vertical.fill",
+                    color:
+                        RecalllQTheme.studyOrange,
+                    background:
+                        RecalllQTheme.orangeBackground
                 )
 
                 statisticCard(
-                    title:
-                        "Cards",
+                    title: "Cards Reviewed",
                     value:
                         "\(studyVM.totalFlashcardsReviewed)",
                     icon:
-                        "rectangle.on.rectangle"
+                        "rectangle.on.rectangle",
+                    color:
+                        RecalllQTheme.success,
+                    background:
+                        RecalllQTheme.greenBackground
                 )
             }
+        }
+    }
+
+    // =====================================================
+    // SECTION HEADER
+    // =====================================================
+
+    private func sectionHeader(
+        title: String,
+        subtitle: String,
+        icon: String,
+        color: Color,
+        background: Color
+    ) -> some View {
+
+        HStack(
+            alignment: .center,
+            spacing: 12
+        ) {
+
+            ZStack {
+
+                RoundedRectangle(
+                    cornerRadius: 11
+                )
+                .fill(background)
+                .frame(
+                    width: 40,
+                    height: 40
+                )
+
+                Image(
+                    systemName: icon
+                )
+                .font(.subheadline)
+                .fontWeight(.bold)
+                .foregroundColor(color)
+            }
+
+            VStack(
+                alignment: .leading,
+                spacing: 3
+            ) {
+
+                Text(title)
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .foregroundColor(
+                        RecalllQTheme.primaryText
+                    )
+
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundColor(
+                        RecalllQTheme.secondaryText
+                    )
+            }
+
+            Spacer()
         }
     }
 
@@ -571,39 +751,58 @@ struct StudySessionView: View {
     private func statisticCard(
         title: String,
         value: String,
-        icon: String
+        icon: String,
+        color: Color,
+        background: Color
     ) -> some View {
 
         VStack(spacing: 8) {
 
-            Image(
-                systemName:
-                    icon
-            )
-            .font(.title3)
-            .foregroundColor(
-                RecalllQTheme.primary
-            )
+            ZStack {
+
+                RoundedRectangle(
+                    cornerRadius: 11
+                )
+                .fill(background)
+                .frame(
+                    width: 42,
+                    height: 42
+                )
+
+                Image(
+                    systemName: icon
+                )
+                .font(.headline)
+                .foregroundColor(color)
+            }
 
             Text(value)
-                .font(.headline)
-                .bold()
+                .font(
+                    .system(
+                        size: 19,
+                        weight: .bold
+                    )
+                )
                 .foregroundColor(
                     RecalllQTheme.primaryText
                 )
                 .lineLimit(1)
-                .minimumScaleFactor(0.8)
+                .minimumScaleFactor(0.75)
 
             Text(title)
                 .font(.caption)
+                .fontWeight(.medium)
                 .foregroundColor(
                     RecalllQTheme.secondaryText
                 )
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
         .frame(
-            maxWidth: .infinity
+            maxWidth: .infinity,
+            minHeight: 125
         )
-        .padding(.vertical, 16)
+        .padding(.horizontal, 8)
         .background(
             RoundedRectangle(
                 cornerRadius:
@@ -619,7 +818,7 @@ struct StudySessionView: View {
                     RecalllQTheme.mediumRadius
             )
             .stroke(
-                RecalllQTheme.primary.opacity(0.10),
+                color.opacity(0.10),
                 lineWidth: 1
             )
         )
@@ -637,37 +836,27 @@ struct StudySessionView: View {
     }
 
     // =====================================================
-    // RECENT ACTIVITY SECTION
+    // RECENT ACTIVITY
     // =====================================================
 
     private var recentActivitySection: some View {
 
         VStack(
             alignment: .leading,
-            spacing: 12
+            spacing: 14
         ) {
 
-            HStack {
-
-                Text(
-                    "Recent Study Activity"
-                )
-                .font(.title3)
-                .bold()
-                .foregroundColor(
-                    RecalllQTheme.primaryText
-                )
-
-                Spacer()
-
-                Image(
-                    systemName:
-                        "clock.arrow.circlepath"
-                )
-                .foregroundColor(
-                    RecalllQTheme.smartPurple
-                )
-            }
+            sectionHeader(
+                title: "Recent Study Activity",
+                subtitle:
+                    "Your latest learning sessions",
+                icon:
+                    "clock.arrow.circlepath",
+                color:
+                    RecalllQTheme.smartPurple,
+                background:
+                    RecalllQTheme.purpleBackground
+            )
 
             if studyVM.recentSessions.isEmpty {
 
@@ -693,7 +882,7 @@ struct StudySessionView: View {
 
     private var emptyActivityState: some View {
 
-        VStack(spacing: 12) {
+        VStack(spacing: 14) {
 
             ZStack {
 
@@ -702,27 +891,28 @@ struct StudySessionView: View {
                         RecalllQTheme.purpleBackground
                     )
                     .frame(
-                        width: 72,
-                        height: 72
+                        width: 70,
+                        height: 70
                     )
 
                 Image(
                     systemName:
                         "clock.badge.questionmark"
                 )
-                .font(.system(size: 30))
+                .font(
+                    .system(size: 30)
+                )
                 .foregroundColor(
                     RecalllQTheme.smartPurple
                 )
             }
 
-            Text(
-                "No Study Sessions Yet"
-            )
-            .font(.headline)
-            .foregroundColor(
-                RecalllQTheme.primaryText
-            )
+            Text("No Study Sessions Yet")
+                .font(.headline)
+                .fontWeight(.bold)
+                .foregroundColor(
+                    RecalllQTheme.primaryText
+                )
 
             Text(
                 "Start your first study session to begin tracking your learning progress."
@@ -756,7 +946,7 @@ struct StudySessionView: View {
                     RecalllQTheme.largeRadius
             )
             .stroke(
-                RecalllQTheme.primary.opacity(0.10),
+                RecalllQTheme.smartPurple.opacity(0.10),
                 lineWidth: 1
             )
         )
@@ -773,10 +963,10 @@ struct StudySessionView: View {
 
         VStack(
             alignment: .leading,
-            spacing: 12
+            spacing: 14
         ) {
 
-            HStack {
+            HStack(spacing: 12) {
 
                 ZStack {
 
@@ -785,14 +975,14 @@ struct StudySessionView: View {
                             RecalllQTheme.blueBackground
                         )
                         .frame(
-                            width: 42,
-                            height: 42
+                            width: 46,
+                            height: 46
                         )
 
                     Image(
-                        systemName:
-                            "clock.fill"
+                        systemName: "clock.fill"
                     )
+                    .font(.subheadline)
                     .foregroundColor(
                         RecalllQTheme.primary
                     )
@@ -800,7 +990,7 @@ struct StudySessionView: View {
 
                 VStack(
                     alignment: .leading,
-                    spacing: 3
+                    spacing: 4
                 ) {
 
                     Text(
@@ -808,6 +998,7 @@ struct StudySessionView: View {
                         style: .date
                     )
                     .font(.headline)
+                    .fontWeight(.bold)
                     .foregroundColor(
                         RecalllQTheme.primaryText
                     )
@@ -824,16 +1015,32 @@ struct StudySessionView: View {
 
                 Spacer()
 
-                Text(
-                    studyVM.formatDuration(
-                        session.duration
+                VStack(
+                    alignment: .trailing,
+                    spacing: 3
+                ) {
+
+                    Text(
+                        studyVM.formatDuration(
+                            session.duration
+                        )
                     )
-                )
-                .font(.subheadline)
-                .bold()
-                .foregroundColor(
-                    RecalllQTheme.primary
-                )
+                    .font(
+                        .system(
+                            size: 17,
+                            weight: .bold
+                        )
+                    )
+                    .foregroundColor(
+                        RecalllQTheme.primary
+                    )
+
+                    Text("duration")
+                        .font(.caption2)
+                        .foregroundColor(
+                            RecalllQTheme.secondaryText
+                        )
+                }
             }
 
             Divider()
@@ -843,8 +1050,7 @@ struct StudySessionView: View {
                 historyStat(
                     value:
                         "\(session.flashcardsReviewed)",
-                    title:
-                        "Cards",
+                    title: "Cards",
                     icon:
                         "rectangle.on.rectangle"
                 )
@@ -854,8 +1060,7 @@ struct StudySessionView: View {
                 historyStat(
                     value:
                         "\(session.memoriesStudied)",
-                    title:
-                        "Memories",
+                    title: "Memories",
                     icon:
                         "brain.head.profile"
                 )
@@ -865,14 +1070,13 @@ struct StudySessionView: View {
                 historyStat(
                     value:
                         "\(session.quizzesCompleted)",
-                    title:
-                        "Quizzes",
+                    title: "Quizzes",
                     icon:
-                        "questionmark.circle"
+                        "questionmark.circle.fill"
                 )
             }
         }
-        .padding()
+        .padding(17)
         .frame(
             maxWidth: .infinity,
             alignment: .leading
@@ -892,7 +1096,7 @@ struct StudySessionView: View {
                     RecalllQTheme.mediumRadius
             )
             .stroke(
-                Color.gray.opacity(0.08),
+                RecalllQTheme.primary.opacity(0.08),
                 lineWidth: 1
             )
         )
@@ -920,11 +1124,10 @@ struct StudySessionView: View {
         icon: String
     ) -> some View {
 
-        VStack(spacing: 4) {
+        VStack(spacing: 5) {
 
             Image(
-                systemName:
-                    icon
+                systemName: icon
             )
             .font(.caption)
             .foregroundColor(
@@ -932,8 +1135,12 @@ struct StudySessionView: View {
             )
 
             Text(value)
-                .font(.subheadline)
-                .bold()
+                .font(
+                    .system(
+                        size: 16,
+                        weight: .bold
+                    )
+                )
                 .foregroundColor(
                     RecalllQTheme.primaryText
                 )
@@ -944,5 +1151,18 @@ struct StudySessionView: View {
                     RecalllQTheme.secondaryText
                 )
         }
+    }
+}
+
+// =====================================================
+// PREVIEW
+// =====================================================
+
+#Preview {
+    NavigationStack {
+        StudySessionView()
+            .environmentObject(
+                AppState()
+            )
     }
 }
