@@ -15,13 +15,20 @@ import Combine
 // - Forgot Password
 // - Authentication state
 // - Form validation
+// - Email validation
+// - Password validation
+// - Local account storage
 // - Error messages
 // - Success messages
 //
-// NOTE:
-// This version provides local authentication so the UI
-// can work immediately. The AuthenticationService can
-// later be connected to Firebase/API authentication.
+// IMPORTANT:
+// This version uses local authentication for development.
+//
+// Later, the same ViewModel can be connected to:
+// - Firebase Authentication
+// - RecalllQ API
+// - Secure token authentication
+//
 // =====================================================
 
 @MainActor
@@ -60,6 +67,9 @@ final class AuthenticationViewModel: ObservableObject {
     // =====================================================
 
     private let accountKey = "recalllq_account"
+
+    private let passwordKey = "recalllq_password"
+
     private let loggedInKey = "recalllq_logged_in"
 
     // =====================================================
@@ -67,6 +77,11 @@ final class AuthenticationViewModel: ObservableObject {
     // =====================================================
 
     init() {
+
+        // IMPORTANT:
+        // We restore authentication only when the persisted
+        // login state is actually true.
+
         isAuthenticated =
             UserDefaults.standard.bool(
                 forKey: loggedInKey
@@ -90,14 +105,17 @@ final class AuthenticationViewModel: ObservableObject {
             email.trimmingCharacters(
                 in: .whitespacesAndNewlines
             )
+            .lowercased()
 
         // -------------------------------------------------
         // VALIDATE NAME
         // -------------------------------------------------
 
         guard !cleanName.isEmpty else {
+
             errorMessage =
                 "Please enter your name."
+
             return
         }
 
@@ -106,8 +124,10 @@ final class AuthenticationViewModel: ObservableObject {
         // -------------------------------------------------
 
         guard isValidEmail(cleanEmail) else {
+
             errorMessage =
                 "Please enter a valid email address."
+
             return
         }
 
@@ -116,8 +136,10 @@ final class AuthenticationViewModel: ObservableObject {
         // -------------------------------------------------
 
         guard password.count >= 6 else {
+
             errorMessage =
                 "Password must contain at least 6 characters."
+
             return
         }
 
@@ -126,13 +148,15 @@ final class AuthenticationViewModel: ObservableObject {
         // -------------------------------------------------
 
         guard password == confirmPassword else {
+
             errorMessage =
                 "Passwords do not match."
+
             return
         }
 
         // -------------------------------------------------
-        // PREVENT DUPLICATE ACCOUNT
+        // CHECK FOR EXISTING ACCOUNT
         // -------------------------------------------------
 
         if let existingEmail =
@@ -141,8 +165,9 @@ final class AuthenticationViewModel: ObservableObject {
             ) {
 
             if existingEmail
-                .localizedCaseInsensitiveCompare(cleanEmail)
-                == .orderedSame {
+                .localizedCaseInsensitiveCompare(
+                    cleanEmail
+                ) == .orderedSame {
 
                 errorMessage =
                     "An account with this email already exists."
@@ -157,27 +182,51 @@ final class AuthenticationViewModel: ObservableObject {
 
         isLoading = true
 
+        // Save email
         UserDefaults.standard.set(
             cleanEmail,
             forKey: accountKey
         )
 
+        // Save password for local development authentication
+        UserDefaults.standard.set(
+            password,
+            forKey: passwordKey
+        )
+
+        // Mark user as logged in
         UserDefaults.standard.set(
             true,
             forKey: loggedInKey
         )
 
+        // Update current authentication state
         isAuthenticated = true
+
         isLoading = false
 
         successMessage =
             "Account created successfully."
 
-        print("========================================")
-        print("✅ RECALLlQ ACCOUNT CREATED")
-        print("Name: \(cleanName)")
-        print("Email: \(cleanEmail)")
-        print("========================================")
+        print(
+            "========================================"
+        )
+
+        print(
+            "✅ RECALLIQ ACCOUNT CREATED"
+        )
+
+        print(
+            "Name: \(cleanName)"
+        )
+
+        print(
+            "Email: \(cleanEmail)"
+        )
+
+        print(
+            "========================================"
+        )
     }
 
     // =====================================================
@@ -186,20 +235,46 @@ final class AuthenticationViewModel: ObservableObject {
 
     func login() {
 
+        // -------------------------------------------------
+        // ALWAYS RESET OLD MESSAGES
+        // -------------------------------------------------
+
         clearMessages()
+
+        // -------------------------------------------------
+        // IMPORTANT:
+        // Do NOT assume the user is authenticated.
+        // -------------------------------------------------
+
+        isAuthenticated = false
+
+        // -------------------------------------------------
+        // CLEAN EMAIL
+        // -------------------------------------------------
 
         let cleanEmail =
             email.trimmingCharacters(
                 in: .whitespacesAndNewlines
             )
+            .lowercased()
 
         // -------------------------------------------------
         // VALIDATE EMAIL
         // -------------------------------------------------
 
+        guard !cleanEmail.isEmpty else {
+
+            errorMessage =
+                "Please enter your email address."
+
+            return
+        }
+
         guard isValidEmail(cleanEmail) else {
+
             errorMessage =
                 "Please enter a valid email address."
+
             return
         }
 
@@ -208,13 +283,15 @@ final class AuthenticationViewModel: ObservableObject {
         // -------------------------------------------------
 
         guard !password.isEmpty else {
+
             errorMessage =
                 "Please enter your password."
+
             return
         }
 
         // -------------------------------------------------
-        // CHECK ACCOUNT
+        // CHECK WHETHER ACCOUNT EXISTS
         // -------------------------------------------------
 
         guard
@@ -247,7 +324,36 @@ final class AuthenticationViewModel: ObservableObject {
         }
 
         // -------------------------------------------------
-        // LOGIN
+        // CHECK SAVED PASSWORD
+        // -------------------------------------------------
+
+        guard
+            let savedPassword =
+                UserDefaults.standard.string(
+                    forKey: passwordKey
+                )
+        else {
+
+            errorMessage =
+                "No password is associated with this account."
+
+            return
+        }
+
+        // -------------------------------------------------
+        // CHECK PASSWORD
+        // -------------------------------------------------
+
+        guard password == savedPassword else {
+
+            errorMessage =
+                "The email or password is incorrect."
+
+            return
+        }
+
+        // -------------------------------------------------
+        // LOGIN SUCCESS
         // -------------------------------------------------
 
         isLoading = true
@@ -258,15 +364,27 @@ final class AuthenticationViewModel: ObservableObject {
         )
 
         isAuthenticated = true
+
         isLoading = false
 
         successMessage =
             "Welcome back to RecalllQ!"
 
-        print("========================================")
-        print("✅ RECALLlQ LOGIN SUCCESSFUL")
-        print("Email: \(cleanEmail)")
-        print("========================================")
+        print(
+            "========================================"
+        )
+
+        print(
+            "✅ RECALLIQ LOGIN SUCCESSFUL"
+        )
+
+        print(
+            "Email: \(cleanEmail)"
+        )
+
+        print(
+            "========================================"
+        )
     }
 
     // =====================================================
@@ -275,20 +393,52 @@ final class AuthenticationViewModel: ObservableObject {
 
     func logout() {
 
+        // -------------------------------------------------
+        // CLEAR LOGIN STATE
+        // -------------------------------------------------
+
         UserDefaults.standard.set(
             false,
             forKey: loggedInKey
         )
 
+        // -------------------------------------------------
+        // UPDATE VIEWMODEL STATE
+        // -------------------------------------------------
+
         isAuthenticated = false
+
+        // -------------------------------------------------
+        // CLEAR FORM
+        // -------------------------------------------------
+
+        email = ""
+
+        password = ""
+
+        confirmPassword = ""
+
+        // -------------------------------------------------
+        // CLEAR MESSAGES
+        // -------------------------------------------------
 
         clearMessages()
 
-        email = ""
-        password = ""
-        confirmPassword = ""
+        print(
+            "========================================"
+        )
 
-        print("👋 RecalllQ user logged out.")
+        print(
+            "👋 RECALLIQ USER LOGGED OUT"
+        )
+
+        print(
+            "🔐 Persisted login state cleared."
+        )
+
+        print(
+            "========================================"
+        )
     }
 
     // =====================================================
@@ -303,12 +453,31 @@ final class AuthenticationViewModel: ObservableObject {
             email.trimmingCharacters(
                 in: .whitespacesAndNewlines
             )
+            .lowercased()
 
-        guard isValidEmail(cleanEmail) else {
+        // -------------------------------------------------
+        // VALIDATE EMAIL
+        // -------------------------------------------------
+
+        guard !cleanEmail.isEmpty else {
+
             errorMessage =
                 "Enter your email address first."
+
             return
         }
+
+        guard isValidEmail(cleanEmail) else {
+
+            errorMessage =
+                "Please enter a valid email address."
+
+            return
+        }
+
+        // -------------------------------------------------
+        // CHECK ACCOUNT
+        // -------------------------------------------------
 
         guard
             let savedEmail =
@@ -323,6 +492,10 @@ final class AuthenticationViewModel: ObservableObject {
             return
         }
 
+        // -------------------------------------------------
+        // CHECK EMAIL
+        // -------------------------------------------------
+
         guard
             savedEmail.localizedCaseInsensitiveCompare(
                 cleanEmail
@@ -334,6 +507,10 @@ final class AuthenticationViewModel: ObservableObject {
 
             return
         }
+
+        // -------------------------------------------------
+        // PASSWORD RESET
+        // -------------------------------------------------
 
         successMessage =
             "Password reset instructions will be sent to your email."
@@ -367,8 +544,7 @@ final class AuthenticationViewModel: ObservableObject {
     func clearMessages() {
 
         errorMessage = nil
+
         successMessage = nil
     }
 }
-
-

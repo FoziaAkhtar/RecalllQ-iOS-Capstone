@@ -40,6 +40,16 @@ import Combine
 //      ↓
 // MainTabView
 //
+// IMPORTANT:
+//
+// AppState is the GLOBAL authentication state.
+//
+// AuthenticationViewModel is responsible for checking
+// the user's credentials.
+//
+// AppState only changes to authenticated AFTER successful
+// authentication.
+//
 // =====================================================
 
 @MainActor
@@ -58,35 +68,26 @@ final class AppState: ObservableObject {
     // =====================================================
     // AUTHENTICATION STATE
     // =====================================================
+
+    // The app starts signed out.
     //
     // IMPORTANT:
     //
-    // The app starts signed out.
+    // AppState does NOT automatically authenticate the user.
     //
-    // AuthenticationViewModel is responsible for validating
-    // credentials.
+    // LoginView must successfully validate credentials first.
     //
-    // Once authentication succeeds, LoginView or
-    // CreateAccountView calls AppState.login().
-    //
-    // RecalllQApp observes this value and changes the root
-    // screen to MainTabView.
-    //
-    // =====================================================
-
     @Published var isAuthenticated: Bool = false
 
     // =====================================================
     // MAIN TAB NAVIGATION
     // =====================================================
-    //
+
     // 0 = Dashboard
     // 1 = Notes
     // 2 = Memories
     // 3 = Flashcards
     // 4 = Quiz
-    //
-    // =====================================================
 
     @Published var selectedTab: Int = 0
 
@@ -106,7 +107,8 @@ final class AppState: ObservableObject {
     // STUDY RECOMMENDATION SERVICE
     // =====================================================
 
-    let studyRecommendationService: StudyRecommendationService
+    let studyRecommendationService:
+        StudyRecommendationService
 
     // =====================================================
     // QUIZ API SERVICE
@@ -195,7 +197,9 @@ final class AppState: ObservableObject {
 
         memoryVM.objectWillChange
             .sink { [weak self] _ in
+
                 self?.objectWillChange.send()
+
                 self?.generateStudyRecommendations()
             }
             .store(in: &cancellables)
@@ -206,6 +210,7 @@ final class AppState: ObservableObject {
 
         notesVM.objectWillChange
             .sink { [weak self] _ in
+
                 self?.objectWillChange.send()
             }
             .store(in: &cancellables)
@@ -216,7 +221,9 @@ final class AppState: ObservableObject {
 
         flashcardVM.objectWillChange
             .sink { [weak self] _ in
+
                 self?.objectWillChange.send()
+
                 self?.generateStudyRecommendations()
             }
             .store(in: &cancellables)
@@ -227,6 +234,7 @@ final class AppState: ObservableObject {
 
         quizVM.objectWillChange
             .sink { [weak self] _ in
+
                 self?.objectWillChange.send()
             }
             .store(in: &cancellables)
@@ -237,6 +245,7 @@ final class AppState: ObservableObject {
 
         studySessionVM.objectWillChange
             .sink { [weak self] _ in
+
                 self?.objectWillChange.send()
             }
             .store(in: &cancellables)
@@ -942,18 +951,26 @@ final class AppState: ObservableObject {
     //
     // IMPORTANT:
     //
-    // This is now the SINGLE global authentication state.
+    // AppState does NOT validate credentials.
     //
-    // AuthenticationViewModel validates the credentials.
+    // AuthenticationViewModel is responsible for:
     //
-    // LoginView / CreateAccountView call this method after
-    // AuthenticationViewModel reports success.
+    // - Email validation
+    // - Password validation
+    // - Account lookup
+    // - Credential verification
+    //
+    // ONLY AFTER AuthenticationViewModel succeeds should
+    // LoginView call:
+    //
+    //     appState.login()
     //
     // =====================================================
 
     func login() {
 
         isAuthenticated = true
+
         selectedTab = 0
 
         print(
@@ -962,6 +979,10 @@ final class AppState: ObservableObject {
 
         print(
             "✅ USER AUTHENTICATED"
+        )
+
+        print(
+            "➡️ MainTabView is now active."
         )
 
         print(
@@ -976,6 +997,7 @@ final class AppState: ObservableObject {
     func logout() {
 
         isAuthenticated = false
+
         selectedTab = 0
 
         print(
@@ -987,7 +1009,12 @@ final class AppState: ObservableObject {
         )
 
         print(
+            "➡️ Returning to WelcomeView."
+        )
+
+        print(
             "========================================"
         )
     }
 }
+

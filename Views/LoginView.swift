@@ -5,38 +5,38 @@ import SwiftUI
 // VIEW: LoginView
 // =====================================================
 // PURPOSE:
-//
 // RecalllQ user login screen.
 //
 // FEATURES:
-//
 // - Email login
 // - Password field
 // - Show / hide password
 // - Forgot password
 // - Create account navigation
 // - Authentication validation
+// - Error messages
+// - Success messages
 // - RecalllQ branded design
-// - Reliable authentication flow
+// - Secure login flow
 //
-// IMPORTANT:
+// AUTHENTICATION FLOW:
 //
-// LoginView does NOT directly navigate to MainTabView.
-//
-// AuthenticationViewModel validates the login.
-//
-// When authentication succeeds:
-//
-// AuthenticationViewModel
-//          ↓
 // LoginView
-//          ↓
+//      ↓
+// AuthenticationViewModel.login()
+//      ↓
+// Validate email
+//      ↓
+// Validate password
+//      ↓
+// Check saved account
+//      ↓
+// Check password
+//      ↓
+// SUCCESS
+//      ↓
 // AppState.login()
-//          ↓
-// AppState.isAuthenticated = true
-//          ↓
-// RecalllQApp
-//          ↓
+//      ↓
 // MainTabView
 //
 // =====================================================
@@ -61,6 +61,7 @@ struct LoginView: View {
     // =====================================================
 
     @State private var showCreateAccount = false
+
     @State private var showForgotPassword = false
 
     // =====================================================
@@ -103,7 +104,6 @@ struct LoginView: View {
                     minLength: 20
                 )
             }
-
             .padding(.horizontal, 24)
             .padding(.top, 30)
         }
@@ -122,8 +122,7 @@ struct LoginView: View {
         // =====================================================
 
         .navigationDestination(
-            isPresented:
-                $showCreateAccount
+            isPresented: $showCreateAccount
         ) {
 
             CreateAccountView()
@@ -135,36 +134,11 @@ struct LoginView: View {
         // =====================================================
 
         .navigationDestination(
-            isPresented:
-                $showForgotPassword
+            isPresented: $showForgotPassword
         ) {
 
             ForgotPasswordView()
                 .environmentObject(appState)
-        }
-
-        // =====================================================
-        // AUTHENTICATION STATE
-        // =====================================================
-        //
-        // This remains here for asynchronous authentication,
-        // such as Firebase or API authentication later.
-        //
-        // =====================================================
-
-        .onChange(
-            of: auth.isAuthenticated
-        ) { _, authenticated in
-
-            if authenticated {
-
-                print(
-                    "🔐 AuthenticationViewModel reported success."
-                )
-
-                // Update global authentication state.
-                appState.login()
-            }
         }
 
         // =====================================================
@@ -316,9 +290,7 @@ struct LoginView: View {
                     )
                     .autocorrectionDisabled()
                 }
-
                 .padding()
-
                 .background(
                     RoundedRectangle(
                         cornerRadius:
@@ -391,9 +363,7 @@ struct LoginView: View {
                         )
                     }
                 }
-
                 .padding()
-
                 .background(
                     RoundedRectangle(
                         cornerRadius:
@@ -414,8 +384,6 @@ struct LoginView: View {
                 Spacer()
 
                 Button {
-
-                    auth.email = ""
 
                     auth.clearMessages()
 
@@ -474,34 +442,20 @@ struct LoginView: View {
                     "========================================"
                 )
 
-                // =================================================
-                // START AUTHENTICATION
-                // =================================================
+                // -------------------------------------------------
+                // AUTHENTICATE
+                // -------------------------------------------------
 
                 auth.login()
 
-                // =================================================
-                // IMPORTANT FIX
-                // =================================================
-                //
-                // AuthenticationViewModel currently performs
-                // local synchronous authentication.
-                //
-                // If login succeeds, immediately update the
-                // global AppState.
-                //
-                // This guarantees that RecalllQApp switches
-                // from Welcome/Login to MainTabView.
-                //
-                // The onChange handler above remains as a
-                // second path for future asynchronous APIs.
-                //
-                // =================================================
+                // -------------------------------------------------
+                // ONLY UPDATE GLOBAL APP STATE AFTER SUCCESS
+                // -------------------------------------------------
 
                 if auth.isAuthenticated {
 
                     print(
-                        "✅ Authentication successful."
+                        "✅ Credentials accepted."
                     )
 
                     print(
@@ -518,10 +472,6 @@ struct LoginView: View {
                         "➡️ MainTabView should now appear."
                     )
 
-                    print(
-                        "========================================"
-                    )
-
                 } else {
 
                     print(
@@ -533,9 +483,13 @@ struct LoginView: View {
                     )
 
                     print(
-                        "========================================"
+                        "🔒 User remains on LoginView."
                     )
                 }
+
+                print(
+                    "========================================"
+                )
 
             } label: {
 
@@ -571,15 +525,11 @@ struct LoginView: View {
                         )
                     }
                 }
-
                 .padding()
-
                 .frame(
                     maxWidth: .infinity
                 )
-
                 .foregroundColor(.white)
-
                 .background(
                     LinearGradient(
                         colors: [
@@ -590,7 +540,6 @@ struct LoginView: View {
                         endPoint: .trailing
                     )
                 )
-
                 .clipShape(
                     RoundedRectangle(
                         cornerRadius:
@@ -598,7 +547,6 @@ struct LoginView: View {
                     )
                 )
             }
-
             .disabled(
                 auth.isLoading
             )
@@ -665,6 +613,8 @@ struct LoginView: View {
 
             Button {
 
+                auth.clearMessages()
+
                 showCreateAccount = true
 
             } label: {
@@ -678,9 +628,7 @@ struct LoginView: View {
                             "arrow.right"
                     )
                 }
-
                 .font(.headline)
-
                 .foregroundColor(
                     RecalllQTheme.primary
                 )
@@ -706,7 +654,6 @@ struct LoginView: View {
                     ? "exclamationmark.triangle.fill"
                     : "checkmark.circle.fill"
             )
-
             .foregroundColor(
                 isError
                 ? RecalllQTheme.error
@@ -721,9 +668,7 @@ struct LoginView: View {
 
             Spacer()
         }
-
         .padding()
-
         .background(
             RoundedRectangle(
                 cornerRadius:
@@ -738,4 +683,3 @@ struct LoginView: View {
         )
     }
 }
-
