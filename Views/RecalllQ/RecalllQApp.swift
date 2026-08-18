@@ -7,6 +7,9 @@ import SwiftUI
 // PURPOSE:
 // - Creates global AppState
 // - Injects AppState into all views
+// - Controls authentication flow
+// - Shows WelcomeView when user is not signed in
+// - Shows MainTabView when user is signed in
 // - Provides RecalllQ as the root application
 // =====================================================
 
@@ -27,10 +30,28 @@ struct RecalllQApp: App {
 
         WindowGroup {
 
-            MainTabView()
-                .environmentObject(
-                    appState
-                )
+            if appState.isAuthenticated {
+
+                // =================================================
+                // AUTHENTICATED USER
+                // =================================================
+
+                MainTabView()
+                    .environmentObject(
+                        appState
+                    )
+
+            } else {
+
+                // =================================================
+                // NOT AUTHENTICATED
+                // =================================================
+
+                WelcomeView()
+                    .environmentObject(
+                        appState
+                    )
+            }
         }
     }
 }

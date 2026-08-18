@@ -7,15 +7,17 @@ import SwiftUI
 // PURPOSE:
 // Main intelligence dashboard for RecalllQ.
 //
-// UI/UX POLISH:
-// - More lively colors
-// - Modern gradients
-// - Colorful statistic cards
-// - Improved welcome header
-// - Improved AI assistant card
-// - Colorful progress cards
-// - Modern quick actions
-// - Keeps existing RecalllQ functionality
+// FEATURES:
+// - Welcome header
+// - AI Memory Assistant
+// - Learning statistics
+// - Today's progress
+// - Flashcard performance
+// - Quiz performance
+// - Memory progress
+// - Personalized recommendations
+// - Smart memory suggestions
+// - Quick study actions
 // =====================================================
 
 struct DashboardView: View {
@@ -165,9 +167,7 @@ struct DashboardView: View {
         .navigationTitle("Dashboard")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-
             memoryVM.generateSuggestions()
-
             appState.generateStudyRecommendations()
         }
     }
@@ -428,38 +428,26 @@ struct DashboardView: View {
     private var assistantMessage: String {
 
         if memoryVM.memories.isEmpty {
-
-            return
-                "Create your first note and RecalllQ will transform it into an organized memory."
+            return "Create your first note and RecalllQ will transform it into an organized memory."
         }
 
         if flashcardVM.totalFlashcards == 0 {
-
-            return
-                "You have memories ready to study. Generate flashcards to start active recall."
+            return "You have memories ready to study. Generate flashcards to start active recall."
         }
 
         if flashcardVM.reviewedFlashcards == 0 {
-
-            return
-                "Your flashcards are ready. Start reviewing them to build your learning accuracy."
+            return "Your flashcards are ready. Start reviewing them to build your learning accuracy."
         }
 
         if flashcardVM.overallAccuracy < 0.60 {
-
-            return
-                "Keep practicing your flashcards. Repetition will help strengthen your recall."
+            return "Keep practicing your flashcards. Repetition will help strengthen your recall."
         }
 
-        if flashcardVM.masteredFlashcards <
-            flashcardVM.totalFlashcards {
-
-            return
-                "You're making progress! Continue reviewing difficult cards to improve mastery."
+        if flashcardVM.masteredFlashcards < flashcardVM.totalFlashcards {
+            return "You're making progress! Continue reviewing difficult cards to improve mastery."
         }
 
-        return
-            "Excellent work! Your knowledge base and flashcard performance are looking strong."
+        return "Excellent work! Your knowledge base and flashcard performance are looking strong."
     }
 
     // =====================================================
@@ -533,7 +521,6 @@ struct DashboardView: View {
                     .flexible(),
                     spacing: 12
                 ),
-
                 GridItem(
                     .flexible(),
                     spacing: 12
@@ -544,50 +531,34 @@ struct DashboardView: View {
 
             dashboardStatCard(
                 title: "Memories",
-                value:
-                    "\(memoryVM.memories.count)",
-                icon:
-                    "brain.head.profile",
-                color:
-                    RecalllQTheme.primary,
-                background:
-                    RecalllQTheme.blueBackground
+                value: "\(memoryVM.memories.count)",
+                icon: "brain.head.profile",
+                color: RecalllQTheme.primary,
+                background: RecalllQTheme.blueBackground
             )
 
             dashboardStatCard(
                 title: "Flashcards",
-                value:
-                    "\(flashcardVM.totalFlashcards)",
-                icon:
-                    "rectangle.on.rectangle",
-                color:
-                    RecalllQTheme.studyOrange,
-                background:
-                    RecalllQTheme.orangeBackground
+                value: "\(flashcardVM.totalFlashcards)",
+                icon: "rectangle.on.rectangle",
+                color: RecalllQTheme.studyOrange,
+                background: RecalllQTheme.orangeBackground
             )
 
             dashboardStatCard(
                 title: "Mastered",
-                value:
-                    "\(flashcardVM.masteredFlashcards)",
-                icon:
-                    "checkmark.circle.fill",
-                color:
-                    RecalllQTheme.success,
-                background:
-                    RecalllQTheme.greenBackground
+                value: "\(flashcardVM.masteredFlashcards)",
+                icon: "checkmark.circle.fill",
+                color: RecalllQTheme.success,
+                background: RecalllQTheme.greenBackground
             )
 
             dashboardStatCard(
                 title: "Quizzes",
-                value:
-                    "\(quizVM.totalQuizzes)",
-                icon:
-                    "questionmark.circle.fill",
-                color:
-                    RecalllQTheme.secondary,
-                background:
-                    RecalllQTheme.purpleBackground
+                value: "\(quizVM.totalQuizzes)",
+                icon: "questionmark.circle.fill",
+                color: RecalllQTheme.secondary,
+                background: RecalllQTheme.purpleBackground
             )
         }
     }
@@ -632,8 +603,7 @@ struct DashboardView: View {
                 Spacer()
 
                 Image(
-                    systemName:
-                        "arrow.up.right"
+                    systemName: "arrow.up.right"
                 )
                 .font(.caption)
                 .fontWeight(.bold)
@@ -914,31 +884,22 @@ struct DashboardView: View {
     private var flashcardPerformanceMessage: String {
 
         if flashcardVM.totalFlashcards == 0 {
-
-            return
-                "Generate flashcards from your memories to begin."
+            return "Generate flashcards from your memories to begin."
         }
 
         if flashcardVM.reviewedFlashcards == 0 {
-
-            return
-                "Start reviewing to measure your recall accuracy."
+            return "Start reviewing to measure your recall accuracy."
         }
 
         if flashcardVM.overallAccuracy >= 0.80 {
-
-            return
-                "Excellent recall! Keep reviewing to maintain your knowledge."
+            return "Excellent recall! Keep reviewing to maintain your knowledge."
         }
 
         if flashcardVM.overallAccuracy >= 0.60 {
-
-            return
-                "Good progress. Keep practicing to improve your recall."
+            return "Good progress. Keep practicing to improve your recall."
         }
 
-        return
-            "Review difficult cards more frequently to strengthen your memory."
+        return "Review difficult cards more frequently to strengthen your memory."
     }
 
     // =====================================================
@@ -1056,31 +1017,22 @@ struct DashboardView: View {
     private var quizPerformanceMessage: String {
 
         if quizVM.totalQuizzes == 0 {
-
-            return
-                "Create a quiz from your knowledge to test yourself."
+            return "Create a quiz from your knowledge to test yourself."
         }
 
         if quizVM.completedQuizzes == 0 {
-
-            return
-                "Complete your first quiz to see your performance."
+            return "Complete your first quiz to see your performance."
         }
 
         if quizVM.overallPercentage >= 80 {
-
-            return
-                "Excellent quiz performance! Your knowledge is improving."
+            return "Excellent quiz performance! Your knowledge is improving."
         }
 
         if quizVM.overallPercentage >= 60 {
-
-            return
-                "Good work. Continue testing yourself to strengthen recall."
+            return "Good work. Continue testing yourself to strengthen recall."
         }
 
-        return
-            "Review your memories and try another quiz to improve your score."
+        return "Review your memories and try another quiz to improve your score."
     }
 
     // =====================================================
@@ -1089,15 +1041,13 @@ struct DashboardView: View {
 
     private var memoryProgressCard: some View {
 
-        let current =
-            min(
-                memoryVM.memories.count,
-                memoryGoal
-            )
+        let current = min(
+            memoryVM.memories.count,
+            memoryGoal
+        )
 
         let progress =
-            Double(current)
-            / Double(memoryGoal)
+            Double(current) / Double(memoryGoal)
 
         return VStack(
             alignment: .leading,
@@ -1385,16 +1335,6 @@ struct DashboardView: View {
     // =====================================================
     // SMART MEMORY CARD
     // =====================================================
-    // IMPORTANT:
-    // We intentionally navigate to FlashcardsView.
-    //
-    // We DO NOT call:
-    //
-    // appState.openFlashcard(for: memory)
-    //
-    // because openFlashcard expects a Flashcard,
-    // while this object is a Memory.
-    // =====================================================
 
     private func smartMemoryCard(
         memory: Memory
@@ -1535,9 +1475,9 @@ struct DashboardView: View {
 
         VStack(spacing: 12) {
 
-            // -------------------------------------------------
+            // =================================================
             // START STUDY SESSION
-            // -------------------------------------------------
+            // =================================================
 
             NavigationLink {
 
@@ -1563,9 +1503,9 @@ struct DashboardView: View {
             }
             .buttonStyle(.plain)
 
-            // -------------------------------------------------
+            // =================================================
             // FLASHCARDS
-            // -------------------------------------------------
+            // =================================================
 
             NavigationLink {
 
@@ -1591,9 +1531,9 @@ struct DashboardView: View {
             }
             .buttonStyle(.plain)
 
-            // -------------------------------------------------
+            // =================================================
             // CREATE NOTE
-            // -------------------------------------------------
+            // =================================================
 
             NavigationLink {
 
@@ -1619,9 +1559,9 @@ struct DashboardView: View {
             }
             .buttonStyle(.plain)
 
-            // -------------------------------------------------
+            // =================================================
             // EXPLORE MEMORIES
-            // -------------------------------------------------
+            // =================================================
 
             NavigationLink {
 

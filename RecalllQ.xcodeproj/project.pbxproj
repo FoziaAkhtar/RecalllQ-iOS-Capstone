@@ -21,6 +21,10 @@
 		A496EBE130311DFD005C604F /* StudySession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A496EBE030311DF7005C604F /* StudySession.swift */; };
 		A496EBE330311E8E005C604F /* StudySessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A496EBE230311E81005C604F /* StudySessionView.swift */; };
 		A496EBE530316C17005C604F /* SmartSuggestionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A496EBE430316C0C005C604F /* SmartSuggestionsView.swift */; };
+		A496EC523034B341005C604F /* APIKeySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A496EBE930321DA3005C604F /* APIKeySettingsView.swift */; };
+		A496EC5A3034C48F005C604F /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A496EC593034C48A005C604F /* LoginView.swift */; };
+		A496EC5C3034C4CD005C604F /* CreateAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A496EC5B3034C4C3005C604F /* CreateAccountView.swift */; };
+		A496EC5E3034C514005C604F /* ForgotPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A496EC5D3034C501005C604F /* ForgotPasswordView.swift */; };
 		A49E31622FEEAD5700483750 /* EditNoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A49E31612FEEAD4500483750 /* EditNoteView.swift */; };
 		A49E31782FEED2C500483750 /* MemoriesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A49E31772FEED2BB00483750 /* MemoriesView.swift */; };
 		A49E31812FEF02B800483750 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A49E31802FEF02AB00483750 /* MainTabView.swift */; };
@@ -44,6 +48,10 @@
 		A496EBE230311E81005C604F /* StudySessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudySessionView.swift; sourceTree = "<group>"; };
 		A496EBE430316C0C005C604F /* SmartSuggestionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartSuggestionsView.swift; sourceTree = "<group>"; };
 		A496EBE930321DA3005C604F /* APIKeySettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIKeySettingsView.swift; sourceTree = "<group>"; };
+		A496EC533034BB59005C604F /* RecalllQ-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "RecalllQ-Info.plist"; sourceTree = "<group>"; };
+		A496EC593034C48A005C604F /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		A496EC5B3034C4C3005C604F /* CreateAccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateAccountView.swift; sourceTree = "<group>"; };
+		A496EC5D3034C501005C604F /* ForgotPasswordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForgotPasswordView.swift; sourceTree = "<group>"; };
 		A49E31612FEEAD4500483750 /* EditNoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditNoteView.swift; sourceTree = "<group>"; };
 		A49E31772FEED2BB00483750 /* MemoriesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoriesView.swift; sourceTree = "<group>"; };
 		A49E31802FEF02AB00483750 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
@@ -72,6 +80,7 @@
 		A40E9D0A2FEDA42F00869607 = {
 			isa = PBXGroup;
 			children = (
+				A496EC533034BB59005C604F /* RecalllQ-Info.plist */,
 				A496EBE930321DA3005C604F /* APIKeySettingsView.swift */,
 				A40E9D212FEDA71800869607 /* Views */,
 				A40E9D142FEDA42F00869607 /* Products */,
@@ -89,13 +98,16 @@
 		A40E9D212FEDA71800869607 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				A496EC5D3034C501005C604F /* ForgotPasswordView.swift */,
+				A496EC5B3034C4C3005C604F /* CreateAccountView.swift */,
+				A496EC593034C48A005C604F /* LoginView.swift */,
 				A496EBE430316C0C005C604F /* SmartSuggestionsView.swift */,
-				A496EBE230311E81005C604F /* StudySessionView.swift */,
 				A496EBE030311DF7005C604F /* StudySession.swift */,
 				A496EBDB30311708005C604F /* StudyRecommendationCard.swift */,
 				A496EBD4302F69B5005C604F /* QuizView.swift */,
 				A496EBC9302F635D005C604F /* FlashcardsView.swift */,
 				A496EBC1302F5938005C604F /* ScanReviewView.swift */,
+				A496EBE230311E81005C604F /* StudySessionView.swift */,
 				A496EBBF302F54BE005C604F /* DocumentScannerView.swift */,
 				A496EBB7302F511C005C604F /* RecalllQTheme.swift */,
 				A49E31852FEF07CE00483750 /* ReminderView.swift */,
@@ -193,13 +205,17 @@
 				A40E9D2B2FEDA92700869607 /* NotesView.swift in Sources */,
 				A40E9D252FEDA7F000869607 /* DashboardView.swift in Sources */,
 				A49E31862FEF07D700483750 /* ReminderView.swift in Sources */,
+				A496EC5A3034C48F005C604F /* LoginView.swift in Sources */,
 				A40E9D2F2FEDAAEE00869607 /* SearchView.swift in Sources */,
 				A49E31782FEED2C500483750 /* MemoriesView.swift in Sources */,
 				A496EBE130311DFD005C604F /* StudySession.swift in Sources */,
 				A49E31812FEF02B800483750 /* MainTabView.swift in Sources */,
+				A496EC5E3034C514005C604F /* ForgotPasswordView.swift in Sources */,
 				A40E9D312FEDAB5100869607 /* SettingsView.swift in Sources */,
 				A49E31622FEEAD5700483750 /* EditNoteView.swift in Sources */,
 				A496EBC0302F54CE005C604F /* DocumentScannerView.swift in Sources */,
+				A496EC5C3034C4CD005C604F /* CreateAccountView.swift in Sources */,
+				A496EC523034B341005C604F /* APIKeySettingsView.swift in Sources */,
 				A496EBDC3031171A005C604F /* StudyRecommendationCard.swift in Sources */,
 				A40E9D232FEDA72F00869607 /* WelcomeView.swift in Sources */,
 				A496EBE530316C17005C604F /* SmartSuggestionsView.swift in Sources */,
@@ -340,6 +356,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "RecalllQ-Info.plist";
 				INFOPLIST_KEY_NSCameraUsageDescription = "RecalllQ uses the camera to scan your study notes and documents.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -372,6 +389,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "RecalllQ-Info.plist";
 				INFOPLIST_KEY_NSCameraUsageDescription = "RecalllQ uses the camera to scan your study notes and documents.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

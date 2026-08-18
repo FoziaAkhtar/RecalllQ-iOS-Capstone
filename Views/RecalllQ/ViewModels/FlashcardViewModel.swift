@@ -6,10 +6,15 @@ import Combine
 // VIEWMODEL: FlashcardViewModel
 // =====================================================
 // PURPOSE:
-// Manages RecalllQ flashcards.
+// Manages all RecalllQ flashcard functionality.
 //
 // FEATURES:
 // - Create flashcards from Memories
+// - Create flashcards from all Memories
+// - Create flashcards from selected Memories
+// - Select / deselect Memories
+// - Select all Memories
+// - Deselect all Memories
 // - Prevent duplicate flashcards
 // - Save / load flashcards
 // - Delete flashcards
@@ -20,16 +25,17 @@ import Combine
 // - Previous / Next navigation
 // - Smart Suggestion integration
 // - Study Session integration
+// - Generation status
+// - Error / success messages
 // =====================================================
 
+@MainActor
 final class FlashcardViewModel: ObservableObject {
 
     // =====================================================
     // APP STATE
     // =====================================================
 
-    // Weak reference prevents a retain cycle because
-    // AppState owns this ViewModel.
     weak var appState: AppState?
 
     // =====================================================
@@ -49,27 +55,165 @@ final class FlashcardViewModel: ObservableObject {
     // =====================================================
 
     @Published var currentIndex: Int = 0
-
     @Published var isShowingAnswer: Bool = false
+
+    // =====================================================
+    // GENERATION STATE
+    // =====================================================
+
+    @Published var isGeneratingFlashcards: Bool = false
+
+    @Published var flashcardGenerationMessage: String?
+
+    @Published var flashcardGenerationError: String?
+
+    // =====================================================
+    // MEMORY SELECTION STATE
+    // =====================================================
+    // Stores the IDs of Memories selected by the user
+    // for flashcard generation.
+    // =====================================================
+
+    @Published var selectedMemoryIDs: Set<UUID> = []
 
     // =====================================================
     // STORAGE
     // =====================================================
 
-    private let storageKey =
-        "saved_flashcards"
+    private let storageKey = "saved_flashcards"
 
     // =====================================================
     // INIT
     // =====================================================
 
     init() {
-
         loadFlashcards()
 
         currentIndex = 0
-
         isShowingAnswer = false
+        isGeneratingFlashcards = false
+        selectedMemoryIDs = []
+    }
+
+    // =====================================================
+    // MARK MEMORY AS SELECTED
+    // =====================================================
+
+    func selectMemory(_ memoryID: UUID) {
+
+        selectedMemoryIDs.insert(memoryID)
+
+        print("✅ Memory selected: \(memoryID)")
+    }
+
+    // =====================================================
+    // UNSELECT MEMORY
+    // =====================================================
+
+    func deselectMemory(_ memoryID: UUID) {
+
+        selectedMemoryIDs.remove(memoryID)
+
+        print("❌ Memory deselected: \(memoryID)")
+    }
+
+    // =====================================================
+    // TOGGLE MEMORY SELECTION
+    // =====================================================
+
+    func toggleMemorySelection(_ memoryID: UUID) {
+
+        if selectedMemoryIDs.contains(memoryID) {
+
+            selectedMemoryIDs.remove(memoryID)
+
+            print("❌ Memory deselected: \(memoryID)")
+
+        } else {
+
+            selectedMemoryIDs.insert(memoryID)
+
+            print("✅ Memory selected: \(memoryID)")
+        }
+    }
+
+    // =====================================================
+    // CHECK IF MEMORY IS SELECTED
+    // =====================================================
+
+    func isMemorySelected(_ memoryID: UUID) -> Bool {
+
+        return selectedMemoryIDs.contains(memoryID)
+    }
+
+    // =====================================================
+    // SELECT ALL MEMORIES
+    // =====================================================
+
+    func selectAllMemories(_ memories: [Memory]) {
+
+        selectedMemoryIDs = Set(
+            memories.map { $0.id }
+        )
+
+        print(
+            "✅ Selected all \(selectedMemoryIDs.count) memories."
+        )
+    }
+
+    // =====================================================
+    // DESELECT ALL MEMORIES
+    // =====================================================
+
+    func deselectAllMemories() {
+
+        selectedMemoryIDs.removeAll()
+
+        print("❌ All memory selections cleared.")
+    }
+
+    // =====================================================
+    // SELECTABLE MEMORY COUNT
+    // =====================================================
+    // Counts Memories that do not already have a flashcard.
+    // =====================================================
+
+    func selectableMemoryCount(
+        from memories: [Memory]
+    ) -> Int {
+
+        return memories.filter { memory in
+
+            !hasFlashcard(
+                for: memory.id
+            )
+
+        }.count
+    }
+
+    // =====================================================
+    // SELECTED MEMORY COUNT
+    // =====================================================
+
+    var selectedMemoryCount: Int {
+
+        selectedMemoryIDs.count
+    }
+
+    // =====================================================
+    // SELECTED MEMORIES
+    // =====================================================
+
+    func selectedMemories(
+        from memories: [Memory]
+    ) -> [Memory] {
+
+        return memories.filter { memory in
+
+            selectedMemoryIDs.contains(
+                memory.id
+            )
+        }
     }
 
     // =====================================================
@@ -92,20 +236,32 @@ final class FlashcardViewModel: ObservableObject {
                 in: .whitespacesAndNewlines
             )
 
-        guard
-            !cleanQuestion.isEmpty,
-            !cleanAnswer.isEmpty
-        else {
+        guard !cleanQuestion.isEmpty else {
+
+            flashcardGenerationError =
+                "Flashcard question cannot be empty."
 
             print(
-                "❌ Flashcard was not created."
+                "❌ Flashcard question is empty."
+            )
+
+            return
+        }
+
+        guard !cleanAnswer.isEmpty else {
+
+            flashcardGenerationError =
+                "Flashcard answer cannot be empty."
+
+            print(
+                "❌ Flashcard answer is empty."
             )
 
             return
         }
 
         // -------------------------------------------------
-        // Prevent duplicate memory card
+        // Prevent duplicate memory flashcard
         // -------------------------------------------------
 
         if let memoryID = memoryID {
@@ -119,7 +275,7 @@ final class FlashcardViewModel: ObservableObject {
             if exists {
 
                 print(
-                    "⚠️ Flashcard already exists."
+                    "⚠️ Flashcard already exists for this memory."
                 )
 
                 return
@@ -132,22 +288,18 @@ final class FlashcardViewModel: ObservableObject {
 
         let flashcard =
             Flashcard(
-                memoryID:
-                    memoryID,
-
-                question:
-                    cleanQuestion,
-
-                answer:
-                    cleanAnswer
+                memoryID: memoryID,
+                question: cleanQuestion,
+                answer: cleanAnswer
             )
 
         // -------------------------------------------------
         // Add
         // -------------------------------------------------
 
-        flashcards.append(
-            flashcard
+        flashcards.insert(
+            flashcard,
+            at: 0
         )
 
         // -------------------------------------------------
@@ -160,25 +312,28 @@ final class FlashcardViewModel: ObservableObject {
         // Reset study position
         // -------------------------------------------------
 
-        if flashcards.count == 1 {
+        currentIndex = 0
+        isShowingAnswer = false
 
-            currentIndex = 0
-
-            isShowingAnswer = false
-        }
-
-        print(
-            "✅ Flashcard created."
-        )
+        print("========================================")
+        print("✅ FLASHCARD CREATED")
+        print("Question: \(cleanQuestion)")
+        print("========================================")
     }
 
     // =====================================================
-    // CREATE FROM MEMORY
+    // CREATE FLASHCARD FROM ONE MEMORY
     // =====================================================
 
+    @discardableResult
     func createFromMemory(
         _ memory: Memory
-    ) {
+    ) -> Bool {
+
+        print("========================================")
+        print("🧠 CREATING FLASHCARD FROM MEMORY")
+        print("Memory: \(memory.title)")
+        print("========================================")
 
         // -------------------------------------------------
         // Prevent duplicate
@@ -191,96 +346,402 @@ final class FlashcardViewModel: ObservableObject {
         ) {
 
             print(
-                "⚠️ Flashcard already exists."
+                "⚠️ Flashcard already exists for: \(memory.title)"
             )
 
-            return
+            return false
         }
+
+        // -------------------------------------------------
+        // Create question
+        // -------------------------------------------------
 
         let question =
             "What is the main idea of \(memory.title)?"
 
+        // -------------------------------------------------
+        // Clean summary
+        // -------------------------------------------------
+
         let cleanSummary =
             memory.summary.trimmingCharacters(
-                in:
-                    .whitespacesAndNewlines
+                in: .whitespacesAndNewlines
             )
+
+        // -------------------------------------------------
+        // Clean content
+        // -------------------------------------------------
 
         let cleanContent =
             memory.content.trimmingCharacters(
-                in:
-                    .whitespacesAndNewlines
+                in: .whitespacesAndNewlines
             )
 
-        let answer =
-            cleanSummary.isEmpty
-            ? cleanContent
-            : cleanSummary
+        // -------------------------------------------------
+        // Choose best answer
+        // -------------------------------------------------
+
+        let answer: String
+
+        if !cleanSummary.isEmpty {
+
+            answer = cleanSummary
+
+        } else if !cleanContent.isEmpty {
+
+            answer = cleanContent
+
+        } else {
+
+            answer =
+                "Review the memory titled \(memory.title)."
+        }
+
+        // -------------------------------------------------
+        // Add flashcard
+        // -------------------------------------------------
+
+        let beforeCount = flashcards.count
 
         addFlashcard(
-            question:
-                question,
-
-            answer:
-                answer,
-
-            memoryID:
-                memory.id
+            question: question,
+            answer: answer,
+            memoryID: memory.id
         )
+
+        return flashcards.count > beforeCount
+    }
+
+    // =====================================================
+    // CREATE FLASHCARDS FROM SELECTED MEMORIES
+    // =====================================================
+
+    @discardableResult
+    func createFromSelectedMemories(
+        _ memories: [Memory]
+    ) -> Int {
+
+        print("========================================")
+        print("🧠 GENERATE FROM SELECTED MEMORIES")
+        print("Selected: \(selectedMemoryIDs.count)")
+        print("========================================")
+
+        guard !isGeneratingFlashcards else {
+
+            print(
+                "⚠️ Flashcard generation is already running."
+            )
+
+            return 0
+        }
+
+        // -------------------------------------------------
+        // Find selected memories
+        // -------------------------------------------------
+
+        let memoriesToGenerate =
+            memories.filter { memory in
+
+                selectedMemoryIDs.contains(
+                    memory.id
+                )
+            }
+
+        guard !memoriesToGenerate.isEmpty else {
+
+            flashcardGenerationError =
+                "Please select at least one Memory."
+
+            flashcardGenerationMessage = nil
+
+            return 0
+        }
+
+        // -------------------------------------------------
+        // Start generation
+        // -------------------------------------------------
+
+        isGeneratingFlashcards = true
+
+        flashcardGenerationError = nil
+
+        flashcardGenerationMessage =
+            "Generating flashcards..."
+
+        var createdCount = 0
+
+        var skippedCount = 0
+
+        // -------------------------------------------------
+        // Generate selected flashcards
+        // -------------------------------------------------
+
+        for memory in memoriesToGenerate {
+
+            if hasFlashcard(
+                for: memory.id
+            ) {
+
+                skippedCount += 1
+
+                print(
+                    "⏭️ Skipping existing flashcard: \(memory.title)"
+                )
+
+                continue
+            }
+
+            if createFromMemory(memory) {
+
+                createdCount += 1
+
+                print(
+                    "✅ Generated flashcard \(createdCount): \(memory.title)"
+                )
+            }
+        }
+
+        // -------------------------------------------------
+        // Reset selection
+        // -------------------------------------------------
+
+        selectedMemoryIDs.removeAll()
+
+        // -------------------------------------------------
+        // Reset study position
+        // -------------------------------------------------
+
+        currentIndex = 0
+
+        isShowingAnswer = false
+
+        // -------------------------------------------------
+        // Finish generation
+        // -------------------------------------------------
+
+        isGeneratingFlashcards = false
+
+        // -------------------------------------------------
+        // Message
+        // -------------------------------------------------
+
+        if createdCount > 0 {
+
+            if skippedCount > 0 {
+
+                flashcardGenerationMessage =
+                    "\(createdCount) flashcard\(createdCount == 1 ? "" : "s") generated. \(skippedCount) already existed."
+
+            } else {
+
+                flashcardGenerationMessage =
+                    "\(createdCount) flashcard\(createdCount == 1 ? "" : "s") generated successfully!"
+            }
+
+            flashcardGenerationError = nil
+
+        } else {
+
+            flashcardGenerationMessage =
+                "The selected Memories already have flashcards."
+
+            flashcardGenerationError = nil
+        }
+
+        // -------------------------------------------------
+        // Save
+        // -------------------------------------------------
+
+        saveFlashcards()
+
+        print("========================================")
+        print("✅ SELECTED FLASHCARD GENERATION COMPLETE")
+        print("Created: \(createdCount)")
+        print("Skipped: \(skippedCount)")
+        print("Total flashcards: \(flashcards.count)")
+        print("========================================")
+
+        return createdCount
+    }
+
+    // =====================================================
+    // CREATE FLASHCARDS FROM ALL MEMORIES
+    // =====================================================
+
+    @discardableResult
+    func createFromMemories(
+        _ memories: [Memory]
+    ) -> Int {
+
+        print("========================================")
+        print("🧠 GENERATE FLASHCARDS")
+        print("Memories available: \(memories.count)")
+        print("Existing flashcards: \(flashcards.count)")
+        print("========================================")
+
+        // -------------------------------------------------
+        // Prevent duplicate generation requests
+        // -------------------------------------------------
+
+        guard !isGeneratingFlashcards else {
+
+            print(
+                "⚠️ Flashcard generation is already running."
+            )
+
+            return 0
+        }
+
+        // -------------------------------------------------
+        // Validate memories
+        // -------------------------------------------------
+
+        guard !memories.isEmpty else {
+
+            isGeneratingFlashcards = false
+
+            flashcardGenerationError =
+                "No memories available. Create a memory first."
+
+            flashcardGenerationMessage = nil
+
+            print(
+                "❌ No memories available."
+            )
+
+            return 0
+        }
+
+        // -------------------------------------------------
+        // Start generation
+        // -------------------------------------------------
+
+        isGeneratingFlashcards = true
+
+        flashcardGenerationError = nil
+
+        flashcardGenerationMessage =
+            "Generating flashcards..."
+
+        var createdCount = 0
+
+        var skippedCount = 0
+
+        // -------------------------------------------------
+        // Generate one flashcard per memory
+        // -------------------------------------------------
+
+        for memory in memories {
+
+            let alreadyExists =
+                flashcards.contains {
+
+                    $0.memoryID == memory.id
+                }
+
+            if alreadyExists {
+
+                skippedCount += 1
+
+                print(
+                    "⏭️ Skipping existing flashcard: \(memory.title)"
+                )
+
+                continue
+            }
+
+            if createFromMemory(memory) {
+
+                createdCount += 1
+
+                print(
+                    "✅ Generated flashcard \(createdCount): \(memory.title)"
+                )
+            }
+        }
+
+        // -------------------------------------------------
+        // Reset selection
+        // -------------------------------------------------
+
+        selectedMemoryIDs.removeAll()
+
+        // -------------------------------------------------
+        // Reset study position
+        // -------------------------------------------------
+
+        currentIndex = 0
+
+        isShowingAnswer = false
+
+        // -------------------------------------------------
+        // Finish generation
+        // -------------------------------------------------
+
+        isGeneratingFlashcards = false
+
+        if createdCount > 0 {
+
+            if skippedCount > 0 {
+
+                flashcardGenerationMessage =
+                    "\(createdCount) flashcard\(createdCount == 1 ? "" : "s") generated. \(skippedCount) already existed."
+
+            } else {
+
+                flashcardGenerationMessage =
+                    "\(createdCount) flashcard\(createdCount == 1 ? "" : "s") generated successfully!"
+            }
+
+            flashcardGenerationError = nil
+
+        } else {
+
+            flashcardGenerationMessage =
+                "All available memories already have flashcards."
+
+            flashcardGenerationError = nil
+        }
+
+        // -------------------------------------------------
+        // Save again
+        // -------------------------------------------------
+
+        saveFlashcards()
+
+        print("========================================")
+        print("✅ FLASHCARD GENERATION COMPLETE")
+        print("Created: \(createdCount)")
+        print("Skipped: \(skippedCount)")
+        print("Total flashcards: \(flashcards.count)")
+        print("========================================")
+
+        return createdCount
     }
 
     // =====================================================
     // CREATE FROM ALL MEMORIES
     // =====================================================
 
-    func createFromMemories(
+    @discardableResult
+    func createFromAllMemories(
         _ memories: [Memory]
-    ) {
+    ) -> Int {
 
-        guard !memories.isEmpty else {
-
-            print(
-                "❌ No Memories available."
-            )
-
-            return
-        }
-
-        var createdCount = 0
-
-        for memory in memories {
-
-            let exists =
-                flashcards.contains {
-
-                    $0.memoryID == memory.id
-                }
-
-            if exists {
-                continue
-            }
-
-            let before =
-                flashcards.count
-
-            createFromMemory(
-                memory
-            )
-
-            if flashcards.count >
-                before {
-
-                createdCount += 1
-            }
-        }
-
-        currentIndex = 0
-
-        isShowingAnswer = false
-
-        print(
-            "✅ Created \(createdCount) flashcards."
+        return createFromMemories(
+            memories
         )
+    }
+
+    // =====================================================
+    // CLEAR GENERATION MESSAGE
+    // =====================================================
+
+    func clearGenerationMessage() {
+
+        flashcardGenerationMessage = nil
+
+        flashcardGenerationError = nil
     }
 
     // =====================================================
@@ -311,11 +772,9 @@ final class FlashcardViewModel: ObservableObject {
             return
         }
 
-        currentIndex =
-            index
+        currentIndex = index
 
-        isShowingAnswer =
-            false
+        isShowingAnswer = false
 
         print(
             "🎯 Smart Suggestion opened Card \(index + 1)"
@@ -330,7 +789,7 @@ final class FlashcardViewModel: ObservableObject {
         _ memoryID: UUID
     ) -> Flashcard? {
 
-        flashcards.first {
+        return flashcards.first {
 
             $0.memoryID == memoryID
         }
@@ -344,7 +803,7 @@ final class FlashcardViewModel: ObservableObject {
         for memoryID: UUID
     ) -> Bool {
 
-        flashcards.contains {
+        return flashcards.contains {
 
             $0.memoryID == memoryID
         }
@@ -386,10 +845,13 @@ final class FlashcardViewModel: ObservableObject {
                 count - 1
         }
 
-        isShowingAnswer =
-            false
+        isShowingAnswer = false
 
         saveFlashcards()
+
+        print(
+            "🗑️ Flashcard deleted."
+        )
     }
 
     // =====================================================
@@ -406,9 +868,14 @@ final class FlashcardViewModel: ObservableObject {
 
         searchText = ""
 
+        selectedMemoryIDs.removeAll()
+
+        flashcardGenerationMessage = nil
+
+        flashcardGenerationError = nil
+
         UserDefaults.standard.removeObject(
-            forKey:
-                storageKey
+            forKey: storageKey
         )
 
         print(
@@ -423,11 +890,8 @@ final class FlashcardViewModel: ObservableObject {
     func markEasy() {
 
         reviewCurrentCard(
-            difficulty:
-                .easy,
-
-            correct:
-                true
+            difficulty: .easy,
+            correct: true
         )
     }
 
@@ -438,11 +902,8 @@ final class FlashcardViewModel: ObservableObject {
     func markMedium() {
 
         reviewCurrentCard(
-            difficulty:
-                .medium,
-
-            correct:
-                true
+            difficulty: .medium,
+            correct: true
         )
     }
 
@@ -453,11 +914,8 @@ final class FlashcardViewModel: ObservableObject {
     func markHard() {
 
         reviewCurrentCard(
-            difficulty:
-                .hard,
-
-            correct:
-                false
+            difficulty: .hard,
+            correct: false
         )
     }
 
@@ -466,11 +924,8 @@ final class FlashcardViewModel: ObservableObject {
     // =====================================================
 
     private func reviewCurrentCard(
-        difficulty:
-            Flashcard.Difficulty,
-
-        correct:
-            Bool
+        difficulty: Flashcard.Difficulty,
+        correct: Bool
     ) {
 
         let cards =
@@ -494,56 +949,56 @@ final class FlashcardViewModel: ObservableObject {
             let originalIndex =
                 flashcards.firstIndex(
                     where: {
-                        $0.id ==
-                            currentCard.id
+                        $0.id == currentCard.id
                     }
                 )
         else {
+
             return
         }
 
         // -------------------------------------------------
-        // Update review statistics
+        // Update difficulty
         // -------------------------------------------------
 
-        flashcards[originalIndex]
-            .difficulty =
-                difficulty
+        flashcards[originalIndex].difficulty =
+            difficulty
 
-        flashcards[originalIndex]
-            .timesReviewed += 1
+        // -------------------------------------------------
+        // Update review count
+        // -------------------------------------------------
+
+        flashcards[originalIndex].timesReviewed += 1
+
+        // -------------------------------------------------
+        // Update correct count
+        // -------------------------------------------------
 
         if correct {
 
-            flashcards[originalIndex]
-                .timesCorrect += 1
+            flashcards[originalIndex].timesCorrect += 1
         }
 
-        flashcards[originalIndex]
-            .lastReviewed =
-                Date()
+        // -------------------------------------------------
+        // Update dates
+        // -------------------------------------------------
 
-        flashcards[originalIndex]
-            .nextReviewDate =
-                calculateNextReviewDate(
-                    difficulty:
-                        difficulty
-                )
+        flashcards[originalIndex].lastReviewed =
+            Date()
+
+        flashcards[originalIndex].nextReviewDate =
+            calculateNextReviewDate(
+                difficulty: difficulty
+            )
 
         // -------------------------------------------------
-        // Save flashcard
+        // Save
         // -------------------------------------------------
 
         saveFlashcards()
 
         // -------------------------------------------------
-        // STUDY SESSION INTEGRATION
-        // -------------------------------------------------
-        // Every completed review counts as one reviewed
-        // flashcard for the active study session.
-        //
-        // AppState's StudySessionViewModel safely ignores
-        // this if no study session is currently active.
+        // Study session integration
         // -------------------------------------------------
 
         appState?.recordFlashcardReviewed()
@@ -553,7 +1008,7 @@ final class FlashcardViewModel: ObservableObject {
         )
 
         // -------------------------------------------------
-        // Move to next card
+        // Move to next
         // -------------------------------------------------
 
         moveToNextCard()
@@ -635,6 +1090,15 @@ final class FlashcardViewModel: ObservableObject {
     }
 
     // =====================================================
+    // TOGGLE ANSWER
+    // =====================================================
+
+    func toggleAnswer() {
+
+        isShowingAnswer.toggle()
+    }
+
+    // =====================================================
     // RESET STUDY
     // =====================================================
 
@@ -649,13 +1113,11 @@ final class FlashcardViewModel: ObservableObject {
     // FILTERED FLASHCARDS
     // =====================================================
 
-    var filteredFlashcards:
-        [Flashcard] {
+    var filteredFlashcards: [Flashcard] {
 
         let query =
             searchText.trimmingCharacters(
-                in:
-                    .whitespacesAndNewlines
+                in: .whitespacesAndNewlines
             )
 
         guard !query.isEmpty else {
@@ -665,15 +1127,13 @@ final class FlashcardViewModel: ObservableObject {
 
         return flashcards.filter {
 
-            $0.question
-                .localizedCaseInsensitiveContains(
-                    query
-                )
+            $0.question.localizedCaseInsensitiveContains(
+                query
+            )
             ||
-            $0.answer
-                .localizedCaseInsensitiveContains(
-                    query
-                )
+            $0.answer.localizedCaseInsensitiveContains(
+                query
+            )
         }
     }
 
@@ -681,13 +1141,13 @@ final class FlashcardViewModel: ObservableObject {
     // CURRENT FLASHCARD
     // =====================================================
 
-    var currentFlashcard:
-        Flashcard? {
+    var currentFlashcard: Flashcard? {
 
         let cards =
             filteredFlashcards
 
         guard !cards.isEmpty else {
+
             return nil
         }
 
@@ -712,6 +1172,7 @@ final class FlashcardViewModel: ObservableObject {
             filteredFlashcards.count
 
         guard count > 0 else {
+
             return 0
         }
 
@@ -800,8 +1261,7 @@ final class FlashcardViewModel: ObservableObject {
     // =====================================================
 
     private func calculateNextReviewDate(
-        difficulty:
-            Flashcard.Difficulty
+        difficulty: Flashcard.Difficulty
     ) -> Date {
 
         let days: Int
@@ -822,19 +1282,14 @@ final class FlashcardViewModel: ObservableObject {
         }
 
         return Calendar.current.date(
-            byAdding:
-                .day,
-
-            value:
-                days,
-
-            to:
-                Date()
+            byAdding: .day,
+            value: days,
+            to: Date()
         ) ?? Date()
     }
 
     // =====================================================
-    // SAVE
+    // SAVE FLASHCARDS
     // =====================================================
 
     private func saveFlashcards() {
@@ -842,16 +1297,17 @@ final class FlashcardViewModel: ObservableObject {
         do {
 
             let data =
-                try JSONEncoder()
-                    .encode(
-                        flashcards
-                    )
+                try JSONEncoder().encode(
+                    flashcards
+                )
 
             UserDefaults.standard.set(
                 data,
+                forKey: storageKey
+            )
 
-                forKey:
-                    storageKey
+            print(
+                "💾 Flashcards saved: \(flashcards.count)"
             )
 
         } catch {
@@ -863,7 +1319,7 @@ final class FlashcardViewModel: ObservableObject {
     }
 
     // =====================================================
-    // LOAD
+    // LOAD FLASHCARDS
     // =====================================================
 
     private func loadFlashcards() {
@@ -871,8 +1327,7 @@ final class FlashcardViewModel: ObservableObject {
         guard
             let data =
                 UserDefaults.standard.data(
-                    forKey:
-                        storageKey
+                    forKey: storageKey
                 )
         else {
 
@@ -884,13 +1339,14 @@ final class FlashcardViewModel: ObservableObject {
         do {
 
             flashcards =
-                try JSONDecoder()
-                    .decode(
-                        [Flashcard].self,
+                try JSONDecoder().decode(
+                    [Flashcard].self,
+                    from: data
+                )
 
-                        from:
-                            data
-                    )
+            print(
+                "📚 Loaded \(flashcards.count) flashcards."
+            )
 
         } catch {
 

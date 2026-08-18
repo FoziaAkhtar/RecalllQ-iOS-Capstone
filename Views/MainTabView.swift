@@ -7,12 +7,23 @@ import SwiftUI
 // PURPOSE:
 // Central navigation hub for RecalllQ.
 //
+// FEATURES:
+// - Dashboard navigation
+// - Notes navigation
+// - Memories navigation
+// - Flashcards navigation
+// - Quiz navigation
+// - Settings navigation
+// - Uses global AppState
+// - Uses RecalllQTheme for visual styling
+//
 // TAB INDEX:
 // 0 = Dashboard
 // 1 = Notes
 // 2 = Memories
 // 3 = Flashcards
 // 4 = Quiz
+// 5 = Settings
 // =====================================================
 
 struct MainTabView: View {
@@ -41,6 +52,7 @@ struct MainTabView: View {
 
                 DashboardView()
                     .environmentObject(appState)
+
             }
             .tabItem {
 
@@ -48,6 +60,7 @@ struct MainTabView: View {
                     "Dashboard",
                     systemImage: "brain.head.profile"
                 )
+
             }
             .tag(0)
 
@@ -59,6 +72,7 @@ struct MainTabView: View {
 
                 NotesView()
                     .environmentObject(appState)
+
             }
             .tabItem {
 
@@ -66,6 +80,7 @@ struct MainTabView: View {
                     "Notes",
                     systemImage: "note.text"
                 )
+
             }
             .tag(1)
 
@@ -77,13 +92,15 @@ struct MainTabView: View {
 
                 MemoriesView()
                     .environmentObject(appState)
+
             }
             .tabItem {
 
                 Label(
                     "Memories",
-                    systemImage: "sparkles"
+                    systemImage: "brain.head.profile"
                 )
+
             }
             .tag(2)
 
@@ -95,6 +112,7 @@ struct MainTabView: View {
 
                 FlashcardsView()
                     .environmentObject(appState)
+
             }
             .tabItem {
 
@@ -102,6 +120,7 @@ struct MainTabView: View {
                     "Flashcards",
                     systemImage: "rectangle.on.rectangle"
                 )
+
             }
             .tag(3)
 
@@ -113,6 +132,7 @@ struct MainTabView: View {
 
                 QuizView()
                     .environmentObject(appState)
+
             }
             .tabItem {
 
@@ -120,8 +140,45 @@ struct MainTabView: View {
                     "Quiz",
                     systemImage: "questionmark.circle.fill"
                 )
+
             }
             .tag(4)
+
+            // =================================================
+            // SETTINGS
+            // =================================================
+
+            NavigationStack {
+
+                SettingsView()
+                    .environmentObject(appState)
+
+            }
+            .tabItem {
+
+                Label(
+                    "Settings",
+                    systemImage: "gearshape.fill"
+                )
+
+            }
+            .tag(5)
         }
+
+        // =====================================================
+        // TAB BAR APPEARANCE
+        // =====================================================
+
+        .tint(RecalllQTheme.primary)
     }
+}
+
+// =====================================================
+// PREVIEW
+// =====================================================
+
+#Preview {
+
+    MainTabView()
+        .environmentObject(AppState())
 }
