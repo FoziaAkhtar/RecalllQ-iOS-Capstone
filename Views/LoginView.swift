@@ -461,9 +461,7 @@ struct LoginView: View {
                     print(
                         "➡️ Updating AppState..."
                     )
-
-                    appState.login()
-
+                    appState.login(email: auth.email)
                     print(
                         "✅ AppState.isAuthenticated = \(appState.isAuthenticated)"
                     )

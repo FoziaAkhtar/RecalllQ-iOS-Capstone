@@ -8,22 +8,27 @@ import Combine
 // PURPOSE:
 // Manages personalized study sessions for RecalllQ.
 //
-// FEATURES:
-// - Start study session
-// - End study session
-// - Cancel study session
-// - LIVE timer that updates every second
-// - Track flashcards reviewed
-// - Track quizzes completed
-// - Track memories studied
-// - Save sessions locally
-// - Load previous sessions
-// - Calculate total study time
-// - Calculate today's study time
-// - Show recent study activity
-// - Reset study history
+// USER DATA ISOLATION:
+// Each authenticated user gets their own:
+//
+// - Study sessions
+// - Study time
+// - Flashcard activity
+// - Quiz activity
+// - Memory activity
+//
+// STORAGE FORMAT:
+//
+// recallq_study_sessions_<userID>
+//
+// Example:
+//
+// recallq_study_sessions_student1@gmail.com
+// recallq_study_sessions_student2@gmail.com
+//
 // =====================================================
 
+@MainActor
 final class StudySessionViewModel: ObservableObject {
 
     // =====================================================
@@ -45,29 +50,49 @@ final class StudySessionViewModel: ObservableObject {
     // =====================================================
     // LIVE TIMER
     // =====================================================
-    // IMPORTANT:
-    // This value changes every second.
-    // Because it is @Published, SwiftUI updates the UI.
-    // =====================================================
 
     @Published private(set) var elapsedSessionTime: TimeInterval = 0
 
     private var timer: Timer?
 
     // =====================================================
+    // CURRENT USER
+    // =====================================================
+
+    // This is the authenticated user's unique identifier.
+    //
+    // AppState uses the normalized email as the local ID.
+    // =====================================================
+
+    private(set) var currentUserID: String?
+
+    // =====================================================
     // STORAGE
     // =====================================================
 
-    private let storageKey =
-        "recallq_study_sessions"
+    private let storagePrefix = "recallq_study_sessions"
 
     // =====================================================
     // INIT
     // =====================================================
 
     init() {
+        // -------------------------------------------------
+        // IMPORTANT:
+        //
+        // Do NOT automatically load another user's data.
+        //
+        // AppState will call:
+        //
+        //     switchUser(to: userID)
+        //
+        // after successful login.
+        // -------------------------------------------------
 
-        loadSessions()
+        sessions = []
+
+        print("ℹ️ StudySessionViewModel initialized.")
+        print("🔐 Waiting for authenticated user.")
     }
 
     // =====================================================
@@ -75,8 +100,171 @@ final class StudySessionViewModel: ObservableObject {
     // =====================================================
 
     deinit {
+        timer?.invalidate()
+        timer = nil
+    }
+
+    // =====================================================
+    // NORMALIZE USER ID
+    // =====================================================
+
+    private func normalizeUserID(_ userID: String) -> String {
+
+        userID
+            .trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+            .lowercased()
+    }
+
+    // =====================================================
+    // USER-SPECIFIC STORAGE KEY
+    // =====================================================
+
+    private func storageKey(for userID: String) -> String {
+
+        let cleanUserID = normalizeUserID(userID)
+
+        // -------------------------------------------------
+        // Encode the user ID so the storage key is safe.
+        // -------------------------------------------------
+
+        let encodedUserID = cleanUserID
+            .data(using: .utf8)?
+            .base64EncodedString()
+            .replacingOccurrences(
+                of: "=",
+                with: ""
+            )
+            .replacingOccurrences(
+                of: "/",
+                with: "_"
+            )
+            .replacingOccurrences(
+                of: "+",
+                with: "-"
+            )
+            ?? cleanUserID
+
+        return "\(storagePrefix)_\(encodedUserID)"
+    }
+
+    // =====================================================
+    // SWITCH USER
+    // =====================================================
+    //
+    // Called by AppState after authentication.
+    //
+    // IMPORTANT:
+    //
+    // User A's data is cleared from memory first.
+    // Then User B's data is loaded.
+    //
+    // =====================================================
+
+    func switchUser(to userID: String) {
+
+        let cleanUserID = normalizeUserID(userID)
+
+        guard !cleanUserID.isEmpty else {
+
+            print(
+                "❌ StudySessionViewModel: Cannot switch to empty user ID."
+            )
+
+            clearCurrentUserData()
+
+            currentUserID = nil
+
+            return
+        }
+
+        // -------------------------------------------------
+        // If the same user is already active, do not reload.
+        // -------------------------------------------------
+
+        if currentUserID == cleanUserID {
+
+            print(
+                "ℹ️ Study sessions already loaded for \(cleanUserID)."
+            )
+
+            return
+        }
+
+        // -------------------------------------------------
+        // Stop any previous user's active session.
+        // -------------------------------------------------
 
         stopTimer()
+
+        clearActiveSession()
+
+        // -------------------------------------------------
+        // IMPORTANT:
+        //
+        // Remove previous user's sessions from RAM.
+        // -------------------------------------------------
+
+        sessions.removeAll()
+
+        // -------------------------------------------------
+        // Set new user.
+        // -------------------------------------------------
+
+        currentUserID = cleanUserID
+
+        // -------------------------------------------------
+        // Load ONLY this user's sessions.
+        // -------------------------------------------------
+
+        loadSessions()
+
+        print("========================================")
+        print("🔐 STUDY SESSION USER SWITCH")
+        print("========================================")
+        print("👤 Current user: \(cleanUserID)")
+        print("📚 Sessions loaded: \(sessions.count)")
+        print("========================================")
+    }
+
+    // =====================================================
+    // CLEAR CURRENT USER DATA FROM MEMORY
+    // =====================================================
+    //
+    // IMPORTANT:
+    //
+    // This does NOT delete the saved user's data.
+    //
+    // It only removes it from the active ViewModel.
+    //
+    // This is used during logout/user switching.
+    //
+    // =====================================================
+
+    func clearCurrentUserData() {
+
+        stopTimer()
+
+        clearActiveSession()
+
+        sessions.removeAll()
+
+        print(
+            "🧹 Study sessions removed from active memory."
+        )
+    }
+
+    // =====================================================
+    // SAVE
+    // =====================================================
+    //
+    // Public wrapper used by AppState.
+    //
+    // =====================================================
+
+    func save() {
+        saveSessions()
     }
 
     // =====================================================
@@ -86,7 +274,21 @@ final class StudySessionViewModel: ObservableObject {
     func startSession() {
 
         // -------------------------------------------------
-        // Prevent multiple active sessions
+        // Require authenticated user.
+        // -------------------------------------------------
+
+        guard let userID = currentUserID,
+              !userID.isEmpty else {
+
+            print(
+                "❌ Cannot start study session: no authenticated user."
+            )
+
+            return
+        }
+
+        // -------------------------------------------------
+        // Prevent multiple active sessions.
         // -------------------------------------------------
 
         guard !isStudying else {
@@ -100,28 +302,28 @@ final class StudySessionViewModel: ObservableObject {
 
         let startDate = Date()
 
-        let session =
-            StudySession(
-                startDate: startDate
-            )
+        let session = StudySession(
+            startDate: startDate
+        )
 
         activeSession = session
 
-        currentSessionStartDate =
-            startDate
+        currentSessionStartDate = startDate
 
         elapsedSessionTime = 0
 
         isStudying = true
 
         // -------------------------------------------------
-        // START LIVE TIMER
+        // Start live timer.
         // -------------------------------------------------
 
         startTimer()
 
         print("========================================")
         print("📚 STUDY SESSION STARTED")
+        print("========================================")
+        print("👤 User: \(userID)")
         print("Start: \(startDate)")
         print("========================================")
     }
@@ -132,33 +334,30 @@ final class StudySessionViewModel: ObservableObject {
 
     private func startTimer() {
 
-        // Remove any existing timer first.
         stopTimer()
 
-        // -------------------------------------------------
-        // Timer fires every 1 second.
-        // -------------------------------------------------
+        timer = Timer.scheduledTimer(
+            withTimeInterval: 1.0,
+            repeats: true
+        ) { [weak self] _ in
 
-        timer =
-            Timer.scheduledTimer(
-                withTimeInterval: 1.0,
-                repeats: true
-            ) { [weak self] _ in
-
-                guard let self = self else {
-                    return
-                }
-
-                self.updateElapsedTime()
+            guard let self = self else {
+                return
             }
 
-        // Make timer continue while scrolling/UI is busy.
-        RunLoop.main.add(
-            timer!,
-            forMode: .common
-        )
+            Task { @MainActor in
+                self.updateElapsedTime()
+            }
+        }
 
-        // Update immediately.
+        if let timer = timer {
+
+            RunLoop.main.add(
+                timer,
+                forMode: .common
+            )
+        }
+
         updateElapsedTime()
     }
 
@@ -169,19 +368,16 @@ final class StudySessionViewModel: ObservableObject {
     private func updateElapsedTime() {
 
         guard
-            let startDate =
-                currentSessionStartDate,
+            let startDate = currentSessionStartDate,
             isStudying
         else {
-
             return
         }
 
-        elapsedSessionTime =
-            max(
-                Date().timeIntervalSince(startDate),
-                0
-            )
+        elapsedSessionTime = max(
+            Date().timeIntervalSince(startDate),
+            0
+        )
     }
 
     // =====================================================
@@ -201,9 +397,17 @@ final class StudySessionViewModel: ObservableObject {
 
     func endSession() {
 
-        guard
-            var session = activeSession
-        else {
+        guard let userID = currentUserID,
+              !userID.isEmpty else {
+
+            print(
+                "❌ Cannot end study session: no authenticated user."
+            )
+
+            return
+        }
+
+        guard var session = activeSession else {
 
             print(
                 "⚠️ No active study session."
@@ -213,22 +417,21 @@ final class StudySessionViewModel: ObservableObject {
         }
 
         // -------------------------------------------------
-        // Stop live timer
+        // Stop live timer.
         // -------------------------------------------------
 
         stopTimer()
 
         // -------------------------------------------------
-        // End date
+        // End date.
         // -------------------------------------------------
 
         let endDate = Date()
 
-        session.endDate =
-            endDate
+        session.endDate = endDate
 
         // -------------------------------------------------
-        // Calculate final duration
+        // Calculate final duration.
         // -------------------------------------------------
 
         let duration =
@@ -236,14 +439,13 @@ final class StudySessionViewModel: ObservableObject {
                 session.startDate
             )
 
-        session.duration =
-            max(
-                duration,
-                0
-            )
+        session.duration = max(
+            duration,
+            0
+        )
 
         // -------------------------------------------------
-        // Save completed session
+        // Save completed session.
         // -------------------------------------------------
 
         sessions.insert(
@@ -254,13 +456,15 @@ final class StudySessionViewModel: ObservableObject {
         saveSessions()
 
         // -------------------------------------------------
-        // Reset active session
+        // Reset active session.
         // -------------------------------------------------
 
         clearActiveSession()
 
         print("========================================")
         print("✅ STUDY SESSION COMPLETED")
+        print("========================================")
+        print("👤 User: \(userID)")
         print(
             "Duration: \(formatDuration(session.duration))"
         )
@@ -283,7 +487,6 @@ final class StudySessionViewModel: ObservableObject {
     func cancelSession() {
 
         guard isStudying else {
-
             return
         }
 
@@ -319,9 +522,7 @@ final class StudySessionViewModel: ObservableObject {
 
     func recordFlashcardReviewed() {
 
-        guard
-            var session = activeSession
-        else {
+        guard var session = activeSession else {
 
             print(
                 "⚠️ No active session for flashcard activity."
@@ -345,9 +546,7 @@ final class StudySessionViewModel: ObservableObject {
 
     func recordQuizCompleted() {
 
-        guard
-            var session = activeSession
-        else {
+        guard var session = activeSession else {
 
             print(
                 "⚠️ No active session for quiz activity."
@@ -371,9 +570,7 @@ final class StudySessionViewModel: ObservableObject {
 
     func recordMemoryStudied() {
 
-        guard
-            var session = activeSession
-        else {
+        guard var session = activeSession else {
 
             print(
                 "⚠️ No active session for memory activity."
@@ -398,7 +595,6 @@ final class StudySessionViewModel: ObservableObject {
     var totalStudyTime: TimeInterval {
 
         sessions.reduce(0) { total, session in
-
             total + session.duration
         }
     }
@@ -409,8 +605,7 @@ final class StudySessionViewModel: ObservableObject {
 
     var todayStudyTime: TimeInterval {
 
-        let calendar =
-            Calendar.current
+        let calendar = Calendar.current
 
         return sessions
             .filter { session in
@@ -431,7 +626,6 @@ final class StudySessionViewModel: ObservableObject {
     // =====================================================
 
     var totalSessions: Int {
-
         sessions.count
     }
 
@@ -506,9 +700,6 @@ final class StudySessionViewModel: ObservableObject {
 
     // =====================================================
     // FORMATTED ACTIVE SESSION TIME
-    // =====================================================
-    // This now reads the @Published timer value.
-    // The UI will update every second.
     // =====================================================
 
     var formattedActiveSessionTime: String {
@@ -607,6 +798,24 @@ final class StudySessionViewModel: ObservableObject {
 
     private func saveSessions() {
 
+        // -------------------------------------------------
+        // Never save data without a user.
+        // -------------------------------------------------
+
+        guard let userID = currentUserID,
+              !userID.isEmpty else {
+
+            print(
+                "⚠️ Study sessions were not saved because no user is active."
+            )
+
+            return
+        }
+
+        let key = storageKey(
+            for: userID
+        )
+
         do {
 
             let data =
@@ -616,12 +825,11 @@ final class StudySessionViewModel: ObservableObject {
 
             UserDefaults.standard.set(
                 data,
-                forKey:
-                    storageKey
+                forKey: key
             )
 
             print(
-                "💾 Saved \(sessions.count) study sessions."
+                "💾 Saved \(sessions.count) study sessions for \(userID)."
             )
 
         } catch {
@@ -638,18 +846,33 @@ final class StudySessionViewModel: ObservableObject {
 
     private func loadSessions() {
 
+        // -------------------------------------------------
+        // Never load data without a user.
+        // -------------------------------------------------
+
+        guard let userID = currentUserID,
+              !userID.isEmpty else {
+
+            sessions = []
+
+            return
+        }
+
+        let key = storageKey(
+            for: userID
+        )
+
         guard
             let data =
                 UserDefaults.standard.data(
-                    forKey:
-                        storageKey
+                    forKey: key
                 )
         else {
 
             sessions = []
 
             print(
-                "ℹ️ No saved study sessions found."
+                "ℹ️ No saved study sessions for \(userID)."
             )
 
             return
@@ -660,8 +883,7 @@ final class StudySessionViewModel: ObservableObject {
             sessions =
                 try JSONDecoder().decode(
                     [StudySession].self,
-                    from:
-                        data
+                    from: data
                 )
 
             sessions.sort {
@@ -669,7 +891,7 @@ final class StudySessionViewModel: ObservableObject {
             }
 
             print(
-                "✅ Loaded \(sessions.count) study sessions."
+                "✅ Loaded \(sessions.count) study sessions for \(userID)."
             )
 
         } catch {
@@ -683,10 +905,25 @@ final class StudySessionViewModel: ObservableObject {
     }
 
     // =====================================================
-    // RESET ALL SESSIONS
+    // RESET CURRENT USER'S SESSIONS
+    // =====================================================
+    //
+    // Deletes ONLY the currently authenticated user's
+    // saved study history.
+    //
     // =====================================================
 
     func resetAllSessions() {
+
+        guard let userID = currentUserID,
+              !userID.isEmpty else {
+
+            print(
+                "❌ Cannot reset sessions: no authenticated user."
+            )
+
+            return
+        }
 
         stopTimer()
 
@@ -694,13 +931,18 @@ final class StudySessionViewModel: ObservableObject {
 
         clearActiveSession()
 
-        UserDefaults.standard.removeObject(
-            forKey:
-                storageKey
+        let key = storageKey(
+            for: userID
         )
 
-        print(
-            "🗑️ All study sessions reset."
+        UserDefaults.standard.removeObject(
+            forKey: key
         )
+
+        print("========================================")
+        print("🗑️ STUDY HISTORY RESET")
+        print("========================================")
+        print("👤 User: \(userID)")
+        print("========================================")
     }
 }

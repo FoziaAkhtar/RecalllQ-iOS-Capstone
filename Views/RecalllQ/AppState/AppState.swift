@@ -6,6 +6,7 @@ import Combine
 // =====================================================
 // APP STATE
 // =====================================================
+//
 // PURPOSE:
 //
 // Central source of truth for RecalllQ.
@@ -25,30 +26,18 @@ import Combine
 // - Handles AI Quiz generation
 // - Provides local AI fallback
 // - Controls authentication state
-//
-// AUTHENTICATION FLOW:
-//
-// WelcomeView
-//      ↓
-// LoginView
-//      ↓
-// AuthenticationViewModel
-//      ↓
-// AppState.login()
-//      ↓
-// RecalllQApp
-//      ↓
-// MainTabView
+// - Keeps each user's data separate
 //
 // IMPORTANT:
 //
-// AppState is the GLOBAL authentication state.
+// Each authenticated user must have their own:
 //
-// AuthenticationViewModel is responsible for checking
-// the user's credentials.
-//
-// AppState only changes to authenticated AFTER successful
-// authentication.
+// - Notes
+// - Memories
+// - Flashcards
+// - Quizzes
+// - Study sessions
+// - Progress
 //
 // =====================================================
 
@@ -69,15 +58,18 @@ final class AppState: ObservableObject {
     // AUTHENTICATION STATE
     // =====================================================
 
-    // The app starts signed out.
-    //
-    // IMPORTANT:
-    //
-    // AppState does NOT automatically authenticate the user.
-    //
-    // LoginView must successfully validate credentials first.
-
     @Published var isAuthenticated: Bool = false
+
+    // =====================================================
+    // CURRENT USER
+    // =====================================================
+
+    // The currently authenticated user's email.
+    //
+    // The normalized email is used as the local
+    // unique user identifier.
+
+    @Published private(set) var currentUserEmail: String?
 
     // =====================================================
     // MAIN TAB NAVIGATION
@@ -95,19 +87,11 @@ final class AppState: ObservableObject {
     // MEMORY ENGINE
     // =====================================================
 
-    // Local AI-like memory generation.
-    //
-    // This allows RecalllQ to continue working even when
-    // the online AI service is unavailable.
-
     let memoryEngine: MemoryEngine
 
     // =====================================================
     // AI SERVICE
     // =====================================================
-
-    // Connects the iOS application to the RecalllQ
-    // FastAPI backend.
 
     let aiService: AIService
 
@@ -115,14 +99,11 @@ final class AppState: ObservableObject {
     // STUDY RECOMMENDATION SERVICE
     // =====================================================
 
-    let studyRecommendationService:
-        StudyRecommendationService
+    let studyRecommendationService: StudyRecommendationService
 
     // =====================================================
     // QUIZ API SERVICE
     // =====================================================
-
-    // Handles AI quiz generation through the backend.
 
     let quizAPIService: QuizAPIService
 
@@ -131,7 +112,6 @@ final class AppState: ObservableObject {
     // =====================================================
 
     @Published var isGeneratingQuiz: Bool = false
-
     @Published var quizGenerationError: String?
 
     // =====================================================
@@ -139,7 +119,6 @@ final class AppState: ObservableObject {
     // =====================================================
 
     @Published var isGeneratingMemory: Bool = false
-
     @Published var memoryGenerationError: String?
 
     // =====================================================
@@ -186,12 +165,9 @@ final class AppState: ObservableObject {
         // =================================================
 
         self.memoryEngine = MemoryEngine()
-
         self.aiService = AIService()
-
         self.studyRecommendationService =
             StudyRecommendationService()
-
         self.quizAPIService = QuizAPIService()
 
         // =================================================
@@ -273,23 +249,255 @@ final class AppState: ObservableObject {
     }
 
     // =====================================================
-    // CREATE MEMORY FROM NOTE
+    // LOGIN
     // =====================================================
 
-    // Converts a student's note into a structured RecalllQ
-    // memory.
-    //
-    // First attempt:
-    //
-    // iOS → AIService → FastAPI → OpenAI
-    //
-    // If OpenAI is unavailable:
-    //
-    // FastAPI → local fallback
-    //
-    // If the backend itself is unavailable:
-    //
-    // AIService → local MemoryEngine
+    func login(email: String) {
+
+        // =================================================
+        // CLEAN EMAIL
+        // =================================================
+
+        let cleanEmail = email
+            .trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+            .lowercased()
+
+        guard !cleanEmail.isEmpty else {
+
+            print("❌ Cannot login without an email.")
+
+            return
+        }
+
+        // =================================================
+        // IMPORTANT SECURITY STEP
+        // =================================================
+        //
+        // Remove the previous user's data from the active
+        // ViewModels before loading the new account.
+        //
+        // =================================================
+
+        clearAllUserData()
+
+        // =================================================
+        // SET CURRENT USER
+        // =================================================
+
+        currentUserEmail = cleanEmail
+
+        // =================================================
+        // SAVE CURRENT ACCOUNT
+        // =================================================
+
+        UserDefaults.standard.set(
+            cleanEmail,
+            forKey: "recalllq_account"
+        )
+
+        // =================================================
+        // LOAD USER-SPECIFIC NOTES
+        // =================================================
+
+        notesViewModel.switchUser(
+            userID: cleanEmail
+        )
+
+        // =================================================
+        // LOAD USER-SPECIFIC MEMORIES
+        // =================================================
+
+        memoryViewModel.switchUser(
+            to: cleanEmail
+        )
+
+        // =================================================
+        // LOAD USER-SPECIFIC FLASHCARDS
+        // =================================================
+
+        flashcardViewModel.switchUser(
+            to: cleanEmail
+        )
+
+        // =================================================
+        // LOAD USER-SPECIFIC QUIZZES
+        // =================================================
+
+        quizViewModel.switchUser(
+            to: cleanEmail
+        )
+
+        // =================================================
+        // LOAD USER-SPECIFIC STUDY SESSION DATA
+        // =================================================
+
+        studySessionViewModel.switchUser(
+            to: cleanEmail
+        )
+
+        // =================================================
+        // AUTHENTICATE
+        // =================================================
+
+        isAuthenticated = true
+
+        selectedTab = 0
+
+        // =================================================
+        // UPDATE RECOMMENDATIONS
+        // =================================================
+
+        generateStudyRecommendations()
+
+        // =================================================
+        // LOG
+        // =================================================
+
+        print("========================================")
+        print("✅ USER AUTHENTICATED")
+        print("========================================")
+        print("👤 Current user: \(cleanEmail)")
+        print("📝 User-specific notes loaded.")
+        print("🧠 User-specific memories loaded.")
+        print("🗂 User-specific flashcards loaded.")
+        print("❓ User-specific quizzes loaded.")
+        print("📊 User-specific study data loaded.")
+        print("🔐 Account storage: \(cleanEmail)")
+        print("➡️ MainTabView is now active.")
+        print("========================================")
+    }
+
+    // =====================================================
+    // CLEAR ALL USER DATA
+    // =====================================================
+
+    private func clearAllUserData() {
+
+        // =================================================
+        // NOTES
+        // =================================================
+
+        notesViewModel.clearCurrentUserData()
+
+        // =================================================
+        // MEMORIES
+        // =================================================
+
+        memoryViewModel.clearCurrentUserData()
+
+        // =================================================
+        // FLASHCARDS
+        // =================================================
+
+        flashcardViewModel.clearCurrentUserData()
+
+        // =================================================
+        // QUIZZES
+        // =================================================
+
+        quizViewModel.clearCurrentUserData()
+
+        // =================================================
+        // STUDY SESSIONS
+        // =================================================
+
+        studySessionViewModel.clearCurrentUserData()
+
+        // =================================================
+        // RECOMMENDATIONS
+        // =================================================
+
+        studyRecommendations = []
+
+        // =================================================
+        // AI STATES
+        // =================================================
+
+        isGeneratingMemory = false
+        memoryGenerationError = nil
+
+        isGeneratingQuiz = false
+        quizGenerationError = nil
+
+        // =================================================
+        // LOG
+        // =================================================
+
+        print(
+            "🧹 All previous user data cleared from memory."
+        )
+    }
+
+    // =====================================================
+    // LOGOUT
+    // =====================================================
+
+    func logout() {
+
+        // =================================================
+        // SAVE CURRENT USER'S DATA
+        // =================================================
+
+        if isAuthenticated {
+
+            notesViewModel.saveNotes()
+
+            memoryViewModel.save()
+
+            flashcardViewModel.save()
+
+            quizViewModel.save()
+
+            studySessionViewModel.save()
+        }
+
+        // =================================================
+        // CLEAR ALL USER DATA FROM MEMORY
+        // =================================================
+
+        clearAllUserData()
+
+        // =================================================
+        // CLEAR AUTHENTICATION
+        // =================================================
+
+        isAuthenticated = false
+
+        currentUserEmail = nil
+
+        // =================================================
+        // REMOVE ACTIVE ACCOUNT
+        // =================================================
+
+        UserDefaults.standard.removeObject(
+            forKey: "recalllq_account"
+        )
+
+        // =================================================
+        // RESET NAVIGATION
+        // =================================================
+
+        selectedTab = 0
+
+        // =================================================
+        // LOG
+        // =================================================
+
+        print("========================================")
+        print("👋 USER LOGGED OUT")
+        print("========================================")
+        print("🧹 User data removed from active memory.")
+        print("💾 Saved user files remain intact.")
+        print("🔐 Active account cleared.")
+        print("➡️ Returning to WelcomeView.")
+        print("========================================")
+    }
+
+    // =====================================================
+    // CREATE MEMORY FROM NOTE
+    // =====================================================
 
     func createMemoryFromNote(
         title: String,
@@ -343,6 +551,35 @@ final class AppState: ObservableObject {
         }
 
         // =================================================
+        // REQUIRE AUTHENTICATED USER
+        // =================================================
+
+        guard isAuthenticated,
+              let userID = currentUserEmail,
+              !userID.isEmpty else {
+
+            print(
+                "❌ Cannot create Memory: no authenticated user."
+            )
+
+            memoryGenerationError =
+                "Please sign in before creating learning content."
+
+            return
+        }
+
+        // =================================================
+        // MAKE SURE MEMORY VIEW MODEL IS USING CURRENT USER
+        // =================================================
+
+        if memoryViewModel.currentUserID != userID {
+
+            memoryViewModel.switchUser(
+                to: userID
+            )
+        }
+
+        // =================================================
         // RESET STATE
         // =================================================
 
@@ -360,13 +597,9 @@ final class AppState: ObservableObject {
                 print("========================================")
                 print("🤖 RECALLlQ AI MEMORY PIPELINE")
                 print("========================================")
-
+                print("👤 User: \(userID)")
                 print("Title: \(cleanedTitle)")
-
-                print(
-                    "Attempting AI memory generation..."
-                )
-
+                print("Attempting AI memory generation...")
                 print("========================================")
 
                 // =============================================
@@ -393,6 +626,22 @@ final class AppState: ObservableObject {
                         importance: aiResponse.importance,
                         source: "ai"
                     )
+
+                // =============================================
+                // VERIFY USER DID NOT CHANGE
+                // =============================================
+
+                guard currentUserEmail == userID,
+                      isAuthenticated else {
+
+                    print(
+                        "⚠️ User changed while AI memory was generating."
+                    )
+
+                    isGeneratingMemory = false
+
+                    return
+                }
 
                 // =============================================
                 // SAVE MEMORY
@@ -440,14 +689,13 @@ final class AppState: ObservableObject {
                 print("========================================")
                 print("✅ AI MEMORY CREATED")
                 print("========================================")
-
+                print("👤 User:", userID)
                 print("Memory:", memory.title)
                 print("Source:", memory.source)
                 print("Summary:", memory.summary)
                 print("Tags:", memory.tags)
                 print("Confidence:", memory.confidence)
                 print("Importance:", memory.importance)
-
                 print("========================================")
 
             } catch {
@@ -470,6 +718,22 @@ final class AppState: ObservableObject {
                 )
 
                 print("========================================")
+
+                // =============================================
+                // VERIFY USER DID NOT CHANGE
+                // =============================================
+
+                guard currentUserEmail == userID,
+                      isAuthenticated else {
+
+                    print(
+                        "⚠️ User changed while AI request was running."
+                    )
+
+                    isGeneratingMemory = false
+
+                    return
+                }
 
                 // =============================================
                 // LOCAL FALLBACK
@@ -518,11 +782,6 @@ final class AppState: ObservableObject {
                 // =============================================
 
                 isGeneratingMemory = false
-
-                // We do not display an error because the
-                // local fallback successfully created the
-                // memory.
-
                 memoryGenerationError = nil
 
                 // =============================================
@@ -532,14 +791,13 @@ final class AppState: ObservableObject {
                 print("========================================")
                 print("✅ LOCAL MEMORY CREATED")
                 print("========================================")
-
+                print("👤 User:", userID)
                 print("Memory:", memory.title)
                 print("Source:", memory.source)
                 print("Summary:", memory.summary)
                 print("Tags:", memory.tags)
                 print("Confidence:", memory.confidence)
                 print("Importance:", memory.importance)
-
                 print("========================================")
             }
         }
@@ -590,8 +848,6 @@ final class AppState: ObservableObject {
         _ memory: Memory
     ) {
 
-        // Check whether a flashcard already exists.
-
         if let existingFlashcard =
             flashcardViewModel.flashcardForMemory(
                 memory.id
@@ -605,13 +861,9 @@ final class AppState: ObservableObject {
 
         } else {
 
-            // Create a new flashcard.
-
             flashcardViewModel.createFromMemory(
                 memory
             )
-
-            // Try to find the newly created flashcard.
 
             if let newFlashcard =
                 flashcardViewModel.flashcardForMemory(
@@ -633,8 +885,6 @@ final class AppState: ObservableObject {
                 return
             }
         }
-
-        // Switch to Flashcards tab.
 
         selectedTab = 3
     }
@@ -661,6 +911,13 @@ final class AppState: ObservableObject {
     // =====================================================
 
     func generateStudyRecommendations() {
+
+        guard isAuthenticated else {
+
+            studyRecommendations = []
+
+            return
+        }
 
         studyRecommendations =
             studyRecommendationService.generateRecommendations(
@@ -779,7 +1036,6 @@ final class AppState: ObservableObject {
                     .shuffled()
 
                 return QuizQuestion(
-
                     memoryID:
                         flashcard.memoryID,
 
@@ -830,8 +1086,6 @@ final class AppState: ObservableObject {
         numberOfQuestions: Int = 5
     ) {
 
-        // Prevent multiple simultaneous requests.
-
         guard !isGeneratingQuiz else {
 
             print(
@@ -841,7 +1095,18 @@ final class AppState: ObservableObject {
             return
         }
 
-        // Limit the number of questions.
+        guard isAuthenticated,
+              let userID = currentUserEmail else {
+
+            print(
+                "❌ Cannot generate quiz: no authenticated user."
+            )
+
+            quizGenerationError =
+                "Please sign in before generating a quiz."
+
+            return
+        }
 
         let questionCount =
             max(
@@ -859,10 +1124,6 @@ final class AppState: ObservableObject {
 
             do {
 
-                // =============================================
-                // CALL QUIZ API
-                // =============================================
-
                 let questions =
                     try await quizAPIService.generateQuiz(
                         from: memory,
@@ -870,8 +1131,20 @@ final class AppState: ObservableObject {
                     )
 
                 // =============================================
-                // VALIDATE QUESTIONS
+                // VERIFY USER IS STILL LOGGED IN
                 // =============================================
+
+                guard isAuthenticated,
+                      currentUserEmail == userID else {
+
+                    print(
+                        "⚠️ User changed while quiz was generating."
+                    )
+
+                    isGeneratingQuiz = false
+
+                    return
+                }
 
                 guard !questions.isEmpty else {
 
@@ -891,7 +1164,7 @@ final class AppState: ObservableObject {
                 )
 
                 // =============================================
-                // FIND QUIZ
+                // FIND CREATED QUIZ
                 // =============================================
 
                 guard let quiz =
@@ -916,10 +1189,6 @@ final class AppState: ObservableObject {
                 quizGenerationError = nil
 
             } catch {
-
-                // =============================================
-                // QUIZ GENERATION FAILED
-                // =============================================
 
                 print("========================================")
                 print("❌ AI QUIZ GENERATION FAILED")
@@ -1014,65 +1283,5 @@ final class AppState: ObservableObject {
             from: memory,
             numberOfQuestions: 5
         )
-    }
-
-    // =====================================================
-    // AUTHENTICATION
-    // =====================================================
-    //
-    // IMPORTANT:
-    //
-    // AppState does NOT validate credentials.
-    //
-    // AuthenticationViewModel is responsible for:
-    //
-    // - Email validation
-    // - Password validation
-    // - Account lookup
-    // - Credential verification
-    //
-    // ONLY AFTER AuthenticationViewModel succeeds should
-    // LoginView call:
-    //
-    //     appState.login()
-    //
-    // =====================================================
-
-    func login() {
-
-        isAuthenticated = true
-
-        selectedTab = 0
-
-        print("========================================")
-        print("✅ USER AUTHENTICATED")
-        print("========================================")
-
-        print(
-            "➡️ MainTabView is now active."
-        )
-
-        print("========================================")
-    }
-
-    // =====================================================
-    // LOGOUT
-    // =====================================================
-
-    func logout() {
-
-        isAuthenticated = false
-
-        selectedTab = 0
-
-        print("========================================")
-        print("👋 USER LOGGED OUT")
-        print("========================================")
-
-        print(
-            "➡️ Returning to WelcomeView."
-        )
-
-        print("========================================")
     }
 }

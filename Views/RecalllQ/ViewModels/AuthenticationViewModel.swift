@@ -8,27 +8,27 @@ import Combine
 // PURPOSE:
 // Controls RecalllQ authentication.
 //
-// FEATURES:
-// - Login
-// - Create Account
-// - Logout
-// - Forgot Password
-// - Authentication state
-// - Form validation
-// - Email validation
-// - Password validation
-// - Local account storage
-// - Error messages
-// - Success messages
-//
 // IMPORTANT:
-// This version uses local authentication for development.
+// Each account now has:
+// - Unique user ID
+// - Name
+// - Email
+// - Password
 //
-// Later, the same ViewModel can be connected to:
-// - Firebase Authentication
-// - RecalllQ API
-// - Secure token authentication
+// This allows RecalllQ to keep each user's:
+// - Notes
+// - Memories
+// - Flashcards
+// - Quizzes
+// - Study sessions
 //
+// completely separate.
+//
+// NOTE:
+// This is still LOCAL DEVELOPMENT authentication.
+// Passwords are stored locally for development only.
+// For production, use Firebase/Auth API + secure
+// password/token handling.
 // =====================================================
 
 @MainActor
@@ -41,6 +41,16 @@ final class AuthenticationViewModel: ObservableObject {
     @Published var isAuthenticated: Bool = false
 
     @Published var isLoading: Bool = false
+
+    // =====================================================
+    // CURRENT USER
+    // =====================================================
+
+    @Published private(set) var currentUserID: String?
+
+    @Published private(set) var currentUserName: String = ""
+
+    @Published private(set) var currentUserEmail: String = ""
 
     // =====================================================
     // FORM DATA
@@ -63,14 +73,39 @@ final class AuthenticationViewModel: ObservableObject {
     @Published var successMessage: String?
 
     // =====================================================
-    // STORAGE KEYS
+    // STORAGE
     // =====================================================
 
-    private let accountKey = "recalllq_account"
+    // All local development accounts are stored in one
+    // dictionary.
+    //
+    // Email → Account
+    //
+    // Each Account contains its own UUID.
+    // =====================================================
 
-    private let passwordKey = "recalllq_password"
+    private let accountsKey = "recalllq_accounts"
+
+    private let currentUserIDKey = "recalllq_current_user_id"
 
     private let loggedInKey = "recalllq_logged_in"
+
+    // =====================================================
+    // ACCOUNT MODEL
+    // =====================================================
+
+    private struct LocalAccount: Codable {
+
+        let id: UUID
+
+        let name: String
+
+        let email: String
+
+        let password: String
+
+        let createdAt: Date
+    }
 
     // =====================================================
     // INIT
@@ -78,14 +113,38 @@ final class AuthenticationViewModel: ObservableObject {
 
     init() {
 
-        // IMPORTANT:
-        // We restore authentication only when the persisted
-        // login state is actually true.
+        let loggedIn = UserDefaults.standard.bool(
+            forKey: loggedInKey
+        )
 
-        isAuthenticated =
-            UserDefaults.standard.bool(
-                forKey: loggedInKey
-            )
+        isAuthenticated = loggedIn
+
+        // -------------------------------------------------
+        // RESTORE CURRENT USER
+        // -------------------------------------------------
+
+        if loggedIn,
+           let savedUserID = UserDefaults.standard.string(
+                forKey: currentUserIDKey
+           ),
+           let uuid = UUID(uuidString: savedUserID) {
+
+            currentUserID = uuid.uuidString
+
+            // Load account information
+            if let account = findAccount(
+                userID: uuid.uuidString
+            ) {
+
+                currentUserName = account.name
+
+                currentUserEmail = account.email
+            } else {
+
+                // Account no longer exists.
+                clearCurrentSession()
+            }
+        }
     }
 
     // =====================================================
@@ -156,54 +215,60 @@ final class AuthenticationViewModel: ObservableObject {
         }
 
         // -------------------------------------------------
-        // CHECK FOR EXISTING ACCOUNT
+        // LOAD EXISTING ACCOUNTS
         // -------------------------------------------------
 
-        if let existingEmail =
-            UserDefaults.standard.string(
-                forKey: accountKey
-            ) {
+        var accounts = loadAccounts()
 
-            if existingEmail
-                .localizedCaseInsensitiveCompare(
+        // -------------------------------------------------
+        // CHECK DUPLICATE EMAIL
+        // -------------------------------------------------
+
+        let emailAlreadyExists =
+            accounts.values.contains {
+
+                $0.email.localizedCaseInsensitiveCompare(
                     cleanEmail
-                ) == .orderedSame {
-
-                errorMessage =
-                    "An account with this email already exists."
-
-                return
+                ) == .orderedSame
             }
+
+        guard !emailAlreadyExists else {
+
+            errorMessage =
+                "An account with this email already exists."
+
+            return
         }
 
         // -------------------------------------------------
-        // CREATE ACCOUNT
+        // CREATE UNIQUE USER ID
         // -------------------------------------------------
 
-        isLoading = true
+        let newUserID = UUID()
 
-        // Save email
-        UserDefaults.standard.set(
-            cleanEmail,
-            forKey: accountKey
+        let account = LocalAccount(
+            id: newUserID,
+            name: cleanName,
+            email: cleanEmail,
+            password: password,
+            createdAt: Date()
         )
 
-        // Save password for local development authentication
-        UserDefaults.standard.set(
-            password,
-            forKey: passwordKey
+        // -------------------------------------------------
+        // SAVE ACCOUNT
+        // -------------------------------------------------
+
+        accounts[newUserID.uuidString] = account
+
+        saveAccounts(accounts)
+
+        // -------------------------------------------------
+        // START USER SESSION
+        // -------------------------------------------------
+
+        setCurrentUser(
+            account
         )
-
-        // Mark user as logged in
-        UserDefaults.standard.set(
-            true,
-            forKey: loggedInKey
-        )
-
-        // Update current authentication state
-        isAuthenticated = true
-
-        isLoading = false
 
         successMessage =
             "Account created successfully."
@@ -225,6 +290,10 @@ final class AuthenticationViewModel: ObservableObject {
         )
 
         print(
+            "User ID: \(newUserID.uuidString)"
+        )
+
+        print(
             "========================================"
         )
     }
@@ -235,22 +304,13 @@ final class AuthenticationViewModel: ObservableObject {
 
     func login() {
 
-        // -------------------------------------------------
-        // ALWAYS RESET OLD MESSAGES
-        // -------------------------------------------------
-
         clearMessages()
 
         // -------------------------------------------------
-        // IMPORTANT:
-        // Do NOT assume the user is authenticated.
+        // RESET AUTHENTICATION STATE
         // -------------------------------------------------
 
         isAuthenticated = false
-
-        // -------------------------------------------------
-        // CLEAN EMAIL
-        // -------------------------------------------------
 
         let cleanEmail =
             email.trimmingCharacters(
@@ -291,30 +351,23 @@ final class AuthenticationViewModel: ObservableObject {
         }
 
         // -------------------------------------------------
-        // CHECK WHETHER ACCOUNT EXISTS
+        // LOAD ALL ACCOUNTS
         // -------------------------------------------------
 
-        guard
-            let savedEmail =
-                UserDefaults.standard.string(
-                    forKey: accountKey
-                )
-        else {
-
-            errorMessage =
-                "No account found. Please create an account first."
-
-            return
-        }
+        let accounts = loadAccounts()
 
         // -------------------------------------------------
-        // CHECK EMAIL
+        // FIND ACCOUNT BY EMAIL
         // -------------------------------------------------
 
-        guard
-            savedEmail.localizedCaseInsensitiveCompare(
-                cleanEmail
-            ) == .orderedSame
+        guard let account =
+            accounts.values.first(
+                where: {
+                    $0.email.localizedCaseInsensitiveCompare(
+                        cleanEmail
+                    ) == .orderedSame
+                }
+            )
         else {
 
             errorMessage =
@@ -324,27 +377,10 @@ final class AuthenticationViewModel: ObservableObject {
         }
 
         // -------------------------------------------------
-        // CHECK SAVED PASSWORD
-        // -------------------------------------------------
-
-        guard
-            let savedPassword =
-                UserDefaults.standard.string(
-                    forKey: passwordKey
-                )
-        else {
-
-            errorMessage =
-                "No password is associated with this account."
-
-            return
-        }
-
-        // -------------------------------------------------
         // CHECK PASSWORD
         // -------------------------------------------------
 
-        guard password == savedPassword else {
+        guard password == account.password else {
 
             errorMessage =
                 "The email or password is incorrect."
@@ -358,12 +394,9 @@ final class AuthenticationViewModel: ObservableObject {
 
         isLoading = true
 
-        UserDefaults.standard.set(
-            true,
-            forKey: loggedInKey
+        setCurrentUser(
+            account
         )
-
-        isAuthenticated = true
 
         isLoading = false
 
@@ -379,7 +412,15 @@ final class AuthenticationViewModel: ObservableObject {
         )
 
         print(
-            "Email: \(cleanEmail)"
+            "Name: \(account.name)"
+        )
+
+        print(
+            "Email: \(account.email)"
+        )
+
+        print(
+            "User ID: \(account.id.uuidString)"
         )
 
         print(
@@ -393,36 +434,21 @@ final class AuthenticationViewModel: ObservableObject {
 
     func logout() {
 
-        // -------------------------------------------------
-        // CLEAR LOGIN STATE
-        // -------------------------------------------------
+        clearMessages()
 
-        UserDefaults.standard.set(
-            false,
-            forKey: loggedInKey
-        )
-
-        // -------------------------------------------------
-        // UPDATE VIEWMODEL STATE
-        // -------------------------------------------------
-
-        isAuthenticated = false
+        clearCurrentSession()
 
         // -------------------------------------------------
         // CLEAR FORM
         // -------------------------------------------------
+
+        name = ""
 
         email = ""
 
         password = ""
 
         confirmPassword = ""
-
-        // -------------------------------------------------
-        // CLEAR MESSAGES
-        // -------------------------------------------------
-
-        clearMessages()
 
         print(
             "========================================"
@@ -433,7 +459,7 @@ final class AuthenticationViewModel: ObservableObject {
         )
 
         print(
-            "🔐 Persisted login state cleared."
+            "🔐 Current user session cleared."
         )
 
         print(
@@ -479,28 +505,15 @@ final class AuthenticationViewModel: ObservableObject {
         // CHECK ACCOUNT
         // -------------------------------------------------
 
-        guard
-            let savedEmail =
-                UserDefaults.standard.string(
-                    forKey: accountKey
-                )
-        else {
+        let accounts = loadAccounts()
 
-            errorMessage =
-                "No RecalllQ account was found."
-
-            return
-        }
-
-        // -------------------------------------------------
-        // CHECK EMAIL
-        // -------------------------------------------------
-
-        guard
-            savedEmail.localizedCaseInsensitiveCompare(
-                cleanEmail
-            ) == .orderedSame
-        else {
+        guard accounts.values.contains(
+            where: {
+                $0.email.localizedCaseInsensitiveCompare(
+                    cleanEmail
+                ) == .orderedSame
+            }
+        ) else {
 
             errorMessage =
                 "No account was found with this email."
@@ -518,6 +531,136 @@ final class AuthenticationViewModel: ObservableObject {
         print(
             "📧 Password reset requested for \(cleanEmail)"
         )
+    }
+
+    // =====================================================
+    // CURRENT USER SETUP
+    // =====================================================
+
+    private func setCurrentUser(
+        _ account: LocalAccount
+    ) {
+
+        currentUserID =
+            account.id.uuidString
+
+        currentUserName =
+            account.name
+
+        currentUserEmail =
+            account.email
+
+        UserDefaults.standard.set(
+            account.id.uuidString,
+            forKey: currentUserIDKey
+        )
+
+        UserDefaults.standard.set(
+            true,
+            forKey: loggedInKey
+        )
+
+        isAuthenticated = true
+    }
+
+    // =====================================================
+    // CLEAR CURRENT SESSION
+    // =====================================================
+
+    private func clearCurrentSession() {
+
+        currentUserID = nil
+
+        currentUserName = ""
+
+        currentUserEmail = ""
+
+        UserDefaults.standard.set(
+            false,
+            forKey: loggedInKey
+        )
+
+        UserDefaults.standard.removeObject(
+            forKey: currentUserIDKey
+        )
+
+        isAuthenticated = false
+    }
+
+    // =====================================================
+    // LOAD ACCOUNTS
+    // =====================================================
+
+    private func loadAccounts()
+        -> [String: LocalAccount] {
+
+        guard let data =
+            UserDefaults.standard.data(
+                forKey: accountsKey
+            )
+        else {
+
+            return [:]
+        }
+
+        do {
+
+            return try JSONDecoder().decode(
+                [String: LocalAccount].self,
+                from: data
+            )
+
+        } catch {
+
+            print(
+                "⚠️ Could not load accounts:",
+                error.localizedDescription
+            )
+
+            return [:]
+        }
+    }
+
+    // =====================================================
+    // SAVE ACCOUNTS
+    // =====================================================
+
+    private func saveAccounts(
+        _ accounts: [String: LocalAccount]
+    ) {
+
+        do {
+
+            let data =
+                try JSONEncoder().encode(
+                    accounts
+                )
+
+            UserDefaults.standard.set(
+                data,
+                forKey: accountsKey
+            )
+
+        } catch {
+
+            print(
+                "❌ Could not save accounts:",
+                error.localizedDescription
+            )
+        }
+    }
+
+    // =====================================================
+    // FIND ACCOUNT BY USER ID
+    // =====================================================
+
+    private func findAccount(
+        userID: String
+    ) -> LocalAccount? {
+
+        let accounts = loadAccounts()
+
+        return accounts[userID]
     }
 
     // =====================================================

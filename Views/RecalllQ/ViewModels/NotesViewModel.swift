@@ -8,18 +8,15 @@ import Combine
 // PURPOSE:
 // Manages all note-related operations for RecalllQ.
 //
-// FEATURES:
-// - Create notes
-// - Edit notes
-// - Delete notes
-// - Undo delete
-// - Pin / unpin notes
-// - Search notes
-// - Save notes locally
-// - Load notes locally
-// - Schedule study reminders
-// - Cancel reminders
-// - Create AI memories
+// USER DATA ISOLATION:
+// Each authenticated user receives a separate storage key.
+//
+// Example:
+//
+// User A → saved_notes_userA
+// User B → saved_notes_userB
+//
+// Therefore users cannot load each other's notes.
 // =====================================================
 
 final class NotesViewModel: ObservableObject {
@@ -29,7 +26,6 @@ final class NotesViewModel: ObservableObject {
     // =====================================================
 
     @Published var notes: [Note] = []
-
     @Published var searchText: String = ""
 
     // =====================================================
@@ -42,7 +38,48 @@ final class NotesViewModel: ObservableObject {
     // STORAGE
     // =====================================================
 
-    private let storageKey = "saved_notes"
+    // Base key only.
+    //
+    // The actual key is created using the current user's
+    // unique identifier.
+    private let storageKeyPrefix = "saved_notes_"
+
+    // =====================================================
+    // CURRENT USER
+    // =====================================================
+
+    // The account email is currently being used as the
+    // unique identifier for local development.
+    //
+    // Later, when Firebase/API authentication is connected,
+    // this can become the backend user ID.
+
+    private var currentUserID: String? {
+
+        guard
+            let email = UserDefaults.standard.string(
+                forKey: "recalllq_account"
+            ),
+            !email.isEmpty
+        else {
+            return nil
+        }
+
+        return makeSafeUserID(email)
+    }
+
+    // =====================================================
+    // USER-SPECIFIC STORAGE KEY
+    // =====================================================
+
+    private var storageKey: String? {
+
+        guard let userID = currentUserID else {
+            return nil
+        }
+
+        return storageKeyPrefix + userID
+    }
 
     // =====================================================
     // APP STATE
@@ -61,7 +98,161 @@ final class NotesViewModel: ObservableObject {
     // =====================================================
 
     init() {
+
+        // IMPORTANT:
+        // We intentionally do NOT load a generic shared
+        // "saved_notes" key.
+        //
+        // Notes are always loaded for the authenticated user.
+
         loadNotes()
+    }
+
+    // =====================================================
+    // SWITCH USER
+    // =====================================================
+    // IMPORTANT FOR ISSUE #69
+    //
+    // This method is called when:
+    //
+    // 1. A user signs in
+    // 2. A new account is created
+    // 3. A different user signs in
+    // 4. A user signs out
+    //
+    // It clears the previous user's notes from memory
+    // before loading the new user's notes.
+    // =====================================================
+
+    func switchUser(userID: String?) {
+
+        print("========================================")
+        print("🔄 SWITCHING NOTES USER")
+        print("========================================")
+
+        // -------------------------------------------------
+        // STEP 1: Clear previous user's UI data
+        // -------------------------------------------------
+
+        notes = []
+        searchText = ""
+        lastDeletedNote = nil
+
+        print("🧹 Previous user's notes cleared from UI.")
+
+        // -------------------------------------------------
+        // STEP 2: Handle logout
+        // -------------------------------------------------
+
+        guard let userID = userID, !userID.isEmpty else {
+
+            UserDefaults.standard.removeObject(
+                forKey: "recalllq_account"
+            )
+
+            print("🚪 No active user.")
+            print("📚 Notes cleared.")
+
+            print("========================================")
+
+            return
+        }
+
+        // -------------------------------------------------
+        // STEP 3: Set the active account
+        // -------------------------------------------------
+
+        UserDefaults.standard.set(
+            userID,
+            forKey: "recalllq_account"
+        )
+
+        UserDefaults.standard.synchronize()
+
+        print("👤 Active account changed.")
+        print("Account: \(userID)")
+
+        // -------------------------------------------------
+        // STEP 4: Load ONLY the new user's notes
+        // -------------------------------------------------
+
+        loadNotes()
+
+        print(
+            "📚 Loaded \(notes.count) notes for new user."
+        )
+
+        print("========================================")
+    }
+
+    // =====================================================
+    // CREATE USER-SAFE ID
+    // =====================================================
+
+    private func makeSafeUserID(_ email: String) -> String {
+
+        email
+            .lowercased()
+            .trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+            .replacingOccurrences(
+                of: "@",
+                with: "_"
+            )
+            .replacingOccurrences(
+                of: ".",
+                with: "_"
+            )
+            .replacingOccurrences(
+                of: " ",
+                with: "_"
+            )
+    }
+
+    // =====================================================
+    // LOAD DATA FOR CURRENT USER
+    // =====================================================
+
+    func loadCurrentUserData() {
+
+        print("========================================")
+        print("👤 LOADING USER NOTES")
+        print("========================================")
+
+        guard currentUserID != nil else {
+
+            print("ℹ️ No authenticated user found.")
+
+            notes = []
+            searchText = ""
+            lastDeletedNote = nil
+
+            return
+        }
+
+        loadNotes()
+
+        print(
+            "📚 Loaded \(notes.count) notes for current user."
+        )
+
+        print("========================================")
+    }
+
+    // =====================================================
+    // CLEAR CURRENT USER DATA FROM MEMORY
+    // =====================================================
+
+    func clearCurrentUserData() {
+
+        notes = []
+        searchText = ""
+        lastDeletedNote = nil
+
+        print(
+            "🧹 Current user's notes cleared from memory."
+        )
     }
 
     // =====================================================
@@ -83,7 +274,22 @@ final class NotesViewModel: ObservableObject {
         )
 
         guard !cleanTitle.isEmpty || !cleanContent.isEmpty else {
+
             print("❌ Cannot create empty note.")
+
+            return
+        }
+
+        // IMPORTANT:
+        // Do not allow notes to be created without
+        // an authenticated account.
+
+        guard currentUserID != nil else {
+
+            print(
+                "❌ Cannot create note: no authenticated user."
+            )
+
             return
         }
 
@@ -94,24 +300,35 @@ final class NotesViewModel: ObservableObject {
             reminderDate: reminderDate
         )
 
-        notes.insert(note, at: 0)
+        notes.insert(
+            note,
+            at: 0
+        )
 
         saveNotes()
 
-        // Create AI memory
+        // =================================================
+        // CREATE AI MEMORY
+        // =================================================
+
         appState?.createMemoryFromNote(
             title: cleanTitle,
             content: cleanContent
         )
 
-        // Schedule reminder
+        // =================================================
+        // SCHEDULE REMINDER
+        // =================================================
+
         if let date = reminderDate,
            date > Date() {
 
             notificationService.requestPermission()
 
             notificationService.scheduleNotification(
-                id: notificationID(for: note),
+                id: notificationID(
+                    for: note
+                ),
                 title: "📚 RecalllQ Study Reminder",
                 body: cleanTitle.isEmpty
                     ? "Time to review your study notes."
@@ -122,6 +339,7 @@ final class NotesViewModel: ObservableObject {
 
         print("✅ Note created.")
         print("Title: \(cleanTitle)")
+        print("User: \(currentUserID ?? "Unknown")")
         print("Total notes: \(notes.count)")
     }
 
@@ -141,6 +359,16 @@ final class NotesViewModel: ObservableObject {
         ) else {
 
             print("❌ Note not found.")
+
+            return
+        }
+
+        guard currentUserID != nil else {
+
+            print(
+                "❌ Cannot update note: no authenticated user."
+            )
+
             return
         }
 
@@ -155,6 +383,7 @@ final class NotesViewModel: ObservableObject {
         guard !cleanTitle.isEmpty || !cleanContent.isEmpty else {
 
             print("❌ Cannot save an empty note.")
+
             return
         }
 
@@ -227,25 +456,33 @@ final class NotesViewModel: ObservableObject {
         ) else {
 
             print("❌ Could not delete note.")
+
+            return
+        }
+
+        guard currentUserID != nil else {
+
+            print(
+                "❌ Cannot delete note: no authenticated user."
+            )
+
             return
         }
 
         let deletedNote = notes[index]
 
-        // Save for undo
         lastDeletedNote = deletedNote
 
-        // Cancel reminder
         notificationService.cancelNotification(
             id: notificationID(
                 for: deletedNote
             )
         )
 
-        // Remove note
-        notes.remove(at: index)
+        notes.remove(
+            at: index
+        )
 
-        // Save
         saveNotes()
 
         print("🗑️ Note deleted.")
@@ -262,16 +499,28 @@ final class NotesViewModel: ObservableObject {
         guard let note = lastDeletedNote else {
 
             print("ℹ️ Nothing to restore.")
+
             return
         }
 
-        notes.insert(note, at: 0)
+        guard currentUserID != nil else {
+
+            print(
+                "❌ Cannot restore note: no authenticated user."
+            )
+
+            return
+        }
+
+        notes.insert(
+            note,
+            at: 0
+        )
 
         lastDeletedNote = nil
 
         saveNotes()
 
-        // Restore reminder
         if let date = note.reminderDate,
            date > Date() {
 
@@ -312,19 +561,28 @@ final class NotesViewModel: ObservableObject {
         ) else {
 
             print("❌ Note not found.")
+
+            return
+        }
+
+        guard currentUserID != nil else {
+
+            print(
+                "❌ Cannot change pin: no authenticated user."
+            )
+
             return
         }
 
         notes[index].isPinned.toggle()
-
         notes[index].updatedAt = Date()
 
         saveNotes()
 
         print(
             notes[index].isPinned
-            ? "📌 Note pinned."
-            : "📌 Note unpinned."
+                ? "📌 Note pinned."
+                : "📌 Note unpinned."
         )
     }
 
@@ -333,6 +591,15 @@ final class NotesViewModel: ObservableObject {
     // =====================================================
 
     func deleteAllNotes() {
+
+        guard currentUserID != nil else {
+
+            print(
+                "❌ Cannot delete notes: no authenticated user."
+            )
+
+            return
+        }
 
         for note in notes {
 
@@ -378,9 +645,6 @@ final class NotesViewModel: ObservableObject {
             }
         }
 
-        // Pinned notes first
-        // Newest updated notes second
-
         return filtered.sorted {
 
             if $0.isPinned != $1.isPinned {
@@ -397,6 +661,7 @@ final class NotesViewModel: ObservableObject {
     // =====================================================
 
     var totalNotes: Int {
+
         notes.count
     }
 
@@ -439,16 +704,33 @@ final class NotesViewModel: ObservableObject {
 
     func saveNotes() {
 
+        guard let storageKey = storageKey else {
+
+            print(
+                "⚠️ Notes not saved: no authenticated user."
+            )
+
+            return
+        }
+
         do {
 
-            let data = try JSONEncoder().encode(notes)
+            let data = try JSONEncoder().encode(
+                notes
+            )
 
             UserDefaults.standard.set(
                 data,
                 forKey: storageKey
             )
 
-            print("💾 Saved \(notes.count) notes.")
+            print(
+                "💾 Saved \(notes.count) notes."
+            )
+
+            print(
+                "🔐 Storage key: \(storageKey)"
+            )
 
         } catch {
 
@@ -464,11 +746,35 @@ final class NotesViewModel: ObservableObject {
 
     private func loadNotes() {
 
-        guard let data = UserDefaults.standard.data(
-            forKey: storageKey
-        ) else {
+        guard let storageKey = storageKey else {
 
-            print("ℹ️ No saved notes found.")
+            print(
+                "ℹ️ No authenticated user. Notes not loaded."
+            )
+
+            notes = []
+
+            return
+        }
+
+        guard let data =
+                UserDefaults.standard.data(
+                    forKey: storageKey
+                )
+        else {
+
+            // IMPORTANT:
+            // A missing key means this is likely a new user.
+            //
+            // We DO NOT load another user's notes.
+            // We simply start with an empty collection.
+
+            print(
+                "🆕 No saved notes found for current user."
+            )
+
+            notes = []
+
             return
         }
 
@@ -480,7 +786,7 @@ final class NotesViewModel: ObservableObject {
             )
 
             print(
-                "✅ Loaded \(notes.count) notes."
+                "✅ Loaded \(notes.count) notes for current user."
             )
 
         } catch {
@@ -488,7 +794,8 @@ final class NotesViewModel: ObservableObject {
             print(
                 "❌ Could not load notes: \(error)"
             )
+
+            notes = []
         }
     }
 }
-

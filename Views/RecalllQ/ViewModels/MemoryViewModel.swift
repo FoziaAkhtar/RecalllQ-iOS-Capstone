@@ -7,20 +7,38 @@ import Combine
 // VIEWMODEL: MemoryViewModel
 // =====================================================
 // PURPOSE:
+//
 // - Manages memory state
 // - Handles memory creation
 // - Handles memory deletion
 // - Handles search and category filtering
 // - Generates personalized study recommendations
 // - Handles memory persistence
+// - Supports USER-SPECIFIC memory isolation
 //
-// AI processing is handled by:
-// MemoryEngine
+// IMPORTANT:
 //
-// Storage is handled by:
-// MemoryStorageService
+// Each authenticated user gets their own:
+//
+// MemoryStorageService(userID: userID)
+//
+// Example:
+//
+// Student A
+//     ↓
+// MemoryStorageService(userID: "studentA@email.com")
+//     ↓
+// memories_<studentA>.json
+//
+// Student B
+//     ↓
+// MemoryStorageService(userID: "studentB@email.com")
+//     ↓
+// memories_<studentB>.json
+//
 // =====================================================
 
+@MainActor
 final class MemoryViewModel: ObservableObject {
 
     // =====================================================
@@ -30,38 +48,196 @@ final class MemoryViewModel: ObservableObject {
     @Published var memories: [Memory] = []
 
     // =====================================================
-    // SEARCH STATE
+    // SEARCH
     // =====================================================
 
     @Published var searchText: String = ""
 
     // =====================================================
-    // SELECTED CATEGORY
+    // CATEGORY
     // =====================================================
 
     @Published var selectedTag: String = "all"
 
     // =====================================================
-    // PERSONALIZED STUDY SUGGESTIONS
+    // PERSONALIZED SUGGESTIONS
     // =====================================================
 
     @Published var suggestedMemories: [Memory] = []
 
     // =====================================================
-    // SERVICES
+    // CURRENT USER
     // =====================================================
 
-    private let storage = MemoryStorageService()
+    @Published private(set) var currentUserID: String?
+
+    // =====================================================
+    // USER-SPECIFIC STORAGE
+    // =====================================================
+
+    private var storage: MemoryStorageService?
+
+    // =====================================================
+    // LOCAL MEMORY ENGINE
+    // =====================================================
 
     private let engine = MemoryEngine()
 
     // =====================================================
-    // INITIALIZATION
+    // INIT
     // =====================================================
 
     init() {
 
+        // IMPORTANT:
+        //
+        // Do NOT load any memories here.
+        //
+        // At this point there may not be an authenticated
+        // user.
+        //
+        // Memories are loaded only after:
+        //
+        // switchUser(to: userID)
+        //
+
+        currentUserID = nil
+        storage = nil
+
+        memories = []
+        suggestedMemories = []
+
+        print("🧠 MemoryViewModel initialized with no user.")
+    }
+
+    // =====================================================
+    // SWITCH USER
+    // =====================================================
+    //
+    // This is the most important method for data isolation.
+    //
+    // When Student B logs in:
+    //
+    // 1. Student A's memories are removed from memory.
+    // 2. Student A's storage reference is removed.
+    // 3. Student B becomes current user.
+    // 4. Student B's storage is created.
+    // 5. ONLY Student B's memories are loaded.
+    //
+    // =====================================================
+
+    func switchUser(to userID: String) {
+
+        let cleanUserID = userID
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+
+        // -------------------------------------------------
+        // SECURITY CHECK
+        // -------------------------------------------------
+
+        guard !cleanUserID.isEmpty else {
+
+            print(
+                "❌ MemoryViewModel cannot switch to empty user ID."
+            )
+
+            clearCurrentUserData()
+
+            return
+        }
+
+        // -------------------------------------------------
+        // IMPORTANT:
+        //
+        // Always clear the previous user's data BEFORE
+        // loading another user's data.
+        // -------------------------------------------------
+
+        memories = []
+        suggestedMemories = []
+
+        searchText = ""
+        selectedTag = "all"
+
+        // -------------------------------------------------
+        // Remove old storage reference.
+        // -------------------------------------------------
+
+        storage = nil
+
+        // -------------------------------------------------
+        // Set new current user.
+        // -------------------------------------------------
+
+        currentUserID = cleanUserID
+
+        // -------------------------------------------------
+        // Create NEW storage for this user.
+        // -------------------------------------------------
+
+        storage = MemoryStorageService(
+            userID: cleanUserID
+        )
+
+        print("========================================")
+        print("🔄 MEMORY USER SWITCH")
+        print("========================================")
+        print("👤 New user: \(cleanUserID)")
+        print("🧹 Previous memory data cleared.")
+        print("📁 Creating user-specific memory storage.")
+        print("========================================")
+
+        // -------------------------------------------------
+        // Load ONLY this user's memories.
+        // -------------------------------------------------
+
         loadMemories()
+
+        print("========================================")
+        print("✅ MEMORY USER SWITCH COMPLETE")
+        print("========================================")
+        print("👤 User: \(cleanUserID)")
+        print("📚 Memories loaded: \(memories.count)")
+        print("========================================")
+    }
+
+    // =====================================================
+    // CLEAR CURRENT USER DATA
+    // =====================================================
+    //
+    // IMPORTANT:
+    //
+    // This clears the ViewModel only.
+    //
+    // It does NOT delete the user's saved memories.
+    //
+    // Therefore:
+    //
+    // Student A logs out
+    // ↓
+    // Student A data removed from memory
+    //
+    // Student A logs in again
+    // ↓
+    // Student A's saved memories return.
+    //
+    // =====================================================
+
+    func clearCurrentUserData() {
+
+        memories = []
+        suggestedMemories = []
+
+        searchText = ""
+        selectedTag = "all"
+
+        currentUserID = nil
+        storage = nil
+
+        print("========================================")
+        print("🧹 MEMORY DATA CLEARED FROM MEMORY")
+        print("========================================")
     }
 
     // =====================================================
@@ -73,66 +249,112 @@ final class MemoryViewModel: ObservableObject {
         content: String
     ) {
 
-        let cleanTitle =
-            title.trimmingCharacters(
-                in: .whitespacesAndNewlines
+        // -------------------------------------------------
+        // REQUIRE USER
+        // -------------------------------------------------
+
+        guard let userID = currentUserID else {
+
+            print(
+                "❌ Cannot add memory: no authenticated user."
             )
 
-        let cleanContent =
-            content.trimmingCharacters(
-                in: .whitespacesAndNewlines
-            )
-
-        // ---------------------------------------------
-        // Prevent empty memories
-        // ---------------------------------------------
-
-        guard
-            !cleanTitle.isEmpty ||
-            !cleanContent.isEmpty
-        else {
             return
         }
 
-        // ---------------------------------------------
-        // Generate structured memory
-        // ---------------------------------------------
+        // -------------------------------------------------
+        // REQUIRE STORAGE
+        // -------------------------------------------------
 
-        let memory =
-            engine.generateMemory(
-                from: cleanTitle,
-                content: cleanContent
+        guard storage != nil else {
+
+            print(
+                "❌ Cannot add memory: user storage is unavailable."
             )
 
-        // ---------------------------------------------
-        // Add newest memory to the top
-        // ---------------------------------------------
+            return
+        }
+
+        // -------------------------------------------------
+        // CLEAN INPUT
+        // -------------------------------------------------
+
+        let cleanTitle = title
+            .trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+
+        let cleanContent = content
+            .trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+
+        // -------------------------------------------------
+        // VALIDATION
+        // -------------------------------------------------
+
+        guard !cleanTitle.isEmpty ||
+                !cleanContent.isEmpty else {
+
+            print(
+                "❌ Cannot add empty memory."
+            )
+
+            return
+        }
+
+        // -------------------------------------------------
+        // CREATE MEMORY
+        // -------------------------------------------------
+
+        let memory = engine.generateMemory(
+            from: cleanTitle,
+            content: cleanContent
+        )
+
+        // -------------------------------------------------
+        // ADD TO CURRENT USER'S MEMORY ARRAY
+        // -------------------------------------------------
 
         memories.insert(
             memory,
             at: 0
         )
 
-        // ---------------------------------------------
-        // Persist
-        // ---------------------------------------------
+        // -------------------------------------------------
+        // SAVE TO CURRENT USER'S STORAGE
+        // -------------------------------------------------
 
         save()
 
-        // ---------------------------------------------
-        // Refresh personalized recommendations
-        // ---------------------------------------------
+        // -------------------------------------------------
+        // UPDATE SUGGESTIONS
+        // -------------------------------------------------
 
         generateSuggestions()
+
+        print("========================================")
+        print("🧠 MEMORY CREATED")
+        print("========================================")
+        print("👤 User: \(userID)")
+        print("📝 Title: \(memory.title)")
+        print("========================================")
     }
 
     // =====================================================
     // DELETE MEMORY
     // =====================================================
 
-    func deleteMemory(
-        id: UUID
-    ) {
+    func deleteMemory(id: UUID) {
+
+        guard currentUserID != nil else {
+
+            print(
+                "❌ Cannot delete memory: no authenticated user."
+            )
+
+            return
+        }
 
         memories.removeAll {
             $0.id == id
@@ -141,10 +363,6 @@ final class MemoryViewModel: ObservableObject {
         save()
 
         generateSuggestions()
-
-        // ---------------------------------------------
-        // Reset selected category if necessary
-        // ---------------------------------------------
 
         if selectedTag != "all" &&
             !allTags.contains(selectedTag) {
@@ -156,26 +374,19 @@ final class MemoryViewModel: ObservableObject {
     // =====================================================
     // FILTERED MEMORIES
     // =====================================================
-    // Supports:
-    // - Title search
-    // - Content search
-    // - Summary search
-    // - Tag search
-    // - Category filtering
-    // =====================================================
 
     var filteredMemories: [Memory] {
 
         var result = memories
 
-        let query =
-            searchText.trimmingCharacters(
+        let query = searchText
+            .trimmingCharacters(
                 in: .whitespacesAndNewlines
             )
 
-        // ---------------------------------------------
+        // -------------------------------------------------
         // SEARCH
-        // ---------------------------------------------
+        // -------------------------------------------------
 
         if !query.isEmpty {
 
@@ -214,15 +425,16 @@ final class MemoryViewModel: ObservableObject {
             }
         }
 
-        // ---------------------------------------------
+        // -------------------------------------------------
         // CATEGORY FILTER
-        // ---------------------------------------------
+        // -------------------------------------------------
 
         if selectedTag != "all" {
 
             result = result.filter { memory in
 
                 memory.tags.contains {
+
                     $0.caseInsensitiveCompare(
                         selectedTag
                     ) == .orderedSame
@@ -236,39 +448,23 @@ final class MemoryViewModel: ObservableObject {
     // =====================================================
     // ALL TAGS
     // =====================================================
-    // Creates a unique sorted list of categories.
-    // =====================================================
 
     var allTags: [String] {
 
-        let tags =
-            memories.flatMap {
-                $0.tags
-            }
-
-        return Array(
-            Set(tags)
-        )
-        .sorted {
-            $0.localizedCaseInsensitiveCompare(
-                $1
-            ) == .orderedAscending
+        let tags = memories.flatMap {
+            $0.tags
         }
+
+        return Array(Set(tags))
+            .sorted {
+                $0.localizedCaseInsensitiveCompare(
+                    $1
+                ) == .orderedAscending
+            }
     }
 
     // =====================================================
-    // PERSONALIZED STUDY RECOMMENDATIONS
-    // =====================================================
-    // Calculates a recommendation score for every memory.
-    //
-    // Higher score means:
-    // - More important
-    // - Lower confidence
-    // - Older memory that may need review
-    // - Study/exam related
-    //
-    // The top three memories become the user's
-    // personalized recommendations.
+    // PERSONALIZED STUDY SUGGESTIONS
     // =====================================================
 
     func generateSuggestions() {
@@ -288,41 +484,29 @@ final class MemoryViewModel: ObservableObject {
                     !$0.title.isEmpty ||
                     !$0.content.isEmpty
                 }
-                .map { memory -> (memory: Memory, score: Double) in
+                .map {
+                    memory -> (
+                        memory: Memory,
+                        score: Double
+                    ) in
 
-                    // =================================================
-                    // IMPORTANCE SCORE
-                    // =================================================
-                    //
-                    // Importance is 1...5.
-                    // Higher importance = higher recommendation.
-                    // =================================================
+                    // =====================================
+                    // IMPORTANCE
+                    // =====================================
 
                     let importanceScore =
                         Double(memory.importance) * 2.0
 
-                    // =================================================
-                    // CONFIDENCE SCORE
-                    // =================================================
-                    //
-                    // Lower confidence means the student may need
-                    // more review.
-                    //
-                    // Example:
-                    // confidence 0.55 -> strong review boost
-                    // confidence 0.95 -> small review boost
-                    // =================================================
+                    // =====================================
+                    // CONFIDENCE
+                    // =====================================
 
                     let confidenceScore =
                         (1.0 - memory.confidence) * 6.0
 
-                    // =================================================
-                    // AGE / REVIEW SCORE
-                    // =================================================
-                    //
-                    // Older memories receive a larger boost because
-                    // they may benefit from another review.
-                    // =================================================
+                    // =====================================
+                    // AGE
+                    // =====================================
 
                     let ageInDays =
                         max(
@@ -340,9 +524,9 @@ final class MemoryViewModel: ObservableObject {
                             4.0
                         )
 
-                    // =================================================
-                    // STUDY CATEGORY SCORE
-                    // =================================================
+                    // =====================================
+                    // STUDY TAGS
+                    // =====================================
 
                     let studyTags: Set<String> = [
                         "study",
@@ -363,13 +547,9 @@ final class MemoryViewModel: ObservableObject {
                     let categoryScore =
                         Double(matchingTags) * 1.5
 
-                    // =================================================
-                    // RECENCY SCORE
-                    // =================================================
-                    //
-                    // New memories receive a small boost so that
-                    // newly learned material is not ignored.
-                    // =================================================
+                    // =====================================
+                    // RECENCY
+                    // =====================================
 
                     let recencyScore: Double
 
@@ -390,9 +570,9 @@ final class MemoryViewModel: ObservableObject {
                         recencyScore = 0.0
                     }
 
-                    // =================================================
-                    // FINAL PERSONALIZATION SCORE
-                    // =================================================
+                    // =====================================
+                    // TOTAL
+                    // =====================================
 
                     let totalScore =
                         importanceScore +
@@ -407,9 +587,9 @@ final class MemoryViewModel: ObservableObject {
                     )
                 }
 
-        // =================================================
-        // SORT BY PERSONALIZED SCORE
-        // =================================================
+        // -------------------------------------------------
+        // SORT
+        // -------------------------------------------------
 
         suggestedMemories =
             scoredMemories
@@ -420,8 +600,8 @@ final class MemoryViewModel: ObservableObject {
                         return $0.score > $1.score
                     }
 
-                    // If scores are equal, prefer newer memory.
-                    return $0.memory.dateCreated >
+                    return
+                        $0.memory.dateCreated >
                         $1.memory.dateCreated
                 }
                 .prefix(3)
@@ -436,8 +616,52 @@ final class MemoryViewModel: ObservableObject {
 
     func loadMemories() {
 
-        memories =
-            storage.load()
+        // -------------------------------------------------
+        // REQUIRE CURRENT USER
+        // -------------------------------------------------
+
+        guard let userID = currentUserID else {
+
+            print(
+                "🔒 No authenticated user. Memories remain empty."
+            )
+
+            memories = []
+            suggestedMemories = []
+
+            return
+        }
+
+        // -------------------------------------------------
+        // REQUIRE STORAGE
+        // -------------------------------------------------
+
+        guard let storage = storage else {
+
+            print(
+                "❌ Storage missing for user \(userID)."
+            )
+
+            memories = []
+            suggestedMemories = []
+
+            return
+        }
+
+        // -------------------------------------------------
+        // LOAD USER-SPECIFIC FILE
+        // -------------------------------------------------
+
+        let loadedMemories = storage.load()
+
+        memories = loadedMemories
+
+        print("========================================")
+        print("📚 MEMORIES LOADED")
+        print("========================================")
+        print("👤 User: \(userID)")
+        print("📚 Memory count: \(memories.count)")
+        print("========================================")
 
         generateSuggestions()
     }
@@ -448,9 +672,51 @@ final class MemoryViewModel: ObservableObject {
 
     func save() {
 
-        storage.save(
-            memories
-        )
+        // -------------------------------------------------
+        // REQUIRE USER
+        // -------------------------------------------------
+
+        guard let userID = currentUserID else {
+
+            print(
+                "❌ Cannot save memories: no authenticated user."
+            )
+
+            return
+        }
+
+        // -------------------------------------------------
+        // REQUIRE STORAGE
+        // -------------------------------------------------
+
+        guard let storage = storage else {
+
+            print(
+                "❌ Cannot save memories: storage unavailable for \(userID)."
+            )
+
+            return
+        }
+
+        // -------------------------------------------------
+        // SAVE ONLY THIS USER'S MEMORIES
+        // -------------------------------------------------
+
+        storage.save(memories)
+
+        print("========================================")
+        print("💾 MEMORIES SAVED")
+        print("========================================")
+        print("👤 User: \(userID)")
+        print("📚 Memory count: \(memories.count)")
+        print("========================================")
     }
 }
 
+// =====================================================
+// PREVIEW
+// =====================================================
+
+#Preview {
+    Text("MemoryViewModel")
+}

@@ -51,7 +51,6 @@ struct QuizView: View {
     // =====================================================
 
     @State private var isGeneratingQuiz = false
-
     @State private var apiErrorMessage: String?
 
     // =====================================================
@@ -134,7 +133,6 @@ struct QuizView: View {
         .sheet(
             isPresented: $showGenerator
         ) {
-
             quizGeneratorSheet
         }
     }
@@ -180,8 +178,7 @@ struct QuizView: View {
                     )
 
                 Image(
-                    systemName:
-                        "sparkles"
+                    systemName: "sparkles"
                 )
                 .font(.title2)
                 .foregroundColor(
@@ -295,8 +292,7 @@ struct QuizView: View {
                 HStack {
 
                     Image(
-                        systemName:
-                            "xmark.circle"
+                        systemName: "xmark.circle"
                     )
 
                     Text("Exit Quiz")
@@ -376,8 +372,7 @@ struct QuizView: View {
             HStack {
 
                 Image(
-                    systemName:
-                        "questionmark.bubble.fill"
+                    systemName: "questionmark.bubble.fill"
                 )
                 .foregroundColor(
                     RecalllQTheme.smartPurple
@@ -522,6 +517,10 @@ struct QuizView: View {
                 spacing: 12
             ) {
 
+                // =================================================
+                // OPTION LETTER
+                // =================================================
+
                 Text(
                     optionLetter(
                         option,
@@ -543,9 +542,11 @@ struct QuizView: View {
                             )
                         )
                 )
-                .foregroundColor(
-                    .white
-                )
+                .foregroundColor(.white)
+
+                // =================================================
+                // ANSWER TEXT
+                // =================================================
 
                 Text(option)
                     .font(.body)
@@ -557,6 +558,10 @@ struct QuizView: View {
                     )
 
                 Spacer()
+
+                // =================================================
+                // RESULT ICON
+                // =================================================
 
                 if showCorrectAnswer {
 
@@ -766,8 +771,7 @@ struct QuizView: View {
                 Spacer()
 
                 Image(
-                    systemName:
-                        "arrow.right"
+                    systemName: "arrow.right"
                 )
             }
             .padding()
@@ -917,8 +921,7 @@ struct QuizView: View {
                 Spacer()
 
                 Image(
-                    systemName:
-                        "arrow.right"
+                    systemName: "arrow.right"
                 )
             }
             .padding()
@@ -992,6 +995,10 @@ struct QuizView: View {
             .multilineTextAlignment(
                 .center
             )
+
+            // =================================================
+            // SCORE
+            // =================================================
 
             VStack(
                 spacing: 6
@@ -1087,8 +1094,7 @@ struct QuizView: View {
                 HStack {
 
                     Image(
-                        systemName:
-                            "sparkles"
+                        systemName: "sparkles"
                     )
 
                     Text("Generate Another AI Quiz")
@@ -1140,8 +1146,7 @@ struct QuizView: View {
                     )
 
                 Image(
-                    systemName:
-                        "sparkles"
+                    systemName: "sparkles"
                 )
                 .font(
                     .system(size: 55)
@@ -1180,8 +1185,7 @@ struct QuizView: View {
                 HStack {
 
                     Image(
-                        systemName:
-                            "sparkles"
+                        systemName: "sparkles"
                     )
 
                     Text("Generate AI Quiz")
@@ -1336,8 +1340,7 @@ struct QuizView: View {
                 // =================================================
 
                 Section(
-                    header:
-                        Text("Select Memory")
+                    header: Text("Select Memory")
                 ) {
 
                     let memories =
@@ -1369,16 +1372,12 @@ struct QuizView: View {
                                 )
                         ) {
 
-                            ForEach(
-                                memories
-                            ) { memory in
+                            ForEach(memories) { memory in
 
                                 Text(
                                     memory.title
                                 )
-                                .tag(
-                                    memory.id
-                                )
+                                .tag(memory.id)
                             }
                         }
                     }
@@ -1408,9 +1407,7 @@ struct QuizView: View {
                         Text("10 Questions")
                             .tag(10)
                     }
-                    .pickerStyle(
-                        .segmented
-                    )
+                    .pickerStyle(.segmented)
                 }
 
                 // =================================================
@@ -1425,8 +1422,7 @@ struct QuizView: View {
                     ) {
 
                         Image(
-                            systemName:
-                                "sparkles"
+                            systemName: "sparkles"
                         )
                         .foregroundColor(
                             RecalllQTheme.smartPurple
@@ -1440,9 +1436,7 @@ struct QuizView: View {
                 }
             }
             .navigationTitle("AI Quiz Generator")
-            .navigationBarTitleDisplayMode(
-                .inline
-            )
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
 
                 ToolbarItem(
@@ -1494,20 +1488,24 @@ struct QuizView: View {
 
     private func generateAIQuiz() {
 
-        guard
-            let memoryID = selectedMemoryID
-        else {
+        // =================================================
+        // FIND SELECTED MEMORY ID
+        // =================================================
+
+        guard let memoryID = selectedMemoryID else {
 
             apiErrorMessage =
                 "Please select a Memory first."
 
             showGenerator = false
-
             return
         }
 
-        guard
-            let memory =
+        // =================================================
+        // FIND MEMORY
+        // =================================================
+
+        guard let memory =
                 appState
                     .memoryViewModel
                     .memories
@@ -1522,41 +1520,54 @@ struct QuizView: View {
                 "The selected Memory could not be found."
 
             showGenerator = false
-
             return
         }
 
+        // =================================================
+        // START GENERATION
+        // =================================================
+
         showGenerator = false
-
         apiErrorMessage = nil
-
         isGeneratingQuiz = true
 
         Task {
 
             do {
 
+                // =================================================
+                // CALL AI API
+                // =================================================
+
                 let questions =
                     try await quizAPIService.generateQuiz(
-                        from:
-                            memory,
+                        from: memory,
                         numberOfQuestions:
                             numberOfQuestions
                     )
+
+                // =================================================
+                // UPDATE UI ON MAIN ACTOR
+                // =================================================
 
                 await MainActor.run {
 
                     let quizTitle =
                         "\(memory.title) AI Quiz"
 
+                    // =================================================
+                    // CREATE QUIZ
+                    // =================================================
+
                     vm.createQuiz(
-                        title:
-                            quizTitle,
-                        questions:
-                            questions,
-                        memoryID:
-                            memory.id
+                        title: quizTitle,
+                        questions: questions,
+                        memoryID: memory.id
                     )
+
+                    // =================================================
+                    // FIND NEW QUIZ
+                    // =================================================
 
                     if let quiz =
                         vm.quizzes.first(
@@ -1566,9 +1577,12 @@ struct QuizView: View {
                             }
                         ) {
 
+                        // =================================================
+                        // START QUIZ
+                        // =================================================
+
                         vm.startQuiz(
-                            id:
-                                quiz.id
+                            id: quiz.id
                         )
                     }
 
@@ -1576,6 +1590,10 @@ struct QuizView: View {
                 }
 
             } catch {
+
+                // =================================================
+                // HANDLE API ERROR
+                // =================================================
 
                 await MainActor.run {
 

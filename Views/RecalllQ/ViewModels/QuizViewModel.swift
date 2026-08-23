@@ -1,10 +1,11 @@
-
+  
 import Foundation
 import Combine
 
 // =====================================================
 // VIEWMODEL: QuizViewModel
 // =====================================================
+//
 // PURPOSE:
 // Controls the complete RecalllQ quiz system.
 //
@@ -18,14 +19,26 @@ import Combine
 // - Select answers
 // - Submit answers
 // - Track score
-// - Move between questions
 // - Complete quizzes
 // - Restart quizzes
 // - Delete quizzes
 // - Save quizzes locally
 // - Load quizzes locally
+// - User-specific quiz storage
 // - Study Session integration
 // - Quiz statistics
+//
+// USER DATA ISOLATION:
+// Every authenticated user has a separate quiz storage key.
+//
+// Example:
+//
+// recalllq_quizzes_user_student1@example.com
+// recalllq_quizzes_user_student2@example.com
+//
+// This prevents one student's quizzes from appearing
+// when another student logs in.
+//
 // =====================================================
 
 @MainActor
@@ -60,8 +73,13 @@ final class QuizViewModel: ObservableObject {
     // =====================================================
 
     @Published var isGeneratingAIQuiz: Bool = false
-
     @Published var aiQuizError: String?
+
+    // =====================================================
+    // CURRENT USER
+    // =====================================================
+
+    private(set) var currentUserID: String?
 
     // =====================================================
     // AI QUIZ SERVICE
@@ -70,22 +88,182 @@ final class QuizViewModel: ObservableObject {
     private let quizAPIService = QuizAPIService()
 
     // =====================================================
-    // STORAGE KEY
+    // STORAGE PREFIX
     // =====================================================
 
-    private let storageKey = "saved_quizzes"
+    private let storageKeyPrefix = "recalllq_quizzes_user_"
+
+    // =====================================================
+    // LEGACY STORAGE KEY
+    // =====================================================
+    //
+    // Kept only so we can avoid accidentally using the old
+    // shared quiz storage.
+    //
+    // =====================================================
+
+    private let legacyStorageKey = "saved_quizzes"
+
+    // =====================================================
+    // COMPATIBILITY PROPERTIES
+    // =====================================================
+    //
+    // AppState currently checks these properties before
+    // calling user-management methods.
+    //
+    // They are always true because this ViewModel now fully
+    // supports user-specific data management.
+    //
+    // =====================================================
+
+    var respondsToSwitchUser: Bool {
+        true
+    }
+
+    var respondsToClearCurrentUserData: Bool {
+        true
+    }
+
+    var respondsToSave: Bool {
+        true
+    }
 
     // =====================================================
     // INIT
     // =====================================================
 
     init() {
-        loadQuizzes()
+
+        // -------------------------------------------------
+        // IMPORTANT:
+        //
+        // Do NOT load the old global quiz storage here.
+        //
+        // A user must log in first so we know which
+        // account's quizzes should be loaded.
+        // -------------------------------------------------
+
+        quizzes = []
+        currentQuiz = nil
 
         print("========================================")
         print("🧠 QuizViewModel initialized")
-        print("📚 Saved quizzes: \(quizzes.count)")
+        print("🔐 Waiting for authenticated user")
         print("========================================")
+    }
+
+    // =====================================================
+    // USER-SPECIFIC STORAGE KEY
+    // =====================================================
+
+    private func storageKey(for userID: String) -> String {
+
+        let cleanUserID = userID
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+
+        return storageKeyPrefix + cleanUserID
+    }
+
+    // =====================================================
+    // SWITCH USER
+    // =====================================================
+    //
+    // Called by AppState when a new student logs in.
+    //
+    // IMPORTANT:
+    //
+    // 1. Clear the previous user's quizzes.
+    // 2. Set the new user.
+    // 3. Load only the new user's quizzes.
+    //
+    // =====================================================
+
+    func switchUser(to userID: String) {
+
+        let cleanUserID = userID
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+
+        guard !cleanUserID.isEmpty else {
+
+            print("❌ QuizViewModel cannot switch to empty user.")
+
+            clearCurrentUserData()
+
+            currentUserID = nil
+
+            return
+        }
+
+        // -------------------------------------------------
+        // Clear previous user's active data first.
+        // -------------------------------------------------
+
+        quizzes = []
+        currentQuiz = nil
+        showResult = false
+        aiQuizError = nil
+        isGeneratingAIQuiz = false
+
+        // -------------------------------------------------
+        // Set new user.
+        // -------------------------------------------------
+
+        currentUserID = cleanUserID
+
+        // -------------------------------------------------
+        // Load ONLY this user's quizzes.
+        // -------------------------------------------------
+
+        loadQuizzes()
+
+        print("========================================")
+        print("🔄 QUIZ USER SWITCHED")
+        print("========================================")
+        print("👤 User: \(cleanUserID)")
+        print("❓ Quizzes loaded: \(quizzes.count)")
+        print("🔐 Storage key: \(storageKey(for: cleanUserID))")
+        print("========================================")
+    }
+
+    // =====================================================
+    // CLEAR CURRENT USER DATA
+    // =====================================================
+    //
+    // IMPORTANT:
+    //
+    // This clears the ViewModel's active memory only.
+    //
+    // It does NOT delete the user's saved quizzes.
+    //
+    // This allows logout/login to safely switch accounts.
+    //
+    // =====================================================
+
+    func clearCurrentUserData() {
+
+        quizzes = []
+        currentQuiz = nil
+
+        showResult = false
+
+        isGeneratingAIQuiz = false
+        aiQuizError = nil
+
+        print("🧹 QuizViewModel active quiz data cleared.")
+    }
+
+    // =====================================================
+    // SAVE
+    // =====================================================
+    //
+    // Public compatibility method used by AppState.
+    //
+    // =====================================================
+
+    func save() {
+        saveQuizzes()
     }
 
     // =====================================================
@@ -98,10 +276,33 @@ final class QuizViewModel: ObservableObject {
         memoryID: UUID? = nil
     ) {
 
-        guard !questions.isEmpty else {
-            print("❌ Cannot create quiz: no questions.")
+        // -------------------------------------------------
+        // REQUIRE USER
+        // -------------------------------------------------
+
+        guard currentUserID != nil else {
+
+            print("❌ Cannot create quiz: no authenticated user.")
+
+            aiQuizError = "Please sign in before creating a quiz."
+
             return
         }
+
+        // -------------------------------------------------
+        // VALIDATE QUESTIONS
+        // -------------------------------------------------
+
+        guard !questions.isEmpty else {
+
+            print("❌ Cannot create quiz: no questions.")
+
+            return
+        }
+
+        // -------------------------------------------------
+        // CLEAN TITLE
+        // -------------------------------------------------
 
         let cleanedTitle = title
             .trimmingCharacters(
@@ -112,21 +313,35 @@ final class QuizViewModel: ObservableObject {
             ? "Untitled Quiz"
             : cleanedTitle
 
+        // -------------------------------------------------
+        // CREATE QUIZ
+        // -------------------------------------------------
+
         let quiz = Quiz(
             title: finalTitle,
             questions: questions,
             memoryID: memoryID
         )
 
+        // -------------------------------------------------
+        // ADD TO USER'S QUIZ COLLECTION
+        // -------------------------------------------------
+
         quizzes.insert(
             quiz,
             at: 0
         )
 
+        // -------------------------------------------------
+        // SAVE TO USER-SPECIFIC STORAGE
+        // -------------------------------------------------
+
         saveQuizzes()
 
         print("========================================")
         print("✅ QUIZ CREATED")
+        print("========================================")
+        print("👤 User: \(currentUserID ?? "unknown")")
         print("Title: \(finalTitle)")
         print("Questions: \(questions.count)")
         print("========================================")
@@ -152,24 +367,23 @@ final class QuizViewModel: ObservableObject {
             : answer
 
         guard !finalAnswer.isEmpty else {
+
             print(
                 "❌ Cannot create quiz: memory has no usable information."
             )
+
             return
         }
 
         let question = QuizQuestion(
             memoryID: memory.id,
-
             question:
                 "What is the main idea of \(memory.title)?",
-
-            options: makeLocalOptions(
-                correctAnswer: finalAnswer
-            ),
-
+            options:
+                makeLocalOptions(
+                    correctAnswer: finalAnswer
+                ),
             correctAnswer: finalAnswer,
-
             explanation:
                 "The correct answer is based on the information stored in this RecalllQ Memory."
         )
@@ -190,9 +404,11 @@ final class QuizViewModel: ObservableObject {
     ) {
 
         guard !memories.isEmpty else {
+
             print(
                 "❌ No memories available for quizzes."
             )
+
             return
         }
 
@@ -214,16 +430,28 @@ final class QuizViewModel: ObservableObject {
         numberOfQuestions: Int = 5
     ) async {
 
+        guard currentUserID != nil else {
+
+            aiQuizError =
+                "Please sign in before generating a quiz."
+
+            return
+        }
+
         guard !isGeneratingAIQuiz else {
+
             print(
                 "⚠️ AI quiz generation is already running."
             )
+
             return
         }
 
         guard numberOfQuestions > 0 else {
+
             aiQuizError =
                 "Please generate at least one question."
+
             return
         }
 
@@ -242,28 +470,26 @@ final class QuizViewModel: ObservableObject {
                 in: .whitespacesAndNewlines
             )
 
-        // -------------------------------------------------
-        // VALIDATE TITLE
-        // -------------------------------------------------
-
         guard !title.isEmpty else {
+
             aiQuizError =
                 "This memory does not have a title."
+
             return
         }
 
-        // -------------------------------------------------
-        // VALIDATE CONTENT
-        // -------------------------------------------------
-
         guard !content.isEmpty || !summary.isEmpty else {
+
             aiQuizError =
                 "This memory does not contain enough information to create a quiz."
+
             return
         }
 
         isGeneratingAIQuiz = true
         aiQuizError = nil
+
+        let userIDAtStart = currentUserID
 
         defer {
             isGeneratingAIQuiz = false
@@ -272,15 +498,12 @@ final class QuizViewModel: ObservableObject {
         print("========================================")
         print("🤖 AI QUIZ GENERATION")
         print("========================================")
+        print("👤 User: \(userIDAtStart ?? "unknown")")
         print("Memory: \(title)")
         print("Questions requested: \(numberOfQuestions)")
         print("========================================")
 
         do {
-
-            // =================================================
-            // GENERATE USING QUIZ API SERVICE
-            // =================================================
 
             let generatedQuestions =
                 try await quizAPIService.generateQuiz(
@@ -288,13 +511,25 @@ final class QuizViewModel: ObservableObject {
                     numberOfQuestions: numberOfQuestions
                 )
 
-            guard !generatedQuestions.isEmpty else {
-                throw QuizAPIService.QuizAPIError.emptyQuestions
+            // -------------------------------------------------
+            // VERIFY USER DID NOT CHANGE
+            // -------------------------------------------------
+
+            guard currentUserID == userIDAtStart else {
+
+                print(
+                    "⚠️ User changed while AI quiz was generating."
+                )
+
+                return
             }
 
-            // =================================================
-            // CREATE QUIZ
-            // =================================================
+            guard !generatedQuestions.isEmpty else {
+
+                throw QuizAPIService
+                    .QuizAPIError
+                    .emptyQuestions
+            }
 
             createQuiz(
                 title: "\(title) AI Quiz",
@@ -311,9 +546,22 @@ final class QuizViewModel: ObservableObject {
 
         } catch {
 
-            // =================================================
+            // -------------------------------------------------
+            // VERIFY USER
+            // -------------------------------------------------
+
+            guard currentUserID == userIDAtStart else {
+
+                print(
+                    "⚠️ User changed while AI quiz was generating."
+                )
+
+                return
+            }
+
+            // -------------------------------------------------
             // LOCAL FALLBACK
-            // =================================================
+            // -------------------------------------------------
 
             print("========================================")
             print("⚠️ AI QUIZ GENERATION FAILED")
@@ -338,34 +586,35 @@ final class QuizViewModel: ObservableObject {
     ) async {
 
         guard !memories.isEmpty else {
+
             aiQuizError =
                 "No memories are available for the quiz."
+
             return
         }
 
         guard !isGeneratingAIQuiz else {
+
             print(
                 "⚠️ AI quiz generation is already running."
             )
+
             return
         }
 
         guard numberOfQuestions > 0 else {
+
             aiQuizError =
                 "Please generate at least one question."
+
             return
         }
 
-        // -------------------------------------------------
-        // CURRENT QUIZ SERVICE GENERATES FROM ONE MEMORY.
-        //
-        // We use the first valid memory so the AI receives
-        // a focused and reliable source.
-        // -------------------------------------------------
-
         guard let memory = memories.first else {
+
             aiQuizError =
                 "No valid memory was found."
+
             return
         }
 
@@ -408,31 +657,33 @@ final class QuizViewModel: ObservableObject {
             return
         }
 
-        let questionTemplates = [
+        let questionTemplates: [
+            (String, QuizQuestion.Difficulty)
+        ] = [
 
             (
                 "What is the main idea of \(memory.title)?",
-                QuizQuestion.Difficulty.medium
+                .medium
             ),
 
             (
                 "What is the most important information about \(memory.title)?",
-                QuizQuestion.Difficulty.medium
+                .medium
             ),
 
             (
                 "Which statement best describes \(memory.title)?",
-                QuizQuestion.Difficulty.easy
+                .easy
             ),
 
             (
                 "What should you remember about \(memory.title)?",
-                QuizQuestion.Difficulty.easy
+                .easy
             ),
 
             (
                 "What does the memory explain about \(memory.title)?",
-                QuizQuestion.Difficulty.hard
+                .hard
             )
         ]
 
@@ -447,32 +698,19 @@ final class QuizViewModel: ObservableObject {
                 questionTemplates[index]
 
             let question = QuizQuestion(
-
-                memoryID:
-                    memory.id,
-
-                question:
-                    template.0,
-
+                memoryID: memory.id,
+                question: template.0,
                 options:
                     makeLocalOptions(
-                        correctAnswer:
-                            finalAnswer
+                        correctAnswer: finalAnswer
                     ),
-
-                correctAnswer:
-                    finalAnswer,
-
+                correctAnswer: finalAnswer,
                 explanation:
                     "This answer is based on the information stored in your RecalllQ Memory.",
-
-                difficulty:
-                    template.1
+                difficulty: template.1
             )
 
-            questions.append(
-                question
-            )
+            questions.append(question)
         }
 
         guard !questions.isEmpty else {
@@ -486,10 +724,8 @@ final class QuizViewModel: ObservableObject {
         createQuiz(
             title:
                 "\(memory.title) Study Quiz",
-
             questions:
                 questions,
-
             memoryID:
                 memory.id
         )
@@ -555,12 +791,7 @@ final class QuizViewModel: ObservableObject {
             return
         }
 
-        var quiz =
-            existingQuiz
-
-        // -------------------------------------------------
-        // RESET QUIZ STATE
-        // -------------------------------------------------
+        var quiz = existingQuiz
 
         quiz.currentQuestionIndex = 0
         quiz.isCompleted = false
@@ -572,11 +803,8 @@ final class QuizViewModel: ObservableObject {
                 nil
         }
 
-        currentQuiz =
-            quiz
-
-        showResult =
-            false
+        currentQuiz = quiz
+        showResult = false
 
         saveCurrentQuiz()
 
@@ -595,11 +823,8 @@ final class QuizViewModel: ObservableObject {
                 quizzes.first
         else {
 
-            currentQuiz =
-                nil
-
-            showResult =
-                false
+            currentQuiz = nil
+            showResult = false
 
             print(
                 "❌ No quizzes available."
@@ -609,8 +834,7 @@ final class QuizViewModel: ObservableObject {
         }
 
         startQuiz(
-            id:
-                firstQuiz.id
+            id: firstQuiz.id
         )
     }
 
@@ -620,9 +844,7 @@ final class QuizViewModel: ObservableObject {
 
     var currentQuestion: QuizQuestion? {
 
-        guard let quiz =
-                currentQuiz
-        else {
+        guard let quiz = currentQuiz else {
             return nil
         }
 
@@ -763,9 +985,7 @@ final class QuizViewModel: ObservableObject {
             return
         }
 
-        guard var quiz =
-                currentQuiz
-        else {
+        guard var quiz = currentQuiz else {
             return
         }
 
@@ -791,8 +1011,7 @@ final class QuizViewModel: ObservableObject {
         quiz.questions[index].selectedAnswer =
             cleanedAnswer
 
-        currentQuiz =
-            quiz
+        currentQuiz = quiz
 
         saveCurrentQuiz()
     }
@@ -811,9 +1030,7 @@ final class QuizViewModel: ObservableObject {
             return
         }
 
-        guard var quiz =
-                currentQuiz
-        else {
+        guard var quiz = currentQuiz else {
             return
         }
 
@@ -840,11 +1057,9 @@ final class QuizViewModel: ObservableObject {
 
         quiz.updateScore()
 
-        currentQuiz =
-            quiz
+        currentQuiz = quiz
 
-        showResult =
-            true
+        showResult = true
 
         saveCurrentQuiz()
 
@@ -863,9 +1078,7 @@ final class QuizViewModel: ObservableObject {
 
     func nextQuestion() {
 
-        guard var quiz =
-                currentQuiz
-        else {
+        guard var quiz = currentQuiz else {
             return
         }
 
@@ -894,23 +1107,20 @@ final class QuizViewModel: ObservableObject {
             return
         }
 
-        // =================================================
+        // -------------------------------------------------
         // FINISH QUIZ
-        // =================================================
+        // -------------------------------------------------
 
         if currentIndex >=
             quiz.questions.count - 1 {
 
             quiz.updateScore()
 
-            quiz.isCompleted =
-                true
+            quiz.isCompleted = true
 
-            currentQuiz =
-                quiz
+            currentQuiz = quiz
 
-            showResult =
-                true
+            showResult = true
 
             saveCurrentQuiz()
 
@@ -930,17 +1140,15 @@ final class QuizViewModel: ObservableObject {
             return
         }
 
-        // =================================================
+        // -------------------------------------------------
         // MOVE TO NEXT QUESTION
-        // =================================================
+        // -------------------------------------------------
 
         quiz.currentQuestionIndex += 1
 
-        currentQuiz =
-            quiz
+        currentQuiz = quiz
 
-        showResult =
-            false
+        showResult = false
 
         saveCurrentQuiz()
 
@@ -955,15 +1163,12 @@ final class QuizViewModel: ObservableObject {
 
     func resetCurrentQuiz() {
 
-        guard let quiz =
-                currentQuiz
-        else {
+        guard let quiz = currentQuiz else {
             return
         }
 
         startQuiz(
-            id:
-                quiz.id
+            id: quiz.id
         )
     }
 
@@ -981,11 +1186,8 @@ final class QuizViewModel: ObservableObject {
 
     func exitQuiz() {
 
-        currentQuiz =
-            nil
-
-        showResult =
-            false
+        currentQuiz = nil
+        showResult = false
 
         print(
             "⏹️ Quiz session ended."
@@ -1006,11 +1208,8 @@ final class QuizViewModel: ObservableObject {
 
         if currentQuiz?.id == id {
 
-            currentQuiz =
-                nil
-
-            showResult =
-                false
+            currentQuiz = nil
+            showResult = false
         }
 
         saveQuizzes()
@@ -1028,16 +1227,13 @@ final class QuizViewModel: ObservableObject {
 
         quizzes.removeAll()
 
-        currentQuiz =
-            nil
-
-        showResult =
-            false
+        currentQuiz = nil
+        showResult = false
 
         saveQuizzes()
 
         print(
-            "🗑️ All quizzes deleted."
+            "🗑️ All quizzes deleted for current user."
         )
     }
 
@@ -1190,6 +1386,21 @@ final class QuizViewModel: ObservableObject {
 
     private func saveQuizzes() {
 
+        // -------------------------------------------------
+        // NEVER SAVE WITHOUT A USER.
+        // -------------------------------------------------
+
+        guard let userID = currentUserID,
+              !userID.isEmpty
+        else {
+
+            print(
+                "⚠️ Quiz save skipped: no authenticated user."
+            )
+
+            return
+        }
+
         do {
 
             let encoder =
@@ -1203,14 +1414,18 @@ final class QuizViewModel: ObservableObject {
                     quizzes
                 )
 
+            let key =
+                storageKey(
+                    for: userID
+                )
+
             UserDefaults.standard.set(
                 data,
-                forKey:
-                    storageKey
+                forKey: key
             )
 
             print(
-                "💾 Saved \(quizzes.count) quizzes."
+                "💾 Saved \(quizzes.count) quizzes for \(userID)."
             )
 
         } catch {
@@ -1227,17 +1442,38 @@ final class QuizViewModel: ObservableObject {
 
     private func loadQuizzes() {
 
+        // -------------------------------------------------
+        // NEVER LOAD WITHOUT A USER.
+        // -------------------------------------------------
+
+        guard let userID = currentUserID,
+              !userID.isEmpty
+        else {
+
+            quizzes = []
+
+            print(
+                "ℹ️ Quiz loading skipped: no authenticated user."
+            )
+
+            return
+        }
+
+        let key =
+            storageKey(
+                for: userID
+            )
+
         guard let data =
                 UserDefaults.standard.data(
-                    forKey:
-                        storageKey
+                    forKey: key
                 )
         else {
 
             quizzes = []
 
             print(
-                "ℹ️ No saved quizzes found."
+                "ℹ️ No saved quizzes found for \(userID)."
             )
 
             return
@@ -1254,13 +1490,16 @@ final class QuizViewModel: ObservableObject {
             quizzes =
                 try decoder.decode(
                     [Quiz].self,
-                    from:
-                        data
+                    from: data
                 )
 
-            print(
-                "✅ Loaded \(quizzes.count) quizzes."
-            )
+            print("========================================")
+            print("✅ USER QUIZZES LOADED")
+            print("========================================")
+            print("👤 User: \(userID)")
+            print("❓ Quizzes: \(quizzes.count)")
+            print("🔐 Key: \(key)")
+            print("========================================")
 
         } catch {
 
@@ -1272,4 +1511,3 @@ final class QuizViewModel: ObservableObject {
         }
     }
 }
-

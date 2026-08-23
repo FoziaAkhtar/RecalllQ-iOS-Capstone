@@ -8,12 +8,7 @@ import SwiftUI
 //
 // RecalllQ account registration screen.
 //
-// IMPORTANT AUTHENTICATION ARCHITECTURE:
-//
-// CreateAccountView does NOT directly navigate to
-// MainTabView.
-//
-// Instead:
+// AUTHENTICATION FLOW:
 //
 // Create Account
 //      ↓
@@ -21,7 +16,9 @@ import SwiftUI
 //      ↓
 // auth.isAuthenticated = true
 //      ↓
-// appState.login()
+// appState.login(email: auth.email)
+//      ↓
+// User-specific data is loaded
 //      ↓
 // RecalllQApp detects authentication
 //      ↓
@@ -29,7 +26,22 @@ import SwiftUI
 //      ↓
 // Dashboard
 //
-// This keeps authentication navigation centralized.
+// USER DATA ISOLATION:
+//
+// The authenticated email becomes the local user ID.
+//
+// Example:
+//
+// student1@email.com
+//      ↓
+// user ID = student1@email.com
+//
+// student2@email.com
+//      ↓
+// user ID = student2@email.com
+//
+// Each user receives separate notes, memories,
+// flashcards, quizzes, and study data.
 // =====================================================
 
 struct CreateAccountView: View {
@@ -59,7 +71,6 @@ struct CreateAccountView: View {
     // =====================================================
 
     @State private var showPassword = false
-
     @State private var showConfirmPassword = false
 
     // =====================================================
@@ -120,16 +131,21 @@ struct CreateAccountView: View {
         // WATCH AUTHENTICATION STATE
         // =====================================================
         //
-        // When account creation succeeds:
+        // IMPORTANT:
         //
-        // auth.isAuthenticated
-        //          ↓
-        //      appState.login()
+        // We pass the authenticated email to AppState.
         //
-        // RecalllQApp is responsible for switching to
-        // MainTabView.
+        // This is what tells RecalllQ which user's
+        // notes/memories/etc. should be loaded.
         //
-        // We DO NOT navigate to MainTabView directly here.
+        // DO NOT use:
+        //
+        //     appState.login()
+        //
+        // Instead use:
+        //
+        //     appState.login(email: auth.email)
+        //
         // =====================================================
 
         .onChange(
@@ -137,6 +153,21 @@ struct CreateAccountView: View {
         ) { _, authenticated in
 
             if authenticated {
+
+                let cleanEmail = auth.email
+                    .trimmingCharacters(
+                        in: .whitespacesAndNewlines
+                    )
+                    .lowercased()
+
+                guard !cleanEmail.isEmpty else {
+
+                    print(
+                        "❌ Account authenticated but email is empty."
+                    )
+
+                    return
+                }
 
                 print(
                     "========================================"
@@ -147,14 +178,43 @@ struct CreateAccountView: View {
                 )
 
                 print(
-                    "➡️ Updating global AppState..."
+                    "👤 New authenticated user:"
+                )
+
+                print(
+                    cleanEmail
+                )
+
+                print(
+                    "🔐 Loading user-specific data..."
                 )
 
                 print(
                     "========================================"
                 )
 
-                appState.login()
+                // =================================================
+                // IMPORTANT USER ISOLATION STEP
+                // =================================================
+                //
+                // Pass the email to AppState.
+                //
+                // AppState will use this user ID to load:
+                //
+                // - Notes
+                // - Memories
+                // - Flashcards
+                // - Quizzes
+                // - Study sessions
+                // - Progress
+                //
+                // A brand-new account will receive empty data
+                // if no data exists for this user ID.
+                // =================================================
+
+                appState.login(
+                    email: cleanEmail
+                )
             }
         }
 
@@ -165,7 +225,6 @@ struct CreateAccountView: View {
         .navigationTitle(
             "Create Account"
         )
-
         .navigationBarTitleDisplayMode(
             .inline
         )
@@ -385,22 +444,6 @@ struct CreateAccountView: View {
             // =================================================
 
             Button {
-
-                // =============================================
-                // START ACCOUNT CREATION
-                // =============================================
-                //
-                // AuthenticationViewModel handles validation.
-                //
-                // When successful:
-                //
-                // auth.isAuthenticated = true
-                //
-                // The onChange handler above then calls:
-                //
-                // appState.login()
-                //
-                // =============================================
 
                 auth.createAccount()
 
