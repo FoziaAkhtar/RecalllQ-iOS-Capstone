@@ -5,10 +5,13 @@ import VisionKit
 // =====================================================
 // VIEW: NotesView
 // =====================================================
+//
 // PURPOSE:
+//
 // Main study notes screen for RecalllQ.
 //
 // FEATURES:
+//
 // - Search notes
 // - Create notes
 // - Edit notes
@@ -20,6 +23,7 @@ import VisionKit
 // - Delete notes
 // - Swipe-to-delete
 // - Undo delete
+//
 // =====================================================
 
 struct NotesView: View {
@@ -104,7 +108,10 @@ struct NotesView: View {
 
                 TextField(
                     "Search your study notes...",
-                    text: $appState.notesViewModel.searchText
+                    text:
+                        $appState
+                            .notesViewModel
+                            .searchText
                 )
 
                 if !appState
@@ -236,12 +243,15 @@ struct NotesView: View {
         // =====================================================
 
         .sheet(
-            item: $selectedNoteForEditing
+            item:
+                $selectedNoteForEditing
         ) { note in
 
             EditNoteView(
                 note: note
-            ) { newTitle, newContent, newReminderDate in
+            ) { newTitle,
+                newContent,
+                newReminderDate in
 
                 appState
                     .notesViewModel
@@ -249,7 +259,8 @@ struct NotesView: View {
                         id: note.id,
                         newTitle: newTitle,
                         newContent: newContent,
-                        reminderDate: newReminderDate
+                        reminderDate:
+                            newReminderDate
                     )
             }
         }
@@ -259,7 +270,8 @@ struct NotesView: View {
         // =====================================================
 
         .sheet(
-            isPresented: $showScanner
+            isPresented:
+                $showScanner
         ) {
 
             DocumentScannerView { scannedImages in
@@ -275,11 +287,13 @@ struct NotesView: View {
         // =====================================================
 
         .sheet(
-            isPresented: $showScanReview
+            isPresented:
+                $showScanReview
         ) {
 
             ScanReviewView(
-                scannedText: scannedText
+                scannedText:
+                    scannedText
             ) { finalText in
 
                 saveScannedNote(
@@ -294,10 +308,12 @@ struct NotesView: View {
 
         .alert(
             "Camera Scanner Unavailable",
-            isPresented: $showScannerUnavailable
+            isPresented:
+                $showScannerUnavailable
         ) {
 
             Button("OK") {
+
                 showScannerUnavailable = false
             }
 
@@ -426,7 +442,8 @@ struct NotesView: View {
             ) {
 
                 Toggle(
-                    isOn: $addReminder
+                    isOn:
+                        $addReminder
                 ) {
 
                     HStack(spacing: 10) {
@@ -510,6 +527,24 @@ struct NotesView: View {
 
             Button {
 
+                // -------------------------------------------------
+                // Dismiss keyboard
+                // -------------------------------------------------
+
+                isInputFocused = false
+
+                // -------------------------------------------------
+                // Confirm button tap
+                // -------------------------------------------------
+
+                print(
+                    "🟢 ADD NOTE BUTTON TAPPED"
+                )
+
+                // -------------------------------------------------
+                // Submit note
+                // -------------------------------------------------
+
                 addManualNote()
 
             } label: {
@@ -536,6 +571,7 @@ struct NotesView: View {
                     maxWidth: .infinity
                 )
                 .foregroundColor(.white)
+                .contentShape(Rectangle())
                 .background(
                     RoundedRectangle(
                         cornerRadius:
@@ -546,6 +582,8 @@ struct NotesView: View {
                     )
                 )
             }
+            .buttonStyle(.plain)
+            .contentShape(Rectangle())
             .disabled(
                 isNoteInputEmpty
             )
@@ -590,19 +628,21 @@ struct NotesView: View {
 
     private var isNoteInputEmpty: Bool {
 
-        title
-            .trimmingCharacters(
+        let cleanTitle =
+            title.trimmingCharacters(
                 in:
                     .whitespacesAndNewlines
             )
-            .isEmpty
-        &&
-        content
-            .trimmingCharacters(
+
+        let cleanContent =
+            content.trimmingCharacters(
                 in:
                     .whitespacesAndNewlines
             )
-            .isEmpty
+
+        return
+            cleanTitle.isEmpty &&
+            cleanContent.isEmpty
     }
 
     // =====================================================
@@ -677,6 +717,7 @@ struct NotesView: View {
                 )
             )
         }
+        .buttonStyle(.plain)
     }
 
     // =====================================================
@@ -1154,7 +1195,6 @@ struct NotesView: View {
                     .undoDelete()
 
                 showUndo = false
-
             }
             .foregroundColor(
                 RecalllQTheme.primary
@@ -1234,11 +1274,23 @@ struct NotesView: View {
 
     private func addManualNote() {
 
+        print("========================================")
+        print("📝 SUBMITTING MANUAL NOTE")
+        print("========================================")
+
+        // -------------------------------------------------
+        // CLEAN TITLE
+        // -------------------------------------------------
+
         let cleanTitle =
             title.trimmingCharacters(
                 in:
                     .whitespacesAndNewlines
             )
+
+        // -------------------------------------------------
+        // CLEAN CONTENT
+        // -------------------------------------------------
 
         let cleanContent =
             content.trimmingCharacters(
@@ -1246,23 +1298,68 @@ struct NotesView: View {
                     .whitespacesAndNewlines
             )
 
+        print(
+            "Title: \(cleanTitle)"
+        )
+
+        print(
+            "Content length: \(cleanContent.count)"
+        )
+
+        // -------------------------------------------------
+        // VALIDATE INPUT
+        // -------------------------------------------------
+
         guard
             !cleanTitle.isEmpty ||
             !cleanContent.isEmpty
         else {
+
+            print(
+                "❌ NOTE NOT SUBMITTED"
+            )
+
+            print(
+                "❌ Title and content are both empty."
+            )
+
+            print("========================================")
+
             return
         }
+
+        // -------------------------------------------------
+        // VERIFY APP STATE
+        // -------------------------------------------------
+
+        print(
+            "✅ Input validation passed."
+        )
+
+        print(
+            "🔗 Sending note to NotesViewModel..."
+        )
+
+        // -------------------------------------------------
+        // CREATE NOTE
+        // -------------------------------------------------
 
         appState
             .notesViewModel
             .addNote(
-                title: cleanTitle,
-                content: cleanContent,
+                title:
+                    cleanTitle,
+                content:
+                    cleanContent,
                 reminderDate:
                     addReminder
                     ? reminderDate
                     : nil
             )
+
+        print(
+            "✅ NotesViewModel.addNote() called."
+        )
 
         // =================================================
         // RESET FORM
@@ -1270,6 +1367,7 @@ struct NotesView: View {
 
         title = ""
         content = ""
+
         addReminder = false
 
         reminderDate =
@@ -1280,6 +1378,16 @@ struct NotesView: View {
             ) ?? Date()
 
         isInputFocused = false
+
+        print(
+            "🧹 Note form cleared."
+        )
+
+        print("========================================")
+        print(
+            "✅ NOTE SUBMISSION COMPLETE"
+        )
+        print("========================================")
     }
 
     // =====================================================
@@ -1305,7 +1413,8 @@ struct NotesView: View {
             count: images.count
         )
 
-        for (index, image) in images.enumerated() {
+        for (index, image)
+        in images.enumerated() {
 
             group.enter()
 
@@ -1328,6 +1437,7 @@ struct NotesView: View {
             scannedText =
                 results
                     .filter {
+
                         !$0
                             .trimmingCharacters(
                                 in:
@@ -1383,3 +1493,4 @@ struct NotesView: View {
         scannedText = ""
     }
 }
+

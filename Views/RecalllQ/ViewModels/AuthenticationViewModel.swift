@@ -24,11 +24,20 @@ import Combine
 //
 // completely separate.
 //
+// SECURITY:
+// - Account passwords are stored securely in the iOS Keychain.
+// - UserDefaults stores only non-sensitive account information.
+// - Existing legacy passwords stored in UserDefaults are
+//   automatically migrated into the Keychain.
+//
 // NOTE:
 // This is still LOCAL DEVELOPMENT authentication.
-// Passwords are stored locally for development only.
-// For production, use Firebase/Auth API + secure
-// password/token handling.
+//
+// For a production application, use Firebase/Auth API
+// or another secure authentication backend with proper
+// password hashing, authentication tokens, and account
+// recovery.
+//
 // =====================================================
 
 @MainActor
@@ -39,7 +48,6 @@ final class AuthenticationViewModel: ObservableObject {
     // =====================================================
 
     @Published var isAuthenticated: Bool = false
-
     @Published var isLoading: Bool = false
 
     // =====================================================
@@ -47,9 +55,7 @@ final class AuthenticationViewModel: ObservableObject {
     // =====================================================
 
     @Published private(set) var currentUserID: String?
-
     @Published private(set) var currentUserName: String = ""
-
     @Published private(set) var currentUserEmail: String = ""
 
     // =====================================================
@@ -57,11 +63,8 @@ final class AuthenticationViewModel: ObservableObject {
     // =====================================================
 
     @Published var name: String = ""
-
     @Published var email: String = ""
-
     @Published var password: String = ""
-
     @Published var confirmPassword: String = ""
 
     // =====================================================
@@ -69,41 +72,75 @@ final class AuthenticationViewModel: ObservableObject {
     // =====================================================
 
     @Published var errorMessage: String?
-
     @Published var successMessage: String?
 
     // =====================================================
     // STORAGE
     // =====================================================
 
-    // All local development accounts are stored in one
-    // dictionary.
+    // UserDefaults stores only non-sensitive account
+    // information.
     //
-    // Email → Account
-    //
-    // Each Account contains its own UUID.
+    // Passwords are NEVER stored in UserDefaults.
     // =====================================================
 
     private let accountsKey = "recalllq_accounts"
-
     private let currentUserIDKey = "recalllq_current_user_id"
-
     private let loggedInKey = "recalllq_logged_in"
+
+    // =====================================================
+    // PASSWORD KEYCHAIN PREFIX
+    // =====================================================
+
+    // Each account gets its own Keychain password entry.
+    //
+    // Example:
+    //
+    // RECALLIQ_PASSWORD_12345678-1234-1234-1234-123456789ABC
+    //
+    // This keeps passwords separated by user ID.
+    // =====================================================
+
+    private let passwordKeyPrefix = "RECALLIQ_PASSWORD_"
 
     // =====================================================
     // ACCOUNT MODEL
     // =====================================================
 
+    // IMPORTANT:
+    // This model contains ONLY non-sensitive account data.
+    //
+    // Password is intentionally NOT part of this model.
+    // =====================================================
+
     private struct LocalAccount: Codable {
 
         let id: UUID
-
         let name: String
-
         let email: String
+        let createdAt: Date
+    }
 
+    // =====================================================
+    // LEGACY ACCOUNT MODEL
+    // =====================================================
+
+    // Older versions of RecalllQ stored the password
+    // directly inside UserDefaults.
+    //
+    // This model is used ONLY to migrate old accounts.
+    //
+    // After migration, the password is moved to Keychain
+    // and the legacy account data is replaced with the
+    // secure account model above.
+    // =====================================================
+
+    private struct LegacyLocalAccount: Codable {
+
+        let id: UUID
+        let name: String
+        let email: String
         let password: String
-
         let createdAt: Date
     }
 
@@ -113,15 +150,25 @@ final class AuthenticationViewModel: ObservableObject {
 
     init() {
 
+        // =================================================
+        // MIGRATE LEGACY ACCOUNT PASSWORDS
+        // =================================================
+
+        migrateLegacyAccounts()
+
+        // =================================================
+        // RESTORE LOGIN STATE
+        // =================================================
+
         let loggedIn = UserDefaults.standard.bool(
             forKey: loggedInKey
         )
 
         isAuthenticated = loggedIn
 
-        // -------------------------------------------------
+        // =================================================
         // RESTORE CURRENT USER
-        // -------------------------------------------------
+        // =================================================
 
         if loggedIn,
            let savedUserID = UserDefaults.standard.string(
@@ -131,17 +178,23 @@ final class AuthenticationViewModel: ObservableObject {
 
             currentUserID = uuid.uuidString
 
-            // Load account information
+            // =================================================
+            // LOAD CURRENT USER ACCOUNT
+            // =================================================
+
             if let account = findAccount(
                 userID: uuid.uuidString
             ) {
 
                 currentUserName = account.name
-
                 currentUserEmail = account.email
+
             } else {
 
-                // Account no longer exists.
+                // =================================================
+                // ACCOUNT NO LONGER EXISTS
+                // =================================================
+
                 clearCurrentSession()
             }
         }
@@ -155,6 +208,10 @@ final class AuthenticationViewModel: ObservableObject {
 
         clearMessages()
 
+        // =================================================
+        // CLEAN FORM DATA
+        // =================================================
+
         let cleanName =
             name.trimmingCharacters(
                 in: .whitespacesAndNewlines
@@ -166,9 +223,9 @@ final class AuthenticationViewModel: ObservableObject {
             )
             .lowercased()
 
-        // -------------------------------------------------
+        // =================================================
         // VALIDATE NAME
-        // -------------------------------------------------
+        // =================================================
 
         guard !cleanName.isEmpty else {
 
@@ -178,9 +235,9 @@ final class AuthenticationViewModel: ObservableObject {
             return
         }
 
-        // -------------------------------------------------
+        // =================================================
         // VALIDATE EMAIL
-        // -------------------------------------------------
+        // =================================================
 
         guard isValidEmail(cleanEmail) else {
 
@@ -190,9 +247,9 @@ final class AuthenticationViewModel: ObservableObject {
             return
         }
 
-        // -------------------------------------------------
+        // =================================================
         // VALIDATE PASSWORD
-        // -------------------------------------------------
+        // =================================================
 
         guard password.count >= 6 else {
 
@@ -202,9 +259,9 @@ final class AuthenticationViewModel: ObservableObject {
             return
         }
 
-        // -------------------------------------------------
+        // =================================================
         // CONFIRM PASSWORD
-        // -------------------------------------------------
+        // =================================================
 
         guard password == confirmPassword else {
 
@@ -214,15 +271,15 @@ final class AuthenticationViewModel: ObservableObject {
             return
         }
 
-        // -------------------------------------------------
+        // =================================================
         // LOAD EXISTING ACCOUNTS
-        // -------------------------------------------------
+        // =================================================
 
         var accounts = loadAccounts()
 
-        // -------------------------------------------------
+        // =================================================
         // CHECK DUPLICATE EMAIL
-        // -------------------------------------------------
+        // =================================================
 
         let emailAlreadyExists =
             accounts.values.contains {
@@ -240,9 +297,9 @@ final class AuthenticationViewModel: ObservableObject {
             return
         }
 
-        // -------------------------------------------------
+        // =================================================
         // CREATE UNIQUE USER ID
-        // -------------------------------------------------
+        // =================================================
 
         let newUserID = UUID()
 
@@ -250,28 +307,64 @@ final class AuthenticationViewModel: ObservableObject {
             id: newUserID,
             name: cleanName,
             email: cleanEmail,
-            password: password,
             createdAt: Date()
         )
 
-        // -------------------------------------------------
-        // SAVE ACCOUNT
-        // -------------------------------------------------
+        // =================================================
+        // SAVE PASSWORD SECURELY
+        // =================================================
+
+        let passwordSaved =
+            savePasswordToKeychain(
+                password,
+                for: newUserID
+            )
+
+        guard passwordSaved else {
+
+            errorMessage =
+                "The account could not be created because the password could not be stored securely."
+
+            return
+        }
+
+        // =================================================
+        // SAVE NON-SENSITIVE ACCOUNT INFORMATION
+        // =================================================
 
         accounts[newUserID.uuidString] = account
 
         saveAccounts(accounts)
 
-        // -------------------------------------------------
+        // =================================================
         // START USER SESSION
-        // -------------------------------------------------
+        // =================================================
 
         setCurrentUser(
             account
         )
 
+        // =================================================
+        // CLEAR PASSWORD FIELDS
+        // =================================================
+
+        password = ""
+        confirmPassword = ""
+
+        // =================================================
+        // SUCCESS MESSAGE
+        // =================================================
+
         successMessage =
             "Account created successfully."
+
+        // =================================================
+        // DEBUG INFORMATION
+        // =================================================
+
+        // IMPORTANT:
+        // Password is NEVER printed.
+        // =================================================
 
         print(
             "========================================"
@@ -294,6 +387,10 @@ final class AuthenticationViewModel: ObservableObject {
         )
 
         print(
+            "Password: [SECURED IN KEYCHAIN]"
+        )
+
+        print(
             "========================================"
         )
     }
@@ -306,11 +403,15 @@ final class AuthenticationViewModel: ObservableObject {
 
         clearMessages()
 
-        // -------------------------------------------------
+        // =================================================
         // RESET AUTHENTICATION STATE
-        // -------------------------------------------------
+        // =================================================
 
         isAuthenticated = false
+
+        // =================================================
+        // CLEAN EMAIL
+        // =================================================
 
         let cleanEmail =
             email.trimmingCharacters(
@@ -318,9 +419,9 @@ final class AuthenticationViewModel: ObservableObject {
             )
             .lowercased()
 
-        // -------------------------------------------------
+        // =================================================
         // VALIDATE EMAIL
-        // -------------------------------------------------
+        // =================================================
 
         guard !cleanEmail.isEmpty else {
 
@@ -338,9 +439,9 @@ final class AuthenticationViewModel: ObservableObject {
             return
         }
 
-        // -------------------------------------------------
+        // =================================================
         // VALIDATE PASSWORD
-        // -------------------------------------------------
+        // =================================================
 
         guard !password.isEmpty else {
 
@@ -350,24 +451,25 @@ final class AuthenticationViewModel: ObservableObject {
             return
         }
 
-        // -------------------------------------------------
+        // =================================================
         // LOAD ALL ACCOUNTS
-        // -------------------------------------------------
+        // =================================================
 
         let accounts = loadAccounts()
 
-        // -------------------------------------------------
+        // =================================================
         // FIND ACCOUNT BY EMAIL
-        // -------------------------------------------------
+        // =================================================
 
         guard let account =
-            accounts.values.first(
-                where: {
-                    $0.email.localizedCaseInsensitiveCompare(
-                        cleanEmail
-                    ) == .orderedSame
-                }
-            )
+                accounts.values.first(
+                    where: {
+
+                        $0.email.localizedCaseInsensitiveCompare(
+                            cleanEmail
+                        ) == .orderedSame
+                    }
+                )
         else {
 
             errorMessage =
@@ -376,11 +478,31 @@ final class AuthenticationViewModel: ObservableObject {
             return
         }
 
-        // -------------------------------------------------
-        // CHECK PASSWORD
-        // -------------------------------------------------
+        // =================================================
+        // LOAD PASSWORD FROM KEYCHAIN
+        // =================================================
 
-        guard password == account.password else {
+        guard let storedPassword =
+                loadPasswordFromKeychain(
+                    for: account.id
+                )
+        else {
+
+            errorMessage =
+                "The account password could not be accessed securely."
+
+            print(
+                "❌ Password could not be loaded from Keychain for user \(account.id.uuidString)"
+            )
+
+            return
+        }
+
+        // =================================================
+        // CHECK PASSWORD
+        // =================================================
+
+        guard password == storedPassword else {
 
             errorMessage =
                 "The email or password is incorrect."
@@ -388,9 +510,9 @@ final class AuthenticationViewModel: ObservableObject {
             return
         }
 
-        // -------------------------------------------------
+        // =================================================
         // LOGIN SUCCESS
-        // -------------------------------------------------
+        // =================================================
 
         isLoading = true
 
@@ -402,6 +524,21 @@ final class AuthenticationViewModel: ObservableObject {
 
         successMessage =
             "Welcome back to RecalllQ!"
+
+        // =================================================
+        // CLEAR PASSWORD FIELD
+        // =================================================
+
+        password = ""
+        confirmPassword = ""
+
+        // =================================================
+        // DEBUG INFORMATION
+        // =================================================
+
+        // IMPORTANT:
+        // Password is NEVER printed.
+        // =================================================
 
         print(
             "========================================"
@@ -424,6 +561,10 @@ final class AuthenticationViewModel: ObservableObject {
         )
 
         print(
+            "Password: [SECURED IN KEYCHAIN]"
+        )
+
+        print(
             "========================================"
         )
     }
@@ -438,17 +579,18 @@ final class AuthenticationViewModel: ObservableObject {
 
         clearCurrentSession()
 
-        // -------------------------------------------------
+        // =================================================
         // CLEAR FORM
-        // -------------------------------------------------
+        // =================================================
 
         name = ""
-
         email = ""
-
         password = ""
-
         confirmPassword = ""
+
+        // =================================================
+        // DEBUG INFORMATION
+        // =================================================
 
         print(
             "========================================"
@@ -475,15 +617,19 @@ final class AuthenticationViewModel: ObservableObject {
 
         clearMessages()
 
+        // =================================================
+        // CLEAN EMAIL
+        // =================================================
+
         let cleanEmail =
             email.trimmingCharacters(
                 in: .whitespacesAndNewlines
             )
             .lowercased()
 
-        // -------------------------------------------------
+        // =================================================
         // VALIDATE EMAIL
-        // -------------------------------------------------
+        // =================================================
 
         guard !cleanEmail.isEmpty else {
 
@@ -501,14 +647,15 @@ final class AuthenticationViewModel: ObservableObject {
             return
         }
 
-        // -------------------------------------------------
+        // =================================================
         // CHECK ACCOUNT
-        // -------------------------------------------------
+        // =================================================
 
         let accounts = loadAccounts()
 
         guard accounts.values.contains(
             where: {
+
                 $0.email.localizedCaseInsensitiveCompare(
                     cleanEmail
                 ) == .orderedSame
@@ -521,9 +668,17 @@ final class AuthenticationViewModel: ObservableObject {
             return
         }
 
-        // -------------------------------------------------
+        // =================================================
         // PASSWORD RESET
-        // -------------------------------------------------
+        // =================================================
+
+        // IMPORTANT:
+        // This is still a local-development placeholder.
+        //
+        // A real production password reset would send a
+        // secure reset link through an authentication
+        // backend.
+        // =================================================
 
         successMessage =
             "Password reset instructions will be sent to your email."
@@ -541,6 +696,10 @@ final class AuthenticationViewModel: ObservableObject {
         _ account: LocalAccount
     ) {
 
+        // =================================================
+        // UPDATE CURRENT USER
+        // =================================================
+
         currentUserID =
             account.id.uuidString
 
@@ -550,15 +709,27 @@ final class AuthenticationViewModel: ObservableObject {
         currentUserEmail =
             account.email
 
+        // =================================================
+        // SAVE CURRENT USER ID
+        // =================================================
+
         UserDefaults.standard.set(
             account.id.uuidString,
             forKey: currentUserIDKey
         )
 
+        // =================================================
+        // SAVE LOGIN STATE
+        // =================================================
+
         UserDefaults.standard.set(
             true,
             forKey: loggedInKey
         )
+
+        // =================================================
+        // UPDATE AUTHENTICATION STATE
+        // =================================================
 
         isAuthenticated = true
     }
@@ -570,10 +741,12 @@ final class AuthenticationViewModel: ObservableObject {
     private func clearCurrentSession() {
 
         currentUserID = nil
-
         currentUserName = ""
-
         currentUserEmail = ""
+
+        // =================================================
+        // CLEAR LOGIN STATE
+        // =================================================
 
         UserDefaults.standard.set(
             false,
@@ -583,6 +756,10 @@ final class AuthenticationViewModel: ObservableObject {
         UserDefaults.standard.removeObject(
             forKey: currentUserIDKey
         )
+
+        // =================================================
+        // UPDATE AUTHENTICATION STATE
+        // =================================================
 
         isAuthenticated = false
     }
@@ -595,13 +772,72 @@ final class AuthenticationViewModel: ObservableObject {
         -> [String: LocalAccount] {
 
         guard let data =
-            UserDefaults.standard.data(
-                forKey: accountsKey
-            )
+                UserDefaults.standard.data(
+                    forKey: accountsKey
+                )
         else {
 
             return [:]
         }
+
+        // =================================================
+        // TRY LEGACY FORMAT FIRST
+        // =================================================
+
+        // This is important because the legacy format
+        // contains the password.
+        //
+        // We need to detect and migrate it before decoding
+        // the new secure account format.
+        // =================================================
+
+        if let legacyAccounts =
+            try? JSONDecoder().decode(
+                [String: LegacyLocalAccount].self,
+                from: data
+            ) {
+
+            // =================================================
+            // MIGRATE LEGACY PASSWORDS
+            // =================================================
+
+            let migrationSuccessful =
+                migrateLegacyAccounts(
+                    legacyAccounts
+                )
+
+            guard migrationSuccessful else {
+
+                print(
+                    "❌ Legacy account password migration could not be completed."
+                )
+
+                return [:]
+            }
+
+            // =================================================
+            // RETURN SECURE ACCOUNT MODEL
+            // =================================================
+
+            return legacyAccounts.reduce(
+                into: [String: LocalAccount]()
+            ) { result, item in
+
+                let legacyAccount = item.value
+
+                result[item.key] =
+                    LocalAccount(
+                        id: legacyAccount.id,
+                        name: legacyAccount.name,
+                        email: legacyAccount.email,
+                        createdAt: legacyAccount.createdAt
+                    )
+            }
+        }
+
+        // =================================================
+        // LOAD CURRENT SECURE FORMAT
+        // =================================================
 
         do {
 
@@ -636,6 +872,10 @@ final class AuthenticationViewModel: ObservableObject {
                     accounts
                 )
 
+            // =================================================
+            // SAVE ONLY NON-SENSITIVE DATA
+            // =================================================
+
             UserDefaults.standard.set(
                 data,
                 forKey: accountsKey
@@ -648,6 +888,186 @@ final class AuthenticationViewModel: ObservableObject {
                 error.localizedDescription
             )
         }
+    }
+
+    // =====================================================
+    // MIGRATE ALL LEGACY ACCOUNTS
+    // =====================================================
+
+    private func migrateLegacyAccounts() {
+
+        guard let data =
+                UserDefaults.standard.data(
+                    forKey: accountsKey
+                )
+        else {
+
+            return
+        }
+
+        guard let legacyAccounts =
+            try? JSONDecoder().decode(
+                [String: LegacyLocalAccount].self,
+                from: data
+            )
+        else {
+
+            // =================================================
+            // DATA IS ALREADY USING THE NEW SECURE FORMAT
+            // =================================================
+
+            return
+        }
+
+        // =================================================
+        // MIGRATE PASSWORDS
+        // =================================================
+
+        guard migrateLegacyAccounts(
+            legacyAccounts
+        ) else {
+
+            print(
+                "⚠️ RecalllQ account security migration is still pending."
+            )
+
+            return
+        }
+
+        // =================================================
+        // CREATE SECURE ACCOUNT DICTIONARY
+        // =================================================
+
+        let secureAccounts =
+            legacyAccounts.reduce(
+                into: [String: LocalAccount]()
+            ) { result, item in
+
+                let legacyAccount = item.value
+
+                result[item.key] =
+                    LocalAccount(
+                        id: legacyAccount.id,
+                        name: legacyAccount.name,
+                        email: legacyAccount.email,
+                        createdAt: legacyAccount.createdAt
+                    )
+            }
+
+        // =================================================
+        // REPLACE LEGACY USERDEFAULTS DATA
+        // =================================================
+
+        saveAccounts(
+            secureAccounts
+        )
+
+        print(
+            "🔐 RecalllQ legacy account passwords migrated to Keychain."
+        )
+    }
+
+    // =====================================================
+    // MIGRATE LEGACY ACCOUNT PASSWORDS
+    // =====================================================
+
+    private func migrateLegacyAccounts(
+        _ legacyAccounts: [String: LegacyLocalAccount]
+    ) -> Bool {
+
+        // =================================================
+        // SAVE EVERY PASSWORD TO KEYCHAIN
+        // =================================================
+
+        for account in legacyAccounts.values {
+
+            let key =
+                passwordKey(
+                    for: account.id
+                )
+
+            // =================================================
+            // DO NOT OVERWRITE AN EXISTING KEYCHAIN PASSWORD
+            // =================================================
+
+            if KeychainService.shared.read(
+                forKey: key
+            ) != nil {
+
+                continue
+            }
+
+            // =================================================
+            // SAVE LEGACY PASSWORD SECURELY
+            // =================================================
+
+            let saved =
+                KeychainService.shared.save(
+                    account.password,
+                    forKey: key
+                )
+
+            guard saved else {
+
+                print(
+                    "❌ Could not migrate password for user \(account.id.uuidString)"
+                )
+
+                return false
+            }
+        }
+
+        return true
+    }
+
+    // =====================================================
+    // SAVE PASSWORD TO KEYCHAIN
+    // =====================================================
+
+    private func savePasswordToKeychain(
+        _ password: String,
+        for userID: UUID
+    ) -> Bool {
+
+        let key =
+            passwordKey(
+                for: userID
+            )
+
+        return KeychainService.shared.save(
+            password,
+            forKey: key
+        )
+    }
+
+    // =====================================================
+    // LOAD PASSWORD FROM KEYCHAIN
+    // =====================================================
+
+    private func loadPasswordFromKeychain(
+        for userID: UUID
+    ) -> String? {
+
+        let key =
+            passwordKey(
+                for: userID
+            )
+
+        return KeychainService.shared.read(
+            forKey: key
+        )
+    }
+
+    // =====================================================
+    // CREATE PASSWORD KEYCHAIN KEY
+    // =====================================================
+
+    private func passwordKey(
+        for userID: UUID
+    ) -> String {
+
+        return passwordKeyPrefix +
+            userID.uuidString
     }
 
     // =====================================================
@@ -687,7 +1107,6 @@ final class AuthenticationViewModel: ObservableObject {
     func clearMessages() {
 
         errorMessage = nil
-
         successMessage = nil
     }
 }

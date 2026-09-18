@@ -8,16 +8,19 @@ import SwiftUI
 //
 // - Entry screen of RecalllQ
 // - Introduces the application
-// - Sends the user to LoginView
-// - Does NOT bypass authentication
+// - Allows registered users to continue to Login
+// - Allows students and instructors to explore RecalllQ
+//   without providing an email address or password
+// - Guest Mode is handled through AppState
 //
 // FLOW:
 //
 // Welcome
 //    ↓
-// Get Started
-//    ↓
-// Login
+// ┌───────────────────────┐
+// │ Get Started           │ → Login
+// │ Continue as Guest     │ → Main App
+// └───────────────────────┘
 //
 // =====================================================
 
@@ -182,6 +185,76 @@ struct WelcomeView: View {
                     .padding(.horizontal, 24)
 
                     // =================================================
+                    // CONTINUE AS GUEST
+                    // =================================================
+
+                    Button {
+
+                        // ---------------------------------------------
+                        // ENTER GUEST MODE
+                        // ---------------------------------------------
+
+                        appState.continueAsGuest()
+
+                    } label: {
+
+                        HStack(spacing: 10) {
+
+                            Image(
+                                systemName:
+                                    "person.crop.circle.badge.questionmark"
+                            )
+                            .font(.headline)
+
+                            Text("Continue as Guest")
+                                .font(.headline)
+                        }
+                        .foregroundColor(
+                            RecalllQTheme.primary
+                        )
+                        .frame(
+                            maxWidth: .infinity
+                        )
+                        .padding()
+                        .background(
+                            RecalllQTheme.primary
+                                .opacity(0.10)
+                        )
+                        .clipShape(
+                            RoundedRectangle(
+                                cornerRadius:
+                                    RecalllQTheme.mediumRadius
+                            )
+                        )
+                        .overlay(
+                            RoundedRectangle(
+                                cornerRadius:
+                                    RecalllQTheme.mediumRadius
+                            )
+                            .stroke(
+                                RecalllQTheme.primary
+                                    .opacity(0.25),
+                                lineWidth: 1
+                            )
+                        )
+                    }
+                    .padding(.horizontal, 24)
+
+                    // =================================================
+                    // GUEST MODE INFORMATION
+                    // =================================================
+
+                    Text(
+                        "Explore RecalllQ without creating an account."
+                    )
+                    .font(.caption)
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(
+                        RecalllQTheme.secondaryText
+                    )
+                    .padding(.horizontal, 30)
+
+                    // =================================================
                     // FOOTER
                     // =================================================
 
@@ -201,3 +274,4 @@ struct WelcomeView: View {
         }
     }
 }
+

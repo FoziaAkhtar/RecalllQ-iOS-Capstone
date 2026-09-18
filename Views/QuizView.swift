@@ -4,10 +4,13 @@ import SwiftUI
 // =====================================================
 // VIEW: QuizView
 // =====================================================
+//
 // PURPOSE:
+//
 // Main quiz learning screen for RecalllQ.
 //
 // FEATURES:
+//
 // - AI quiz generation
 // - Generate quiz from Memory
 // - Select number of questions
@@ -22,6 +25,7 @@ import SwiftUI
 // - API loading state
 // - API error handling
 // - Lively RecalllQ UI
+//
 // =====================================================
 
 struct QuizView: View {
@@ -41,16 +45,11 @@ struct QuizView: View {
     }
 
     // =====================================================
-    // API SERVICE
-    // =====================================================
-
-    private let quizAPIService = QuizAPIService()
-
-    // =====================================================
     // AI GENERATION STATE
     // =====================================================
 
     @State private var isGeneratingQuiz = false
+
     @State private var apiErrorMessage: String?
 
     // =====================================================
@@ -506,9 +505,27 @@ struct QuizView: View {
 
         Button {
 
+            // =================================================
+            // IMPORTANT:
+            //
+            // QuizViewModel.selectAnswer(_:)
+            // expects an Int index.
+            //
+            // We therefore find the position of the selected
+            // String inside question.options.
+            // =================================================
+
             if !vm.showResult {
 
-                vm.selectAnswer(option)
+                if let answerIndex =
+                    question.options.firstIndex(
+                        of: option
+                    ) {
+
+                    vm.selectAnswer(
+                        answerIndex
+                    )
+                }
             }
 
         } label: {
@@ -637,6 +654,7 @@ struct QuizView: View {
                     of: option
                 )
         else {
+
             return "?"
         }
 
@@ -1043,7 +1061,7 @@ struct QuizView: View {
 
             Button {
 
-                vm.resetCurrentQuiz()
+                vm.resetQuiz()
 
             } label: {
 
@@ -1087,6 +1105,7 @@ struct QuizView: View {
             Button {
 
                 vm.exitQuiz()
+
                 showGenerator = true
 
             } label: {
@@ -1178,6 +1197,7 @@ struct QuizView: View {
             Button {
 
                 apiErrorMessage = nil
+
                 showGenerator = true
 
             } label: {
@@ -1362,11 +1382,13 @@ struct QuizView: View {
                             selection:
                                 Binding(
                                     get: {
+
                                         selectedMemoryID
                                         ?? memories.first?.id
                                         ?? UUID()
                                     },
                                     set: {
+
                                         selectedMemoryID = $0
                                     }
                                 )
@@ -1485,6 +1507,18 @@ struct QuizView: View {
     // =====================================================
     // GENERATE AI QUIZ
     // =====================================================
+    //
+    // IMPORTANT:
+    //
+    // QuizAPIService generates [QuizQuestion].
+    //
+    // QuizViewModel is responsible for converting those
+    // questions into a saved Quiz.
+    //
+    // This keeps QuizView compatible with the current
+    // user-specific QuizStorageService architecture.
+    //
+    // =====================================================
 
     private func generateAIQuiz() {
 
@@ -1498,6 +1532,7 @@ struct QuizView: View {
                 "Please select a Memory first."
 
             showGenerator = false
+
             return
         }
 
@@ -1520,6 +1555,7 @@ struct QuizView: View {
                 "The selected Memory could not be found."
 
             showGenerator = false
+
             return
         }
 
@@ -1528,89 +1564,45 @@ struct QuizView: View {
         // =================================================
 
         showGenerator = false
+
         apiErrorMessage = nil
+
         isGeneratingQuiz = true
 
         Task {
 
-            do {
+            // =================================================
+            // GENERATE QUIZ THROUGH VIEW MODEL
+            // =================================================
+            //
+            // QuizViewModel now owns:
+            //
+            // - AI generation
+            // - Quiz creation
+            // - Memory association
+            // - User-specific saving
+            // - Starting the quiz
+            //
+            // =================================================
 
-                // =================================================
-                // CALL AI API
-                // =================================================
+            await vm.generateAIQuizFromMemory(
+                memory,
+                numberOfQuestions:
+                    numberOfQuestions
+            )
 
-                let questions =
-                    try await quizAPIService.generateQuiz(
-                        from: memory,
-                        numberOfQuestions:
-                            numberOfQuestions
-                    )
+            // =================================================
+            // UPDATE UI
+            // =================================================
 
-                // =================================================
-                // UPDATE UI ON MAIN ACTOR
-                // =================================================
+            await MainActor.run {
 
-                await MainActor.run {
+                if let error = vm.aiQuizError {
 
-                    let quizTitle =
-                        "\(memory.title) AI Quiz"
-
-                    // =================================================
-                    // CREATE QUIZ
-                    // =================================================
-
-                    vm.createQuiz(
-                        title: quizTitle,
-                        questions: questions,
-                        memoryID: memory.id
-                    )
-
-                    // =================================================
-                    // FIND NEW QUIZ
-                    // =================================================
-
-                    if let quiz =
-                        vm.quizzes.first(
-                            where: {
-                                $0.memoryID == memory.id &&
-                                $0.title == quizTitle
-                            }
-                        ) {
-
-                        // =================================================
-                        // START QUIZ
-                        // =================================================
-
-                        vm.startQuiz(
-                            id: quiz.id
-                        )
-                    }
-
-                    isGeneratingQuiz = false
+                    apiErrorMessage = error
                 }
 
-            } catch {
-
-                // =================================================
-                // HANDLE API ERROR
-                // =================================================
-
-                await MainActor.run {
-
-                    isGeneratingQuiz = false
-
-                    if let apiError =
-                        error as? QuizAPIService.QuizAPIError {
-
-                        apiErrorMessage =
-                            apiError.localizedDescription
-
-                    } else {
-
-                        apiErrorMessage =
-                            error.localizedDescription
-                    }
-                }
+                isGeneratingQuiz = false
             }
         }
     }
@@ -1640,6 +1632,7 @@ struct QuizView: View {
     private var progressValue: Double {
 
         guard totalQuestions > 0 else {
+
             return 0
         }
 
@@ -1654,6 +1647,7 @@ struct QuizView: View {
     private var isLastQuestion: Bool {
 
         guard totalQuestions > 0 else {
+
             return false
         }
 

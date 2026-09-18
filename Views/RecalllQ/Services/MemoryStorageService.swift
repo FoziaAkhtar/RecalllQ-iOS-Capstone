@@ -4,17 +4,24 @@ import Foundation
 // =====================================================
 // SERVICE: MemoryStorageService
 // =====================================================
+//
 // PURPOSE:
+//
 // Local persistence for Memory objects.
 //
 // IMPORTANT:
+//
 // Each authenticated user gets their own memory file.
 //
 // Example:
+//
 // User A → memories_user_A.json
 // User B → memories_user_B.json
 //
+// Guest → memories___guest__.json
+//
 // This prevents users from seeing each other's memories.
+//
 // =====================================================
 
 final class MemoryStorageService {
@@ -73,6 +80,10 @@ final class MemoryStorageService {
     private var safeUserID: String {
 
         userID
+            .lowercased()
+            .trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
             .replacingOccurrences(
                 of: "/",
                 with: "_"
@@ -85,15 +96,40 @@ final class MemoryStorageService {
                 of: " ",
                 with: "_"
             )
+            .replacingOccurrences(
+                of: "@",
+                with: "_"
+            )
+            .replacingOccurrences(
+                of: ".",
+                with: "_"
+            )
     }
 
     // =====================================================
     // SAVE MEMORIES
     // =====================================================
+    //
+    // IMPORTANT:
+    //
+    // This save operation is SYNCHRONOUS.
+    //
+    // The method does not return until the memory file
+    // has actually been written.
+    //
+    // This is especially important for:
+    //
+    // Guest Mode
+    // User switching
+    // Logout
+    // Login
+    // App restart
+    //
+    // =====================================================
 
     func save(_ memories: [Memory]) {
 
-        queue.async {
+        queue.sync {
 
             guard let url = self.fileURL else {
 
@@ -108,9 +144,13 @@ final class MemoryStorageService {
 
                 let encoder = JSONEncoder()
 
-                encoder.outputFormatting = .prettyPrinted
+                encoder.outputFormatting = [
+                    .prettyPrinted
+                ]
 
-                let data = try encoder.encode(memories)
+                let data = try encoder.encode(
+                    memories
+                )
 
                 try data.write(
                     to: url,
@@ -118,14 +158,57 @@ final class MemoryStorageService {
                 )
 
                 print(
-                    "💾 Saved \(memories.count) memories for user \(self.userID)"
+                    "========================================"
+                )
+
+                print(
+                    "💾 MEMORIES SAVED TO DISK"
+                )
+
+                print(
+                    "========================================"
+                )
+
+                print(
+                    "👤 User: \(self.userID)"
+                )
+
+                print(
+                    "📚 Memory count: \(memories.count)"
+                )
+
+                print(
+                    "📁 File: \(url.lastPathComponent)"
+                )
+
+                print(
+                    "========================================"
                 )
 
             } catch {
 
                 print(
-                    "❌ MEMORY SAVE ERROR:",
-                    error.localizedDescription
+                    "========================================"
+                )
+
+                print(
+                    "❌ MEMORY SAVE ERROR"
+                )
+
+                print(
+                    "========================================"
+                )
+
+                print(
+                    "👤 User: \(self.userID)"
+                )
+
+                print(
+                    "Error: \(error.localizedDescription)"
+                )
+
+                print(
+                    "========================================"
                 )
             }
         }
@@ -177,7 +260,31 @@ final class MemoryStorageService {
             )
 
             print(
-                "✅ Loaded \(memories.count) memories for user \(userID)"
+                "========================================"
+            )
+
+            print(
+                "✅ MEMORIES LOADED"
+            )
+
+            print(
+                "========================================"
+            )
+
+            print(
+                "👤 User: \(userID)"
+            )
+
+            print(
+                "📚 Memory count: \(memories.count)"
+            )
+
+            print(
+                "📁 File: \(url.lastPathComponent)"
+            )
+
+            print(
+                "========================================"
             )
 
             return memories
@@ -185,11 +292,31 @@ final class MemoryStorageService {
         } catch {
 
             print(
-                "⚠️ MEMORY LOAD ERROR:",
-                error.localizedDescription
+                "========================================"
+            )
+
+            print(
+                "⚠️ MEMORY LOAD ERROR"
+            )
+
+            print(
+                "========================================"
+            )
+
+            print(
+                "👤 User: \(userID)"
+            )
+
+            print(
+                "Error: \(error.localizedDescription)"
+            )
+
+            print(
+                "========================================"
             )
 
             // Do NOT delete the user's file.
+            //
             // Returning [] prevents the app from crashing.
 
             return []
@@ -211,7 +338,7 @@ final class MemoryStorageService {
             return
         }
 
-        queue.async {
+        queue.sync {
 
             do {
 

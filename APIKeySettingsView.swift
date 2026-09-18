@@ -8,8 +8,13 @@ import SwiftUI
 // Allows the user to configure the OpenAI API key
 // used by QuizAPIService.
 //
+// SECURITY:
+// The API key is stored securely using the iOS Keychain.
+//
 // IMPORTANT:
-// The key is stored locally using UserDefaults.
+// Older versions of RecalllQ stored the key in
+// UserDefaults. This version automatically migrates
+// an existing key into the Keychain.
 //
 // For a production application, API requests should
 // go through a secure backend instead.
@@ -20,14 +25,18 @@ struct APIKeySettingsView: View {
     // =====================================================
     // API KEY
     // =====================================================
-
     @State private var apiKey: String = ""
 
     // =====================================================
     // STATUS
     // =====================================================
-
     @State private var showSavedMessage = false
+
+    // =====================================================
+    // API KEY STORAGE KEY
+    // =====================================================
+    private let apiKeyStorageKey =
+        "OPENAI_API_KEY"
 
     // =====================================================
     // BODY
@@ -170,7 +179,7 @@ struct APIKeySettingsView: View {
             ) {
 
                 Text(
-                    "For development, RecalllQ stores the key locally. Never share your API key or commit it to GitHub."
+                    "RecalllQ stores your API key securely in the iOS Keychain. Never share your API key or commit it to GitHub."
                 )
                 .font(.caption)
                 .foregroundColor(
@@ -178,16 +187,20 @@ struct APIKeySettingsView: View {
                 )
             }
         }
+
         .navigationTitle(
             "AI Settings"
         )
+
         .navigationBarTitleDisplayMode(
             .inline
         )
+
         .onAppear {
 
             loadAPIKey()
         }
+
         .alert(
             "API Key Saved",
             isPresented:
@@ -214,11 +227,88 @@ struct APIKeySettingsView: View {
 
     private func loadAPIKey() {
 
-        apiKey =
+        // =================================================
+        // FIRST:
+        // LOAD FROM SECURE KEYCHAIN
+        // =================================================
+
+        if let secureKey =
+            KeychainService.shared.read(
+                forKey:
+                    apiKeyStorageKey
+            ) {
+
+            apiKey = secureKey
+
+            print(
+                "🔐 OpenAI API key loaded from Keychain."
+            )
+
+            return
+        }
+
+        // =================================================
+        // LEGACY MIGRATION
+        // =================================================
+        //
+        // Older versions stored the API key in
+        // UserDefaults.
+        //
+        // If an old key exists, move it to Keychain
+        // and then delete the old UserDefaults value.
+        // =================================================
+
+        if let legacyKey =
             UserDefaults.standard.string(
                 forKey:
-                    "OPENAI_API_KEY"
-            ) ?? ""
+                    apiKeyStorageKey
+            ) {
+
+            let cleanedKey =
+                legacyKey.trimmingCharacters(
+                    in:
+                        .whitespacesAndNewlines
+                )
+
+            guard !cleanedKey.isEmpty else {
+
+                UserDefaults.standard.removeObject(
+                    forKey:
+                        apiKeyStorageKey
+                )
+
+                return
+            }
+
+            // =================================================
+            // SAVE OLD KEY INTO KEYCHAIN
+            // =================================================
+
+            let saved =
+                KeychainService.shared.save(
+                    cleanedKey,
+                    forKey:
+                        apiKeyStorageKey
+                )
+
+            if saved {
+
+                // =============================================
+                // DELETE OLD USERDEFAULTS VALUE
+                // =============================================
+
+                UserDefaults.standard.removeObject(
+                    forKey:
+                        apiKeyStorageKey
+                )
+
+                apiKey = cleanedKey
+
+                print(
+                    "🔄 Existing API key migrated from UserDefaults to Keychain."
+                )
+            }
+        }
     }
 
     // =====================================================
@@ -239,16 +329,47 @@ struct APIKeySettingsView: View {
             return
         }
 
-        UserDefaults.standard.set(
-            cleanedKey,
+        // =================================================
+        // SAVE SECURELY TO KEYCHAIN
+        // =================================================
+
+        let saved =
+            KeychainService.shared.save(
+                cleanedKey,
+                forKey:
+                    apiKeyStorageKey
+            )
+
+        // =================================================
+        // CHECK SAVE RESULT
+        // =================================================
+
+        guard saved else {
+
+            print(
+                "❌ OpenAI API key could not be saved to Keychain."
+            )
+
+            return
+        }
+
+        // =================================================
+        // REMOVE LEGACY USERDEFAULTS VALUE
+        // =================================================
+
+        UserDefaults.standard.removeObject(
             forKey:
-                "OPENAI_API_KEY"
+                apiKeyStorageKey
         )
+
+        // =================================================
+        // SUCCESS
+        // =================================================
 
         showSavedMessage = true
 
         print(
-            "✅ OpenAI API key saved."
+            "🔐 OpenAI API key saved securely in Keychain."
         )
     }
 
@@ -258,15 +379,33 @@ struct APIKeySettingsView: View {
 
     private func removeAPIKey() {
 
+        // =================================================
+        // REMOVE FROM KEYCHAIN
+        // =================================================
+
+        KeychainService.shared.delete(
+            forKey:
+                apiKeyStorageKey
+        )
+
+        // =================================================
+        // REMOVE ANY OLD USERDEFAULTS VALUE
+        // =================================================
+
         UserDefaults.standard.removeObject(
             forKey:
-                "OPENAI_API_KEY"
+                apiKeyStorageKey
         )
+
+        // =================================================
+        // CLEAR SCREEN
+        // =================================================
 
         apiKey = ""
 
         print(
-            "🗑️ OpenAI API key removed."
+            "🗑️ OpenAI API key removed securely."
         )
     }
 }
+

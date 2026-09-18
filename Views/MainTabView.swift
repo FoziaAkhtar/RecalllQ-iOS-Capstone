@@ -16,6 +16,7 @@ import SwiftUI
 // - Settings navigation
 // - Uses global AppState
 // - Uses RecalllQTheme for visual styling
+// - Resets Settings navigation when switching accounts
 //
 // TAB INDEX:
 // 0 = Dashboard
@@ -35,6 +36,31 @@ struct MainTabView: View {
     @EnvironmentObject var appState: AppState
 
     // =====================================================
+    // SETTINGS NAVIGATION RESET
+    // =====================================================
+
+    //
+    // WHY THIS EXISTS:
+    //
+    // Settings contains additional NavigationLinks such as:
+    //
+    // Settings
+    //     ↓
+    // Switch Account
+    //     ↓
+    // Continue as Guest
+    //
+    // When AppState changes selectedTab from 5 → 0,
+    // SwiftUI can sometimes keep the Settings NavigationStack
+    // alive.
+    //
+    // This ID forces the Settings NavigationStack to be
+    // recreated whenever the selected tab changes.
+    // =====================================================
+
+    @State private var settingsNavigationID = UUID()
+
+    // =====================================================
     // BODY
     // =====================================================
 
@@ -52,16 +78,16 @@ struct MainTabView: View {
 
                 DashboardView()
                     .environmentObject(appState)
-
             }
+
             .tabItem {
 
                 Label(
                     "Dashboard",
                     systemImage: "brain.head.profile"
                 )
-
             }
+
             .tag(0)
 
             // =================================================
@@ -72,16 +98,16 @@ struct MainTabView: View {
 
                 NotesView()
                     .environmentObject(appState)
-
             }
+
             .tabItem {
 
                 Label(
                     "Notes",
                     systemImage: "note.text"
                 )
-
             }
+
             .tag(1)
 
             // =================================================
@@ -92,16 +118,16 @@ struct MainTabView: View {
 
                 MemoriesView()
                     .environmentObject(appState)
-
             }
+
             .tabItem {
 
                 Label(
                     "Memories",
                     systemImage: "brain.head.profile"
                 )
-
             }
+
             .tag(2)
 
             // =================================================
@@ -110,18 +136,36 @@ struct MainTabView: View {
 
             NavigationStack {
 
-                FlashcardsView()
-                    .environmentObject(appState)
+                // =================================================
+                // IMPORTANT:
+                // FlashcardsView now observes FlashcardViewModel
+                // directly.
+                //
+                // This allows SwiftUI to detect changes to:
+                //
+                // - currentIndex
+                // - currentFlashcard
+                // - isShowingAnswer
+                // - flashcards
+                //
+                // This is required for the Next / Previous buttons
+                // to refresh the displayed question correctly.
+                // =================================================
 
+                FlashcardsView(
+                    viewModel: appState.flashcardViewModel
+                )
+                .environmentObject(appState)
             }
+
             .tabItem {
 
                 Label(
                     "Flashcards",
                     systemImage: "rectangle.on.rectangle"
                 )
-
             }
+
             .tag(3)
 
             // =================================================
@@ -132,16 +176,16 @@ struct MainTabView: View {
 
                 QuizView()
                     .environmentObject(appState)
-
             }
+
             .tabItem {
 
                 Label(
                     "Quiz",
                     systemImage: "questionmark.circle.fill"
                 )
-
             }
+
             .tag(4)
 
             // =================================================
@@ -152,17 +196,64 @@ struct MainTabView: View {
 
                 SettingsView()
                     .environmentObject(appState)
-
             }
+
+            // =================================================
+            // SETTINGS NAVIGATION RESET
+            // =================================================
+
+            //
+            // Every time selectedTab changes, this ID changes.
+            //
+            // If the user was deep inside Settings and switches
+            // to another tab, SwiftUI receives a fresh Settings
+            // NavigationStack the next time Settings is opened.
+            // =================================================
+
+            .id(settingsNavigationID)
+
             .tabItem {
 
                 Label(
                     "Settings",
                     systemImage: "gearshape.fill"
                 )
-
             }
+
             .tag(5)
+        }
+
+        // =====================================================
+        // WATCH FOR TAB CHANGES
+        // =====================================================
+
+        //
+        // When the app moves away from Settings, reset the
+        // Settings NavigationStack.
+        //
+        // This is especially important for:
+        //
+        // Account A
+        //     ↓
+        // Settings
+        //     ↓
+        // Switch Account
+        //     ↓
+        // Continue as Guest
+        //     ↓
+        // Dashboard
+        //
+        // The Dashboard tab will now become the visible root
+        // screen instead of leaving the Settings navigation
+        // hierarchy on screen.
+        // =====================================================
+
+        .onChange(of: appState.selectedTab) { _, newTab in
+
+            if newTab != 5 {
+
+                settingsNavigationID = UUID()
+            }
         }
 
         // =====================================================

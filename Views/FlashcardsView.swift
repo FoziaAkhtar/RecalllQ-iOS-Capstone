@@ -4,10 +4,27 @@ import SwiftUI
 // =====================================================
 // VIEW: FlashcardsView
 // =====================================================
+//
 // PURPOSE:
+//
 // Premium RecalllQ flashcard learning experience.
 //
+// IMPORTANT:
+//
+// This view directly observes FlashcardViewModel.
+//
+// This is required because FlashcardViewModel contains
+// its own @Published properties such as:
+//
+// - currentIndex
+// - flashcards
+// - searchText
+// - isGeneratingFlashcards
+//
+// =====================================================
+//
 // FEATURES:
+//
 // - Flashcard statistics
 // - Memory → Flashcard conversion progress
 // - Search
@@ -24,6 +41,7 @@ import SwiftUI
 // - Delete flashcards
 // - Reset all flashcards
 // - Study Session integration
+//
 // =====================================================
 
 struct FlashcardsView: View {
@@ -35,11 +53,28 @@ struct FlashcardsView: View {
     @EnvironmentObject var appState: AppState
 
     // =====================================================
-    // VIEW MODEL
+    // FLASHCARD VIEW MODEL
+    // =====================================================
+    //
+    // IMPORTANT:
+    //
+    // We use @ObservedObject here.
+    //
+    // This makes SwiftUI listen directly to
+    // FlashcardViewModel's @Published properties.
+    //
     // =====================================================
 
-    private var vm: FlashcardViewModel {
-        appState.flashcardViewModel
+    @ObservedObject private var vm: FlashcardViewModel
+
+    // =====================================================
+    // INITIALIZER
+    // =====================================================
+
+    init(viewModel: FlashcardViewModel) {
+        self._vm = ObservedObject(
+            wrappedValue: viewModel
+        )
     }
 
     // =====================================================
@@ -47,7 +82,8 @@ struct FlashcardsView: View {
     // =====================================================
 
     @State private var showingResetConfirmation = false
-    @State private var showingGenerationInfo = false
+
+    @State private var isAnswerRevealed = false
 
     // =====================================================
     // MEMORY INFORMATION
@@ -62,11 +98,17 @@ struct FlashcardsView: View {
     }
 
     private var convertedMemoryCount: Int {
-        min(flashcardCount, memoryCount)
+        min(
+            flashcardCount,
+            memoryCount
+        )
     }
 
     private var remainingFlashcards: Int {
-        max(memoryCount - convertedMemoryCount, 0)
+        max(
+            memoryCount - convertedMemoryCount,
+            0
+        )
     }
 
     private var memoryProgress: Double {
@@ -75,7 +117,8 @@ struct FlashcardsView: View {
         }
 
         return min(
-            Double(convertedMemoryCount) / Double(memoryCount),
+            Double(convertedMemoryCount)
+            / Double(memoryCount),
             1.0
         )
     }
@@ -104,7 +147,10 @@ struct FlashcardsView: View {
     }
 
     private var unreviewedCount: Int {
-        max(flashcardCount - reviewedCount, 0)
+        max(
+            flashcardCount - reviewedCount,
+            0
+        )
     }
 
     // =====================================================
@@ -118,7 +164,8 @@ struct FlashcardsView: View {
         }
 
         if remainingFlashcards > 0 {
-            return "Generate \(remainingFlashcards) Flashcard\(remainingFlashcards == 1 ? "" : "s")"
+            return
+                "Generate \(remainingFlashcards) Flashcard\(remainingFlashcards == 1 ? "" : "s")"
         }
 
         return "Generate Flashcards"
@@ -138,7 +185,8 @@ struct FlashcardsView: View {
             return "All Memories have been converted into flashcards."
         }
 
-        return "\(remainingFlashcards) Memory\(remainingFlashcards == 1 ? "" : "ies") ready for flashcard generation."
+        return
+            "\(remainingFlashcards) Memory\(remainingFlashcards == 1 ? "" : "ies") ready for flashcard generation."
     }
 
     // =====================================================
@@ -147,7 +195,9 @@ struct FlashcardsView: View {
 
     var body: some View {
 
-        ScrollView(showsIndicators: false) {
+        ScrollView(
+            showsIndicators: false
+        ) {
 
             VStack(
                 alignment: .leading,
@@ -166,9 +216,16 @@ struct FlashcardsView: View {
 
                 searchSection
 
+                // =================================================
+                // STUDY AREA
+                // =================================================
+
                 if let card = vm.currentFlashcard {
+
                     studySection(card)
+
                 } else {
+
                     emptyState
                 }
 
@@ -183,6 +240,24 @@ struct FlashcardsView: View {
         )
         .navigationTitle("Flashcards")
         .navigationBarTitleDisplayMode(.inline)
+
+        // =====================================================
+        // RESET ANSWER WHEN CARD CHANGES
+        // =====================================================
+
+        .onChange(
+            of: vm.currentFlashcard?.id
+        ) { _, _ in
+
+            print("========================================")
+            print("🔄 FLASHCARD VIEW DETECTED CARD CHANGE")
+            print("🔄 Resetting answer reveal.")
+            print("📍 Current index: \(vm.currentIndex)")
+            print("❓ Current question: \(vm.currentFlashcard?.question ?? "NONE")")
+            print("========================================")
+
+            isAnswerRevealed = false
+        }
     }
 
     // =====================================================
@@ -205,11 +280,13 @@ struct FlashcardsView: View {
                         RecalllQTheme.primaryText
                     )
 
-                Text("Turn your Memories into active learning.")
-                    .font(.subheadline)
-                    .foregroundColor(
-                        RecalllQTheme.secondaryText
-                    )
+                Text(
+                    "Turn your Memories into active learning."
+                )
+                .font(.subheadline)
+                .foregroundColor(
+                    RecalllQTheme.secondaryText
+                )
             }
 
             Spacer()
@@ -233,7 +310,8 @@ struct FlashcardsView: View {
                     )
 
                 Image(
-                    systemName: "rectangle.on.rectangle.fill"
+                    systemName:
+                        "rectangle.on.rectangle.fill"
                 )
                 .font(.title2)
                 .foregroundColor(
@@ -309,7 +387,8 @@ struct FlashcardsView: View {
         .padding(.vertical, 14)
         .background(
             RoundedRectangle(
-                cornerRadius: RecalllQTheme.mediumRadius
+                cornerRadius:
+                    RecalllQTheme.mediumRadius
             )
             .fill(
                 RecalllQTheme.cardBackground
@@ -317,7 +396,8 @@ struct FlashcardsView: View {
         )
         .overlay(
             RoundedRectangle(
-                cornerRadius: RecalllQTheme.mediumRadius
+                cornerRadius:
+                    RecalllQTheme.mediumRadius
             )
             .stroke(
                 color.opacity(0.12),
@@ -346,7 +426,8 @@ struct FlashcardsView: View {
 
                     Label(
                         "Memory → Flashcards",
-                        systemImage: "brain.head.profile"
+                        systemImage:
+                            "brain.head.profile"
                     )
                     .font(.headline)
                     .foregroundColor(
@@ -430,21 +511,30 @@ struct FlashcardsView: View {
             HStack(spacing: 12) {
 
                 progressMiniStat(
-                    icon: "brain.head.profile",
-                    value: "\(memoryCount)",
-                    title: "Memories"
+                    icon:
+                        "brain.head.profile",
+                    value:
+                        "\(memoryCount)",
+                    title:
+                        "Memories"
                 )
 
                 progressMiniStat(
-                    icon: "rectangle.stack.fill",
-                    value: "\(flashcardCount)",
-                    title: "Cards"
+                    icon:
+                        "rectangle.stack.fill",
+                    value:
+                        "\(flashcardCount)",
+                    title:
+                        "Cards"
                 )
 
                 progressMiniStat(
-                    icon: "clock.fill",
-                    value: "\(unreviewedCount)",
-                    title: "Unreviewed"
+                    icon:
+                        "clock.fill",
+                    value:
+                        "\(unreviewedCount)",
+                    title:
+                        "Unreviewed"
                 )
             }
         }
@@ -452,7 +542,8 @@ struct FlashcardsView: View {
         .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(
-                cornerRadius: RecalllQTheme.largeRadius
+                cornerRadius:
+                    RecalllQTheme.largeRadius
             )
             .fill(
                 RecalllQTheme.cardBackground
@@ -460,7 +551,8 @@ struct FlashcardsView: View {
         )
         .overlay(
             RoundedRectangle(
-                cornerRadius: RecalllQTheme.largeRadius
+                cornerRadius:
+                    RecalllQTheme.largeRadius
             )
             .stroke(
                 RecalllQTheme.primary.opacity(0.10),
@@ -468,12 +560,15 @@ struct FlashcardsView: View {
             )
         )
         .shadow(
-            color: Color.black.opacity(
-                RecalllQTheme.shadowOpacity
-            ),
-            radius: RecalllQTheme.shadowRadius,
+            color:
+                Color.black.opacity(
+                    RecalllQTheme.shadowOpacity
+                ),
+            radius:
+                RecalllQTheme.shadowRadius,
             x: 0,
-            y: RecalllQTheme.shadowY
+            y:
+                RecalllQTheme.shadowY
         )
     }
 
@@ -520,6 +615,10 @@ struct FlashcardsView: View {
 
         Button {
 
+            print("========================================")
+            print("✨ GENERATE FLASHCARDS TAPPED")
+            print("========================================")
+
             appState.createFlashcardsFromAllMemories()
 
         } label: {
@@ -529,14 +628,17 @@ struct FlashcardsView: View {
                 ZStack {
 
                     Circle()
-                        .fill(Color.white.opacity(0.18))
+                        .fill(
+                            Color.white.opacity(0.18)
+                        )
                         .frame(
                             width: 44,
                             height: 44
                         )
 
                     Image(
-                        systemName: "sparkles"
+                        systemName:
+                            "sparkles"
                     )
                     .font(.title3)
                 }
@@ -546,8 +648,10 @@ struct FlashcardsView: View {
                     spacing: 4
                 ) {
 
-                    Text(generateButtonTitle)
-                        .font(.headline)
+                    Text(
+                        generateButtonTitle
+                    )
+                    .font(.headline)
 
                     Text(
                         memoryCount > 0
@@ -568,7 +672,8 @@ struct FlashcardsView: View {
                 } else {
 
                     Image(
-                        systemName: "arrow.right"
+                        systemName:
+                            "arrow.right"
                     )
                     .font(.headline)
                 }
@@ -588,11 +693,13 @@ struct FlashcardsView: View {
             )
             .clipShape(
                 RoundedRectangle(
-                    cornerRadius: RecalllQTheme.largeRadius
+                    cornerRadius:
+                        RecalllQTheme.largeRadius
                 )
             )
             .shadow(
-                color: RecalllQTheme.primary.opacity(0.20),
+                color:
+                    RecalllQTheme.primary.opacity(0.20),
                 radius: 10,
                 x: 0,
                 y: 5
@@ -617,26 +724,37 @@ struct FlashcardsView: View {
         if vm.isGeneratingFlashcards {
 
             statusMessage(
-                icon: "sparkles",
-                text: "RecalllQ is generating your flashcards...",
-                color: RecalllQTheme.primary
+                icon:
+                    "sparkles",
+                text:
+                    "RecalllQ is generating your flashcards...",
+                color:
+                    RecalllQTheme.primary
             )
 
-        } else if let message = vm.flashcardGenerationMessage {
+        } else if let message =
+                    vm.flashcardGenerationMessage {
 
             statusMessage(
-                icon: "checkmark.circle.fill",
-                text: message,
-                color: RecalllQTheme.success
+                icon:
+                    "checkmark.circle.fill",
+                text:
+                    message,
+                color:
+                    RecalllQTheme.success
             )
         }
 
-        if let error = vm.flashcardGenerationError {
+        if let error =
+            vm.flashcardGenerationError {
 
             statusMessage(
-                icon: "exclamationmark.triangle.fill",
-                text: error,
-                color: RecalllQTheme.error
+                icon:
+                    "exclamationmark.triangle.fill",
+                text:
+                    error,
+                color:
+                    RecalllQTheme.error
             )
         }
 
@@ -651,12 +769,15 @@ struct FlashcardsView: View {
                 HStack {
 
                     Image(
-                        systemName: "trash.fill"
+                        systemName:
+                            "trash.fill"
                     )
 
-                    Text("Reset All Flashcards")
-                        .font(.subheadline)
-                        .bold()
+                    Text(
+                        "Reset All Flashcards"
+                    )
+                    .font(.subheadline)
+                    .bold()
 
                     Spacer()
                 }
@@ -667,7 +788,8 @@ struct FlashcardsView: View {
             }
             .alert(
                 "Reset All Flashcards?",
-                isPresented: $showingResetConfirmation
+                isPresented:
+                    $showingResetConfirmation
             ) {
 
                 Button(
@@ -679,7 +801,10 @@ struct FlashcardsView: View {
                     "Reset",
                     role: .destructive
                 ) {
+
                     vm.resetAllFlashcards()
+
+                    isAnswerRevealed = false
                 }
 
             } message: {
@@ -718,7 +843,8 @@ struct FlashcardsView: View {
         .padding()
         .background(
             RoundedRectangle(
-                cornerRadius: RecalllQTheme.mediumRadius
+                cornerRadius:
+                    RecalllQTheme.mediumRadius
             )
             .fill(
                 color.opacity(0.09)
@@ -735,7 +861,8 @@ struct FlashcardsView: View {
         HStack(spacing: 10) {
 
             Image(
-                systemName: "magnifyingglass"
+                systemName:
+                    "magnifyingglass"
             )
             .foregroundColor(
                 RecalllQTheme.primary
@@ -762,18 +889,21 @@ struct FlashcardsView: View {
                 } label: {
 
                     Image(
-                        systemName: "xmark.circle.fill"
+                        systemName:
+                            "xmark.circle.fill"
                     )
                     .foregroundColor(
                         RecalllQTheme.secondaryText
                     )
                 }
+                .buttonStyle(.plain)
             }
         }
         .padding(13)
         .background(
             RoundedRectangle(
-                cornerRadius: RecalllQTheme.mediumRadius
+                cornerRadius:
+                    RecalllQTheme.mediumRadius
             )
             .fill(
                 RecalllQTheme.cardBackground
@@ -781,7 +911,8 @@ struct FlashcardsView: View {
         )
         .overlay(
             RoundedRectangle(
-                cornerRadius: RecalllQTheme.mediumRadius
+                cornerRadius:
+                    RecalllQTheme.mediumRadius
             )
             .stroke(
                 RecalllQTheme.primary.opacity(0.10),
@@ -804,11 +935,16 @@ struct FlashcardsView: View {
             spacing: 18
         ) {
 
+            // =================================================
+            // STUDY HEADER
+            // =================================================
+
             HStack {
 
                 Label(
                     "Study Mode",
-                    systemImage: "brain.head.profile"
+                    systemImage:
+                        "brain.head.profile"
                 )
                 .font(.headline)
                 .foregroundColor(
@@ -827,17 +963,30 @@ struct FlashcardsView: View {
                 )
             }
 
+            // =================================================
+            // PROGRESS
+            // =================================================
+
             ProgressView(
-                value: Double(vm.currentCardNumber),
-                total: Double(
-                    max(vm.filteredFlashcards.count, 1)
-                )
+                value:
+                    Double(vm.currentCardNumber),
+                total:
+                    Double(
+                        max(
+                            vm.filteredFlashcards.count,
+                            1
+                        )
+                    )
             )
             .tint(
                 RecalllQTheme.primary
             )
 
             Divider()
+
+            // =================================================
+            // QUESTION
+            // =================================================
 
             Text("QUESTION")
                 .font(.caption)
@@ -858,7 +1007,11 @@ struct FlashcardsView: View {
                     vertical: true
                 )
 
-            if vm.isShowingAnswer {
+            // =================================================
+            // ANSWER / REVEAL
+            // =================================================
+
+            if isAnswerRevealed {
 
                 answerSection(card)
 
@@ -866,6 +1019,10 @@ struct FlashcardsView: View {
 
                 showAnswerButton
             }
+
+            // =================================================
+            // NAVIGATION
+            // =================================================
 
             navigationButtons
         }
@@ -878,7 +1035,8 @@ struct FlashcardsView: View {
         )
         .background(
             RoundedRectangle(
-                cornerRadius: RecalllQTheme.largeRadius
+                cornerRadius:
+                    RecalllQTheme.largeRadius
             )
             .fill(
                 RecalllQTheme.cardBackground
@@ -886,7 +1044,8 @@ struct FlashcardsView: View {
         )
         .overlay(
             RoundedRectangle(
-                cornerRadius: RecalllQTheme.largeRadius
+                cornerRadius:
+                    RecalllQTheme.largeRadius
             )
             .stroke(
                 RecalllQTheme.primary.opacity(0.12),
@@ -894,12 +1053,15 @@ struct FlashcardsView: View {
             )
         )
         .shadow(
-            color: Color.black.opacity(
-                RecalllQTheme.shadowOpacity
-            ),
-            radius: RecalllQTheme.shadowRadius,
+            color:
+                Color.black.opacity(
+                    RecalllQTheme.shadowOpacity
+                ),
+            radius:
+                RecalllQTheme.shadowRadius,
             x: 0,
-            y: RecalllQTheme.shadowY
+            y:
+                RecalllQTheme.shadowY
         )
     }
 
@@ -918,13 +1080,51 @@ struct FlashcardsView: View {
 
             Divider()
 
-            Text("ANSWER")
-                .font(.caption)
-                .bold()
-                .tracking(1)
-                .foregroundColor(
-                    RecalllQTheme.secondaryText
-                )
+            // =================================================
+            // ANSWER HEADER
+            // =================================================
+
+            HStack {
+
+                Text("ANSWER")
+                    .font(.caption)
+                    .bold()
+                    .tracking(1)
+                    .foregroundColor(
+                        RecalllQTheme.secondaryText
+                    )
+
+                Spacer()
+
+                Button {
+
+                    print("🙈 HIDING ANSWER")
+
+                    isAnswerRevealed = false
+
+                } label: {
+
+                    HStack(spacing: 5) {
+
+                        Image(
+                            systemName:
+                                "eye.slash.fill"
+                        )
+
+                        Text("Hide")
+                    }
+                    .font(.caption)
+                    .bold()
+                    .foregroundColor(
+                        RecalllQTheme.primary
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+
+            // =================================================
+            // ANSWER TEXT
+            // =================================================
 
             Text(card.answer)
                 .font(.body)
@@ -935,59 +1135,116 @@ struct FlashcardsView: View {
                     horizontal: false,
                     vertical: true
                 )
-
-            Text("How well did you know this?")
-                .font(.caption)
-                .foregroundColor(
-                    RecalllQTheme.secondaryText
+                .padding()
+                .frame(
+                    maxWidth: .infinity,
+                    alignment: .leading
                 )
-                .padding(.top, 3)
+                .background(
+                    RoundedRectangle(
+                        cornerRadius:
+                            RecalllQTheme.mediumRadius
+                    )
+                    .fill(
+                        RecalllQTheme.blueBackground
+                    )
+                )
+                .overlay(
+                    RoundedRectangle(
+                        cornerRadius:
+                            RecalllQTheme.mediumRadius
+                    )
+                    .stroke(
+                        RecalllQTheme.primary.opacity(0.15),
+                        lineWidth: 1
+                    )
+                )
+
+            // =================================================
+            // REVIEW QUESTION
+            // =================================================
+
+            Text(
+                "How well did you know this?"
+            )
+            .font(.caption)
+            .foregroundColor(
+                RecalllQTheme.secondaryText
+            )
+            .padding(.top, 3)
+
+            // =================================================
+            // DIFFICULTY BUTTONS
+            // =================================================
 
             HStack(spacing: 8) {
 
                 difficultyButton(
                     title: "Easy",
-                    icon: "face.smiling.fill",
-                    color: RecalllQTheme.success
+                    icon:
+                        "face.smiling.fill",
+                    color:
+                        RecalllQTheme.success
                 ) {
+
                     vm.markEasy()
+
+                    isAnswerRevealed = false
                 }
 
                 difficultyButton(
                     title: "Medium",
-                    icon: "minus.circle.fill",
-                    color: RecalllQTheme.secondary
+                    icon:
+                        "minus.circle.fill",
+                    color:
+                        RecalllQTheme.secondary
                 ) {
+
                     vm.markMedium()
+
+                    isAnswerRevealed = false
                 }
 
                 difficultyButton(
                     title: "Hard",
-                    icon: "exclamationmark.circle.fill",
-                    color: RecalllQTheme.error
+                    icon:
+                        "exclamationmark.circle.fill",
+                    color:
+                        RecalllQTheme.error
                 ) {
+
                     vm.markHard()
+
+                    isAnswerRevealed = false
                 }
             }
         }
     }
 
     // =====================================================
-    // SHOW ANSWER
+    // SHOW ANSWER BUTTON
     // =====================================================
 
     private var showAnswerButton: some View {
 
         Button {
 
-            vm.showAnswer()
+            print("========================================")
+            print("👁️ REVEAL ANSWER BUTTON TAPPED")
+            print("========================================")
+
+            isAnswerRevealed = true
+
+            print("✅ Answer reveal state = TRUE")
+            print("========================================")
 
         } label: {
 
             HStack {
 
                 Image(
-                    systemName: "eye.fill"
+                    systemName:
+                        "eye.fill"
                 )
 
                 Text("Reveal Answer")
@@ -996,11 +1253,14 @@ struct FlashcardsView: View {
                 Spacer()
 
                 Image(
-                    systemName: "chevron.down"
+                    systemName:
+                        "chevron.down"
                 )
             }
             .padding()
-            .frame(maxWidth: .infinity)
+            .frame(
+                maxWidth: .infinity
+            )
             .foregroundColor(.white)
             .background(
                 LinearGradient(
@@ -1014,10 +1274,13 @@ struct FlashcardsView: View {
             )
             .clipShape(
                 RoundedRectangle(
-                    cornerRadius: RecalllQTheme.mediumRadius
+                    cornerRadius:
+                        RecalllQTheme.mediumRadius
                 )
             )
         }
+        .buttonStyle(.plain)
+        .contentShape(Rectangle())
     }
 
     // =====================================================
@@ -1028,31 +1291,72 @@ struct FlashcardsView: View {
 
         HStack {
 
+            // =================================================
+            // PREVIOUS
+            // =================================================
+
             Button {
 
+                print("========================================")
+                print("⬅️ PREVIOUS CARD BUTTON TAPPED")
+                print("📍 BEFORE INDEX: \(vm.currentIndex)")
+                print("❓ BEFORE QUESTION: \(vm.currentFlashcard?.question ?? "NONE")")
+                print("========================================")
+
+                isAnswerRevealed = false
+
                 vm.previousCard()
+
+                print("========================================")
+                print("⬅️ PREVIOUS CARD FINISHED")
+                print("📍 AFTER INDEX: \(vm.currentIndex)")
+                print("❓ AFTER QUESTION: \(vm.currentFlashcard?.question ?? "NONE")")
+                print("========================================")
 
             } label: {
 
                 Label(
                     "Previous",
-                    systemImage: "chevron.left"
+                    systemImage:
+                        "chevron.left"
                 )
             }
+            .buttonStyle(.plain)
 
             Spacer()
 
+            // =================================================
+            // NEXT
+            // =================================================
+
             Button {
 
+                print("========================================")
+                print("➡️ NEXT CARD BUTTON TAPPED")
+                print("📍 BEFORE INDEX: \(vm.currentIndex)")
+                print("📚 TOTAL CARDS: \(vm.filteredFlashcards.count)")
+                print("❓ BEFORE QUESTION: \(vm.currentFlashcard?.question ?? "NONE")")
+                print("========================================")
+
+                isAnswerRevealed = false
+
                 vm.nextCard()
+
+                print("========================================")
+                print("➡️ NEXT CARD FINISHED")
+                print("📍 AFTER INDEX: \(vm.currentIndex)")
+                print("❓ AFTER QUESTION: \(vm.currentFlashcard?.question ?? "NONE")")
+                print("========================================")
 
             } label: {
 
                 Label(
                     "Next",
-                    systemImage: "chevron.right"
+                    systemImage:
+                        "chevron.right"
                 )
             }
+            .buttonStyle(.plain)
         }
         .font(.subheadline)
         .bold()
@@ -1075,6 +1379,10 @@ struct FlashcardsView: View {
 
         Button {
 
+            print(
+                "📊 \(title.uppercased()) SELECTED"
+            )
+
             action()
 
         } label: {
@@ -1096,13 +1404,15 @@ struct FlashcardsView: View {
             .foregroundColor(color)
             .background(
                 RoundedRectangle(
-                    cornerRadius: RecalllQTheme.smallRadius
+                    cornerRadius:
+                        RecalllQTheme.smallRadius
                 )
                 .fill(
                     color.opacity(0.10)
                 )
             )
         }
+        .buttonStyle(.plain)
     }
 
     // =====================================================
@@ -1192,7 +1502,8 @@ struct FlashcardsView: View {
                 )
 
                 Image(
-                    systemName: "rectangle.on.rectangle.fill"
+                    systemName:
+                        "rectangle.on.rectangle.fill"
                 )
                 .foregroundColor(
                     RecalllQTheme.primary
@@ -1253,7 +1564,8 @@ struct FlashcardsView: View {
         )
         .background(
             RoundedRectangle(
-                cornerRadius: RecalllQTheme.mediumRadius
+                cornerRadius:
+                    RecalllQTheme.mediumRadius
             )
             .fill(
                 RecalllQTheme.cardBackground
@@ -1261,7 +1573,8 @@ struct FlashcardsView: View {
         )
         .overlay(
             RoundedRectangle(
-                cornerRadius: RecalllQTheme.mediumRadius
+                cornerRadius:
+                    RecalllQTheme.mediumRadius
             )
             .stroke(
                 Color.gray.opacity(0.08),
@@ -1282,7 +1595,8 @@ struct FlashcardsView: View {
 
                 Label(
                     "Delete",
-                    systemImage: "trash"
+                    systemImage:
+                        "trash"
                 )
             }
         }
@@ -1310,6 +1624,7 @@ struct FlashcardsView: View {
             case .hard:
                 return RecalllQTheme.error
             }
+
         }()
 
         Text(
@@ -1354,7 +1669,8 @@ struct FlashcardsView: View {
                     )
 
                 Image(
-                    systemName: "rectangle.on.rectangle"
+                    systemName:
+                        "rectangle.on.rectangle"
                 )
                 .font(
                     .system(size: 32)
@@ -1384,7 +1700,9 @@ struct FlashcardsView: View {
             .foregroundColor(
                 RecalllQTheme.secondaryText
             )
-            .multilineTextAlignment(.center)
+            .multilineTextAlignment(
+                .center
+            )
 
             if vm.flashcards.isEmpty &&
                 !appState.memoryViewModel.memories.isEmpty {
@@ -1398,7 +1716,8 @@ struct FlashcardsView: View {
                     HStack {
 
                         Image(
-                            systemName: "sparkles"
+                            systemName:
+                                "sparkles"
                         )
 
                         Text(
@@ -1409,11 +1728,14 @@ struct FlashcardsView: View {
                         Spacer()
 
                         Image(
-                            systemName: "arrow.right"
+                            systemName:
+                                "arrow.right"
                         )
                     }
                     .padding()
-                    .frame(maxWidth: .infinity)
+                    .frame(
+                        maxWidth: .infinity
+                    )
                     .foregroundColor(.white)
                     .background(
                         LinearGradient(
@@ -1432,6 +1754,7 @@ struct FlashcardsView: View {
                         )
                     )
                 }
+                .buttonStyle(.plain)
                 .padding(.top, 4)
             }
         }
@@ -1460,4 +1783,16 @@ struct FlashcardsView: View {
         )
     }
 }
+
+// =====================================================
+// PREVIEW
+// =====================================================
+//
+// NOTE:
+//
+// The real application supplies the ViewModel from
+// AppState.
+//
+// =====================================================
+
 

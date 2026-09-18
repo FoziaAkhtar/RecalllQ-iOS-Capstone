@@ -5,28 +5,30 @@ import SwiftUI
 // VIEW: MemoriesView
 // =====================================================
 // PURPOSE:
-// Displays AI-organized memories created by RecalllQ.
+// Displays the student's AI-generated academic Memories.
 //
 // FEATURES:
-// - Search memories
-// - Filter memories by topic
-// - Display memory statistics
-// - Display AI-organized memory cards
-// - Delete memories with visible delete button
-// - Empty state
-// - Modern RecalllQ UI
+// - Memory search
+// - Memory count
+// - Memory cards
+// - AI-generated summaries
+// - Memory tags
+// - Delete memories
+// - Generate Flashcards from Memories
+// - Open existing Flashcards
+// - Flashcard navigation
 // =====================================================
 
 struct MemoriesView: View {
 
     // =====================================================
-    // GLOBAL APP STATE
+    // APP STATE
     // =====================================================
 
     @EnvironmentObject var appState: AppState
 
     // =====================================================
-    // MEMORY VIEW MODEL
+    // VIEW MODEL
     // =====================================================
 
     private var vm: MemoryViewModel {
@@ -39,82 +41,113 @@ struct MemoriesView: View {
 
     var body: some View {
 
-        ZStack {
+        ScrollView(showsIndicators: false) {
 
-            RecalllQTheme.background
-                .ignoresSafeArea()
+            VStack(
+                alignment: .leading,
+                spacing: 20
+            ) {
 
-            VStack(spacing: 0) {
+                headerSection
 
-                searchBar
+                searchSection
 
-                ScrollView(showsIndicators: false) {
+                summarySection
 
-                    VStack(
-                        alignment: .leading,
-                        spacing: 20
-                    ) {
+                if vm.memories.isEmpty {
 
-                        memoryHeader
+                    emptyState
 
-                        memorySummaryCard
+                } else {
 
-                        if !vm.allTags.isEmpty {
-                            categorySection
-                        }
-
-                        knowledgeBaseHeader
-
-                        if vm.filteredMemories.isEmpty {
-
-                            emptyState
-
-                        } else {
-
-                            ForEach(
-                                vm.filteredMemories
-                            ) { memory in
-
-                                memoryCard(memory)
-                            }
-                        }
-
-                        Spacer(minLength: 30)
-                    }
-                    .padding(.horizontal, 18)
-                    .padding(.top, 18)
+                    memoriesSection
                 }
             }
+            .padding()
+            .padding(.bottom, 30)
         }
+        .background(
+            RecalllQTheme.background
+                .ignoresSafeArea()
+        )
         .navigationTitle("Memories")
         .navigationBarTitleDisplayMode(.inline)
     }
 
     // =====================================================
-    // SEARCH BAR
+    // HEADER
     // =====================================================
 
-    private var searchBar: some View {
+    private var headerSection: some View {
 
-        HStack(spacing: 10) {
+        HStack(spacing: 14) {
+
+            VStack(
+                alignment: .leading,
+                spacing: 5
+            ) {
+
+                Text("Memories")
+                    .font(.largeTitle)
+                    .bold()
+                    .foregroundColor(
+                        RecalllQTheme.primaryText
+                    )
+
+                Text(
+                    "Your AI-powered academic knowledge base."
+                )
+                .font(.subheadline)
+                .foregroundColor(
+                    RecalllQTheme.secondaryText
+                )
+            }
+
+            Spacer()
 
             ZStack {
 
                 Circle()
                     .fill(
-                        RecalllQTheme.primary.opacity(0.10)
+                        LinearGradient(
+                            colors: [
+                                RecalllQTheme.primary.opacity(0.18),
+                                RecalllQTheme.smartPurple.opacity(0.12)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
                     )
                     .frame(
-                        width: 32,
-                        height: 32
+                        width: 56,
+                        height: 56
                     )
 
-                Image(systemName: "magnifyingglass")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(
-                        RecalllQTheme.primary
-                    )
+                Image(
+                    systemName: "brain.head.profile"
+                )
+                .font(.title2)
+                .foregroundColor(
+                    RecalllQTheme.primary
+                )
             }
+        }
+    }
+
+    // =====================================================
+    // SEARCH
+    // =====================================================
+
+    private var searchSection: some View {
+
+        HStack(spacing: 10) {
+
+            Image(
+                systemName: "magnifyingglass"
+            )
+            .foregroundColor(
+                RecalllQTheme.primary
+            )
 
             TextField(
                 "Search your memories...",
@@ -127,7 +160,6 @@ struct MemoriesView: View {
                     }
                 )
             )
-            .font(.subheadline)
 
             if !vm.searchText.isEmpty {
 
@@ -138,22 +170,19 @@ struct MemoriesView: View {
                 } label: {
 
                     Image(
-                        systemName:
-                            "xmark.circle.fill"
+                        systemName: "xmark.circle.fill"
                     )
                     .foregroundColor(
                         RecalllQTheme.secondaryText
                     )
                 }
-                .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 11)
+        .padding(13)
         .background(
             RoundedRectangle(
                 cornerRadius:
-                    RecalllQTheme.largeRadius
+                    RecalllQTheme.mediumRadius
             )
             .fill(
                 RecalllQTheme.cardBackground
@@ -162,380 +191,141 @@ struct MemoriesView: View {
         .overlay(
             RoundedRectangle(
                 cornerRadius:
-                    RecalllQTheme.largeRadius
+                    RecalllQTheme.mediumRadius
             )
             .stroke(
-                RecalllQTheme.primary.opacity(0.12),
+                RecalllQTheme.primary.opacity(0.10),
                 lineWidth: 1
             )
         )
-        .shadow(
-            color: Color.black.opacity(0.05),
-            radius: 8,
-            x: 0,
-            y: 3
-        )
-        .padding(.horizontal, 18)
-        .padding(.top, 10)
     }
 
     // =====================================================
-    // MEMORY HEADER
+    // SUMMARY SECTION
     // =====================================================
 
-    private var memoryHeader: some View {
+    private var summarySection: some View {
 
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
 
-            ZStack {
-
-                RoundedRectangle(
-                    cornerRadius: 16
-                )
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            RecalllQTheme.primary,
-                            RecalllQTheme.smartPurple
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(
-                    width: 56,
-                    height: 56
-                )
-
-                Image(
-                    systemName:
-                        "brain.head.profile"
-                )
-                .font(.title2)
-                .foregroundColor(.white)
-            }
-
-            VStack(
-                alignment: .leading,
-                spacing: 4
-            ) {
-
-                Text("My Memories")
-                    .font(.title2.weight(.bold))
-                    .foregroundColor(
-                        RecalllQTheme.primaryText
-                    )
-
-                Text(
-                    "\(vm.filteredMemories.count) organized memories"
-                )
-                .font(.subheadline)
-                .foregroundColor(
-                    RecalllQTheme.secondaryText
-                )
-            }
-
-            Spacer()
-        }
-    }
-
-    // =====================================================
-    // MEMORY SUMMARY
-    // =====================================================
-
-    private var memorySummaryCard: some View {
-
-        HStack(spacing: 0) {
-
-            summaryMetric(
+            summaryCard(
                 value: "\(vm.memories.count)",
                 title: "Memories",
-                icon: "brain.fill",
-                color: RecalllQTheme.primary,
-                background: RecalllQTheme.blueBackground
+                icon: "brain.head.profile",
+                color: RecalllQTheme.primary
             )
 
-            Rectangle()
-                .fill(
-                    Color.gray.opacity(0.12)
-                )
-                .frame(
-                    width: 1,
-                    height: 48
-                )
-                .padding(.horizontal, 14)
-
-            summaryMetric(
-                value: "\(vm.allTags.count)",
-                title: "Topics",
-                icon: "tag.fill",
-                color: RecalllQTheme.smartPurple,
-                background: RecalllQTheme.purpleBackground
+            summaryCard(
+                value: "\(appState.flashcardViewModel.totalFlashcards)",
+                title: "Flashcards",
+                icon: "rectangle.stack.fill",
+                color: RecalllQTheme.smartPurple
             )
-
-            Spacer()
         }
-        .padding(18)
-        .frame(
-            maxWidth: .infinity,
-            alignment: .leading
-        )
-        .background(
-            RoundedRectangle(
-                cornerRadius:
-                    RecalllQTheme.largeRadius
-            )
-            .fill(
-                RecalllQTheme.cardBackground
-            )
-        )
-        .overlay(
-            RoundedRectangle(
-                cornerRadius:
-                    RecalllQTheme.largeRadius
-            )
-            .stroke(
-                RecalllQTheme.primary.opacity(0.08),
-                lineWidth: 1
-            )
-        )
-        .shadow(
-            color:
-                Color.black.opacity(
-                    RecalllQTheme.shadowOpacity
-                ),
-            radius:
-                RecalllQTheme.shadowRadius,
-            x: 0,
-            y: RecalllQTheme.shadowY
-        )
     }
 
     // =====================================================
-    // SUMMARY METRIC
+    // SUMMARY CARD
     // =====================================================
 
-    private func summaryMetric(
+    @ViewBuilder
+    private func summaryCard(
         value: String,
         title: String,
         icon: String,
-        color: Color,
-        background: Color
+        color: Color
     ) -> some View {
-
-        HStack(spacing: 10) {
-
-            ZStack {
-
-                Circle()
-                    .fill(background)
-                    .frame(
-                        width: 44,
-                        height: 44
-                    )
-
-                Image(systemName: icon)
-                    .font(.subheadline.weight(.bold))
-                    .foregroundColor(color)
-            }
-
-            VStack(
-                alignment: .leading,
-                spacing: 2
-            ) {
-
-                Text(value)
-                    .font(
-                        .system(
-                            size: 22,
-                            weight: .bold
-                        )
-                    )
-                    .foregroundColor(
-                        RecalllQTheme.primaryText
-                    )
-
-                Text(title)
-                    .font(.caption)
-                    .foregroundColor(
-                        RecalllQTheme.secondaryText
-                    )
-            }
-        }
-    }
-
-    // =====================================================
-    // CATEGORY SECTION
-    // =====================================================
-
-    private var categorySection: some View {
 
         VStack(
             alignment: .leading,
-            spacing: 10
+            spacing: 8
         ) {
 
-            HStack {
-
-                Label(
-                    "Topics",
-                    systemImage:
-                        "square.grid.2x2.fill"
-                )
+            Image(systemName: icon)
                 .font(.headline)
+                .foregroundColor(color)
+
+            Text(value)
+                .font(.title2)
+                .bold()
                 .foregroundColor(
                     RecalllQTheme.primaryText
                 )
 
-                Spacer()
-
-                Text("\(vm.allTags.count)")
-                    .font(.caption.weight(.bold))
-                    .foregroundColor(
-                        RecalllQTheme.smartPurple
-                    )
-            }
-
-            ScrollView(
-                .horizontal,
-                showsIndicators: false
-            ) {
-
-                HStack(spacing: 8) {
-
-                    tagButton(
-                        title: "All",
-                        icon: "sparkles",
-                        isSelected:
-                            vm.selectedTag == "all"
-                    ) {
-
-                        vm.selectedTag = "all"
-                    }
-
-                    ForEach(
-                        vm.allTags,
-                        id: \.self
-                    ) { tag in
-
-                        tagButton(
-                            title: tag,
-                            icon: "tag.fill",
-                            isSelected:
-                                vm.selectedTag == tag
-                        ) {
-
-                            vm.selectedTag = tag
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // =====================================================
-    // TAG BUTTON
-    // =====================================================
-
-    @ViewBuilder
-    private func tagButton(
-        title: String,
-        icon: String,
-        isSelected: Bool,
-        action: @escaping () -> Void
-    ) -> some View {
-
-        Button {
-
-            action()
-
-        } label: {
-
-            HStack(spacing: 5) {
-
-                Image(systemName: icon)
-                    .font(.caption2.weight(.bold))
-
-                Text(title)
-                    .font(.caption.weight(.semibold))
-            }
-            .padding(.horizontal, 13)
-            .padding(.vertical, 9)
-            .background(
-                Capsule()
-                    .fill(
-                        isSelected
-                        ? RecalllQTheme.primary
-                        : RecalllQTheme.cardBackground
-                    )
-            )
-            .overlay(
-                Capsule()
-                    .stroke(
-                        isSelected
-                        ? RecalllQTheme.primary
-                        : RecalllQTheme.primary.opacity(0.12),
-                        lineWidth: 1
-                    )
-            )
-            .foregroundColor(
-                isSelected
-                ? .white
-                : RecalllQTheme.primary
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
-    // =====================================================
-    // KNOWLEDGE BASE HEADER
-    // =====================================================
-
-    private var knowledgeBaseHeader: some View {
-
-        HStack(spacing: 10) {
-
-            ZStack {
-
-                RoundedRectangle(
-                    cornerRadius: 10
-                )
-                .fill(
-                    RecalllQTheme.orangeBackground
-                )
-                .frame(
-                    width: 36,
-                    height: 36
-                )
-
-                Image(systemName: "sparkles")
-                    .font(.subheadline.weight(.bold))
-                    .foregroundColor(
-                        RecalllQTheme.studyOrange
-                    )
-            }
-
-            VStack(
-                alignment: .leading,
-                spacing: 2
-            ) {
-
-                Text("Knowledge Base")
-                    .font(.title3.weight(.bold))
-                    .foregroundColor(
-                        RecalllQTheme.primaryText
-                    )
-
-                Text(
-                    "Your AI-organized knowledge"
-                )
+            Text(title)
                 .font(.caption)
                 .foregroundColor(
                     RecalllQTheme.secondaryText
                 )
+        }
+        .frame(
+            maxWidth: .infinity,
+            alignment: .leading
+        )
+        .padding()
+        .background(
+            RoundedRectangle(
+                cornerRadius:
+                    RecalllQTheme.mediumRadius
+            )
+            .fill(
+                RecalllQTheme.cardBackground
+            )
+        )
+        .overlay(
+            RoundedRectangle(
+                cornerRadius:
+                    RecalllQTheme.mediumRadius
+            )
+            .stroke(
+                color.opacity(0.12),
+                lineWidth: 1
+            )
+        )
+    }
+
+    // =====================================================
+    // MEMORIES SECTION
+    // =====================================================
+
+    @ViewBuilder
+    private var memoriesSection: some View {
+
+        VStack(
+            alignment: .leading,
+            spacing: 14
+        ) {
+
+            HStack {
+
+                VStack(
+                    alignment: .leading,
+                    spacing: 3
+                ) {
+
+                    Text("Knowledge Base")
+                        .font(.title3)
+                        .bold()
+                        .foregroundColor(
+                            RecalllQTheme.primaryText
+                        )
+
+                    Text(
+                        "\(vm.memories.count) saved academic memor\(vm.memories.count == 1 ? "y" : "ies")"
+                    )
+                    .font(.caption)
+                    .foregroundColor(
+                        RecalllQTheme.secondaryText
+                    )
+                }
+
+                Spacer()
             }
 
-            Spacer()
+            ForEach(vm.memories) { memory in
+
+                memoryCard(memory)
+            }
         }
     }
 
@@ -553,9 +343,9 @@ struct MemoriesView: View {
             spacing: 14
         ) {
 
-            // =================================================
-            // TITLE + DELETE BUTTON
-            // =================================================
+            // =====================================================
+            // MEMORY HEADER
+            // =====================================================
 
             HStack(
                 alignment: .top,
@@ -565,17 +355,10 @@ struct MemoriesView: View {
                 ZStack {
 
                     RoundedRectangle(
-                        cornerRadius: 13
+                        cornerRadius: 12
                     )
                     .fill(
-                        LinearGradient(
-                            colors: [
-                                RecalllQTheme.blueBackground,
-                                RecalllQTheme.purpleBackground
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
+                        RecalllQTheme.blueBackground
                     )
                     .frame(
                         width: 46,
@@ -586,7 +369,6 @@ struct MemoriesView: View {
                         systemName:
                             "brain.head.profile"
                     )
-                    .font(.headline)
                     .foregroundColor(
                         RecalllQTheme.primary
                     )
@@ -597,45 +379,28 @@ struct MemoriesView: View {
                     spacing: 5
                 ) {
 
+                    Text(memory.title)
+                        .font(.headline)
+                        .foregroundColor(
+                            RecalllQTheme.primaryText
+                        )
+                        .fixedSize(
+                            horizontal: false,
+                            vertical: true
+                        )
+
                     Text(
-                        memory.title.isEmpty
-                        ? "Untitled Memory"
-                        : memory.title
+                        memory.source == "ai"
+                        ? "AI Enhanced Memory"
+                        : "Academic Memory"
                     )
-                    .font(
-                        .headline.weight(.bold)
-                    )
+                    .font(.caption)
                     .foregroundColor(
-                        RecalllQTheme.primaryText
+                        RecalllQTheme.secondaryText
                     )
-                    .lineLimit(2)
-
-                    HStack(spacing: 5) {
-
-                        Circle()
-                            .fill(
-                                RecalllQTheme.success
-                            )
-                            .frame(
-                                width: 6,
-                                height: 6
-                            )
-
-                        Text("AI Organized Memory")
-                            .font(
-                                .caption2.weight(.semibold)
-                            )
-                            .foregroundColor(
-                                RecalllQTheme.success
-                            )
-                    }
                 }
 
                 Spacer()
-
-                // =================================================
-                // DELETE BUTTON
-                // =================================================
 
                 Button {
 
@@ -649,56 +414,51 @@ struct MemoriesView: View {
                         systemName:
                             "trash"
                     )
-                    .font(
-                        .subheadline.weight(.semibold)
-                    )
-                    .foregroundColor(.red)
-                    .frame(
-                        width: 36,
-                        height: 36
-                    )
-                    .background(
-                        Circle()
-                            .fill(
-                                Color.red.opacity(0.10)
-                            )
+                    .foregroundColor(
+                        RecalllQTheme.error
                     )
                 }
                 .buttonStyle(.plain)
             }
 
-            // =================================================
-            // DIVIDER
-            // =================================================
-
-            Rectangle()
-                .fill(
-                    Color.gray.opacity(0.08)
-                )
-                .frame(height: 1)
-
-            // =================================================
+            // =====================================================
             // SUMMARY
-            // =================================================
+            // =====================================================
 
-            Text(
-                memory.summary.isEmpty
-                ? memory.content
-                : memory.summary
-            )
-            .font(.subheadline)
-            .foregroundColor(
-                RecalllQTheme.secondaryText
-            )
-            .lineLimit(4)
-            .fixedSize(
-                horizontal: false,
-                vertical: true
-            )
+            if !memory.summary
+                .trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                )
+                .isEmpty {
 
-            // =================================================
+                VStack(
+                    alignment: .leading,
+                    spacing: 7
+                ) {
+
+                    Text("AI SUMMARY")
+                        .font(.caption2)
+                        .bold()
+                        .tracking(1)
+                        .foregroundColor(
+                            RecalllQTheme.secondaryText
+                        )
+
+                    Text(memory.summary)
+                        .font(.subheadline)
+                        .foregroundColor(
+                            RecalllQTheme.primaryText
+                        )
+                        .fixedSize(
+                            horizontal: false,
+                            vertical: true
+                        )
+                }
+            }
+
+            // =====================================================
             // TAGS
-            // =================================================
+            // =====================================================
 
             if !memory.tags.isEmpty {
 
@@ -707,82 +467,48 @@ struct MemoriesView: View {
                     showsIndicators: false
                 ) {
 
-                    HStack(spacing: 6) {
+                    HStack(spacing: 7) {
 
                         ForEach(
                             memory.tags,
                             id: \.self
                         ) { tag in
 
-                            HStack(spacing: 4) {
-
-                                Image(
-                                    systemName:
-                                        "tag.fill"
+                            Text(tag)
+                                .font(.caption2)
+                                .bold()
+                                .foregroundColor(
+                                    RecalllQTheme.primary
                                 )
-                                .font(
-                                    .system(size: 8)
+                                .padding(
+                                    .horizontal,
+                                    8
                                 )
-
-                                Text(tag)
-                                    .font(
-                                        .caption2.weight(
-                                            .semibold
-                                        )
-                                    )
-                            }
-                            .padding(
-                                .horizontal,
-                                9
-                            )
-                            .padding(
-                                .vertical,
-                                6
-                            )
-                            .background(
-                                Capsule()
-                                    .fill(
-                                        RecalllQTheme
-                                            .purpleBackground
-                                    )
-                            )
-                            .foregroundColor(
-                                RecalllQTheme.smartPurple
-                            )
+                                .padding(
+                                    .vertical,
+                                    5
+                                )
+                                .background(
+                                    RecalllQTheme.primary
+                                        .opacity(0.09)
+                                )
+                                .clipShape(
+                                    Capsule()
+                                )
                         }
                     }
                 }
             }
 
-            // =================================================
-            // DELETE LABEL
-            // =================================================
+            // =====================================================
+            // FLASHCARD ACTION
+            // =====================================================
 
-            HStack {
-
-                Spacer()
-
-                Button {
-
-                    vm.deleteMemory(
-                        id: memory.id
-                    )
-
-                } label: {
-
-                    Label(
-                        "Delete Memory",
-                        systemImage: "trash"
-                    )
-                    .font(
-                        .caption.weight(.semibold)
-                    )
-                    .foregroundColor(.red)
-                }
-                .buttonStyle(.plain)
-            }
+            flashcardActionSection(
+                for: memory
+            )
         }
-        .padding(18)
+        .padding()
         .frame(
             maxWidth: .infinity,
             alignment: .leading
@@ -802,20 +528,235 @@ struct MemoriesView: View {
                     RecalllQTheme.largeRadius
             )
             .stroke(
-                RecalllQTheme.primary.opacity(0.08),
+                RecalllQTheme.primary.opacity(0.10),
                 lineWidth: 1
             )
         )
         .shadow(
-            color:
-                Color.black.opacity(
-                    RecalllQTheme.shadowOpacity
-                ),
-            radius:
-                RecalllQTheme.shadowRadius,
+            color: Color.black.opacity(
+                RecalllQTheme.shadowOpacity
+            ),
+            radius: RecalllQTheme.shadowRadius,
             x: 0,
             y: RecalllQTheme.shadowY
         )
+    }
+
+    // =====================================================
+    // FLASHCARD ACTION SECTION
+    // =====================================================
+
+    @ViewBuilder
+    private func flashcardActionSection(
+        for memory: Memory
+    ) -> some View {
+
+        let hasFlashcard =
+            appState.flashcardViewModel
+                .hasFlashcard(
+                    for: memory.id
+                )
+
+        VStack(
+            alignment: .leading,
+            spacing: 8
+        ) {
+
+            Divider()
+
+            if hasFlashcard {
+
+                // =====================================================
+                // EXISTING FLASHCARD
+                // =====================================================
+
+                Button {
+
+                    appState.openMemoryInFlashcards(
+                        memory
+                    )
+
+                } label: {
+
+                    HStack(spacing: 12) {
+
+                        ZStack {
+
+                            Circle()
+                                .fill(
+                                    RecalllQTheme.success
+                                        .opacity(0.12)
+                                )
+                                .frame(
+                                    width: 38,
+                                    height: 38
+                                )
+
+                            Image(
+                                systemName:
+                                    "rectangle.on.rectangle.fill"
+                            )
+                            .foregroundColor(
+                                RecalllQTheme.success
+                            )
+                        }
+
+                        VStack(
+                            alignment: .leading,
+                            spacing: 3
+                        ) {
+
+                            Text(
+                                "Flashcard Ready"
+                            )
+                            .font(.subheadline)
+                            .bold()
+                            .foregroundColor(
+                                RecalllQTheme.primaryText
+                            )
+
+                            Text(
+                                "Open this Memory's flashcard in Study Mode"
+                            )
+                            .font(.caption)
+                            .foregroundColor(
+                                RecalllQTheme.secondaryText
+                            )
+                        }
+
+                        Spacer()
+
+                        Image(
+                            systemName:
+                                "arrow.right.circle.fill"
+                        )
+                        .font(.title3)
+                        .foregroundColor(
+                            RecalllQTheme.success
+                        )
+                    }
+                    .padding(12)
+                    .frame(
+                        maxWidth: .infinity,
+                        alignment: .leading
+                    )
+                    .background(
+                        RoundedRectangle(
+                            cornerRadius:
+                                RecalllQTheme.mediumRadius
+                        )
+                        .fill(
+                            RecalllQTheme.success
+                                .opacity(0.07)
+                        )
+                    )
+                }
+                .buttonStyle(.plain)
+
+            } else {
+
+                // =====================================================
+                // GENERATE NEW FLASHCARD
+                // =====================================================
+
+                Button {
+
+                    appState.createFlashcardFromMemory(
+                        memory
+                    )
+
+                    // =====================================================
+                    // OPEN FLASHCARD TAB
+                    // =====================================================
+
+                    appState.selectedTab = 3
+
+                } label: {
+
+                    HStack(spacing: 12) {
+
+                        ZStack {
+
+                            Circle()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            RecalllQTheme.primary
+                                                .opacity(0.16),
+                                            RecalllQTheme.smartPurple
+                                                .opacity(0.14)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(
+                                    width: 38,
+                                    height: 38
+                                )
+
+                            Image(
+                                systemName:
+                                    "sparkles"
+                            )
+                            .foregroundColor(
+                                RecalllQTheme.primary
+                            )
+                        }
+
+                        VStack(
+                            alignment: .leading,
+                            spacing: 3
+                        ) {
+
+                            Text(
+                                "Generate Flashcard"
+                            )
+                            .font(.subheadline)
+                            .bold()
+                            .foregroundColor(
+                                RecalllQTheme.primaryText
+                            )
+
+                            Text(
+                                "Turn this Memory into an active study card"
+                            )
+                            .font(.caption)
+                            .foregroundColor(
+                                RecalllQTheme.secondaryText
+                            )
+                        }
+
+                        Spacer()
+
+                        Image(
+                            systemName:
+                                "arrow.right.circle.fill"
+                        )
+                        .font(.title3)
+                        .foregroundColor(
+                            RecalllQTheme.primary
+                        )
+                    }
+                    .padding(12)
+                    .frame(
+                        maxWidth: .infinity,
+                        alignment: .leading
+                    )
+                    .background(
+                        RoundedRectangle(
+                            cornerRadius:
+                                RecalllQTheme.mediumRadius
+                        )
+                        .fill(
+                            RecalllQTheme.primary
+                                .opacity(0.06)
+                        )
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
     }
 
     // =====================================================
@@ -830,14 +771,7 @@ struct MemoriesView: View {
 
                 Circle()
                     .fill(
-                        LinearGradient(
-                            colors: [
-                                RecalllQTheme.blueBackground,
-                                RecalllQTheme.purpleBackground
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
+                        RecalllQTheme.blueBackground
                     )
                     .frame(
                         width: 88,
@@ -849,10 +783,7 @@ struct MemoriesView: View {
                         "brain.head.profile"
                 )
                 .font(
-                    .system(
-                        size: 36,
-                        weight: .medium
-                    )
+                    .system(size: 36)
                 )
                 .foregroundColor(
                     RecalllQTheme.primary
@@ -860,34 +791,35 @@ struct MemoriesView: View {
             }
 
             Text(
-                vm.searchText.isEmpty &&
-                vm.selectedTag == "all"
-                ? "No memories yet"
-                : "No memories found"
+                vm.searchText.isEmpty
+                ? "Your Knowledge Base is Ready"
+                : "No Memories Found"
             )
-            .font(.headline)
+            .font(.title3)
+            .bold()
             .foregroundColor(
                 RecalllQTheme.primaryText
             )
 
             Text(
-                vm.searchText.isEmpty &&
-                vm.selectedTag == "all"
-                ? "Create a study note and RecalllQ will organize it into an intelligent memory."
-                : "Try another search term or category."
+                vm.searchText.isEmpty
+                ? "Add study notes and RecalllQ will transform them into intelligent academic Memories."
+                : "Try another search term."
             )
             .font(.caption)
             .foregroundColor(
                 RecalllQTheme.secondaryText
             )
             .multilineTextAlignment(.center)
-            .padding(.horizontal, 20)
+            .fixedSize(
+                horizontal: false,
+                vertical: true
+            )
         }
         .frame(
             maxWidth: .infinity
         )
-        .padding(.vertical, 34)
-        .padding(.horizontal, 20)
+        .padding(30)
         .background(
             RoundedRectangle(
                 cornerRadius:
@@ -903,16 +835,9 @@ struct MemoriesView: View {
                     RecalllQTheme.largeRadius
             )
             .stroke(
-                RecalllQTheme.primary.opacity(0.08),
+                RecalllQTheme.primary.opacity(0.10),
                 lineWidth: 1
             )
-        )
-        .shadow(
-            color:
-                Color.black.opacity(0.05),
-            radius: 8,
-            x: 0,
-            y: 4
         )
     }
 }

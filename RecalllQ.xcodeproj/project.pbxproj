@@ -29,6 +29,7 @@
 		A49E31782FEED2C500483750 /* MemoriesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A49E31772FEED2BB00483750 /* MemoriesView.swift */; };
 		A49E31812FEF02B800483750 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A49E31802FEF02AB00483750 /* MainTabView.swift */; };
 		A49E31862FEF07D700483750 /* ReminderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A49E31852FEF07CE00483750 /* ReminderView.swift */; };
+		A4A02AA3305CB797008A674A /* AccountSwitchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4A02AA2305CB785008A674A /* AccountSwitchView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -56,6 +57,7 @@
 		A49E31772FEED2BB00483750 /* MemoriesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoriesView.swift; sourceTree = "<group>"; };
 		A49E31802FEF02AB00483750 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		A49E31852FEF07CE00483750 /* ReminderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderView.swift; sourceTree = "<group>"; };
+		A4A02AA2305CB785008A674A /* AccountSwitchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSwitchView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -98,6 +100,7 @@
 		A40E9D212FEDA71800869607 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				A4A02AA2305CB785008A674A /* AccountSwitchView.swift */,
 				A496EC5D3034C501005C604F /* ForgotPasswordView.swift */,
 				A496EC5B3034C4C3005C604F /* CreateAccountView.swift */,
 				A496EC593034C48A005C604F /* LoginView.swift */,
@@ -214,6 +217,7 @@
 				A40E9D312FEDAB5100869607 /* SettingsView.swift in Sources */,
 				A49E31622FEEAD5700483750 /* EditNoteView.swift in Sources */,
 				A496EBC0302F54CE005C604F /* DocumentScannerView.swift in Sources */,
+				A4A02AA3305CB797008A674A /* AccountSwitchView.swift in Sources */,
 				A496EC5C3034C4CD005C604F /* CreateAccountView.swift in Sources */,
 				A496EC523034B341005C604F /* APIKeySettingsView.swift in Sources */,
 				A496EBDC3031171A005C604F /* StudyRecommendationCard.swift in Sources */,

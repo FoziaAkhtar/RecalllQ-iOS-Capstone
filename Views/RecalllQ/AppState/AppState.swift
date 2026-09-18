@@ -1,4 +1,3 @@
-
 import Foundation
 import SwiftUI
 import Combine
@@ -39,6 +38,10 @@ import Combine
 // - Study sessions
 // - Progress
 //
+// Guest Mode also receives its own isolated local
+// storage namespace and does not require personal
+// information.
+//
 // =====================================================
 
 @MainActor
@@ -61,25 +64,34 @@ final class AppState: ObservableObject {
     @Published var isAuthenticated: Bool = false
 
     // =====================================================
-    // CURRENT USER
+    // GUEST MODE
     // =====================================================
 
-    // The currently authenticated user's email.
-    //
-    // The normalized email is used as the local
-    // unique user identifier.
+    @Published private(set) var isGuestUser: Bool = false
+
+    // =====================================================
+    // GUEST USER IDENTIFIER
+    // =====================================================
+
+    private let guestUserID = "__guest__"
+
+    // =====================================================
+    // CURRENT USER
+    // =====================================================
 
     @Published private(set) var currentUserEmail: String?
 
     // =====================================================
     // MAIN TAB NAVIGATION
     // =====================================================
-
+    //
     // 0 = Dashboard
     // 1 = Notes
     // 2 = Memories
     // 3 = Flashcards
     // 4 = Quiz
+    //
+    // =====================================================
 
     @Published var selectedTab: Int = 0
 
@@ -140,19 +152,11 @@ final class AppState: ObservableObject {
 
     init() {
 
-        // =================================================
-        // CREATE VIEW MODELS
-        // =================================================
-
         let memoryVM = MemoryViewModel()
         let notesVM = NotesViewModel()
         let flashcardVM = FlashcardViewModel()
         let quizVM = QuizViewModel()
         let studySessionVM = StudySessionViewModel()
-
-        // =================================================
-        // ASSIGN VIEW MODELS
-        // =================================================
 
         self.memoryViewModel = memoryVM
         self.notesViewModel = notesVM
@@ -160,30 +164,39 @@ final class AppState: ObservableObject {
         self.quizViewModel = quizVM
         self.studySessionViewModel = studySessionVM
 
-        // =================================================
-        // CREATE SERVICES
-        // =================================================
-
         self.memoryEngine = MemoryEngine()
+
         self.aiService = AIService()
+
         self.studyRecommendationService =
             StudyRecommendationService()
+
         self.quizAPIService = QuizAPIService()
 
         // =================================================
-        // CONNECT NOTES TO APP STATE
+        // CONNECT APP STATE
         // =================================================
 
         notesVM.appState = self
 
         // =================================================
-        // CONNECT QUIZ VIEW MODEL TO APP STATE
+        // CONNECT FLASHCARD VIEW MODEL
         // =================================================
+        //
+        // FlashcardViewModel uses AppState for:
+        //
+        // - Study session integration
+        // - Progress tracking
+        // - Flashcard review events
+        //
+        // =================================================
+
+        flashcardVM.appState = self
 
         quizVM.appState = self
 
         // =================================================
-        // FORWARD MEMORY CHANGES
+        // MEMORY OBSERVER
         // =================================================
 
         memoryVM.objectWillChange
@@ -193,10 +206,12 @@ final class AppState: ObservableObject {
 
                 self?.generateStudyRecommendations()
             }
-            .store(in: &cancellables)
+            .store(
+                in: &cancellables
+            )
 
         // =================================================
-        // FORWARD NOTES CHANGES
+        // NOTES OBSERVER
         // =================================================
 
         notesVM.objectWillChange
@@ -204,10 +219,12 @@ final class AppState: ObservableObject {
 
                 self?.objectWillChange.send()
             }
-            .store(in: &cancellables)
+            .store(
+                in: &cancellables
+            )
 
         // =================================================
-        // FORWARD FLASHCARD CHANGES
+        // FLASHCARD OBSERVER
         // =================================================
 
         flashcardVM.objectWillChange
@@ -217,10 +234,12 @@ final class AppState: ObservableObject {
 
                 self?.generateStudyRecommendations()
             }
-            .store(in: &cancellables)
+            .store(
+                in: &cancellables
+            )
 
         // =================================================
-        // FORWARD QUIZ CHANGES
+        // QUIZ OBSERVER
         // =================================================
 
         quizVM.objectWillChange
@@ -228,10 +247,12 @@ final class AppState: ObservableObject {
 
                 self?.objectWillChange.send()
             }
-            .store(in: &cancellables)
+            .store(
+                in: &cancellables
+            )
 
         // =================================================
-        // FORWARD STUDY SESSION CHANGES
+        // STUDY SESSION OBSERVER
         // =================================================
 
         studySessionVM.objectWillChange
@@ -239,7 +260,9 @@ final class AppState: ObservableObject {
 
                 self?.objectWillChange.send()
             }
-            .store(in: &cancellables)
+            .store(
+                in: &cancellables
+            )
 
         // =================================================
         // INITIAL RECOMMENDATIONS
@@ -249,111 +272,212 @@ final class AppState: ObservableObject {
     }
 
     // =====================================================
+    // CONTINUE AS GUEST
+    // =====================================================
+
+    func continueAsGuest() {
+
+        clearAllUserData()
+
+        isGuestUser = true
+        isAuthenticated = true
+        currentUserEmail = guestUserID
+
+        UserDefaults.standard.set(
+            guestUserID,
+            forKey: "recalllq_account"
+        )
+
+        notesViewModel.switchUser(
+            userID: guestUserID
+        )
+
+        memoryViewModel.switchUser(
+            to: guestUserID
+        )
+
+        flashcardViewModel.switchUser(
+            to: guestUserID
+        )
+
+        quizViewModel.switchUser(
+            to: guestUserID
+        )
+
+        studySessionViewModel.switchUser(
+            to: guestUserID
+        )
+
+        selectedTab = 0
+
+        generateStudyRecommendations()
+
+        print("========================================")
+        print("👤 RECALLIQ GUEST MODE")
+        print("========================================")
+        print("🔓 No account credentials required.")
+        print("🆔 Guest ID: \(guestUserID)")
+        print("📝 Guest notes loaded.")
+        print("🧠 Guest memories loaded.")
+        print("🗂 Guest flashcards loaded.")
+        print("❓ Guest quizzes loaded.")
+        print("📊 Guest study data loaded.")
+        print("🔐 Guest storage is isolated.")
+        print("➡️ MainTabView is now active.")
+        print("========================================")
+    }
+
+    // =====================================================
+    // SWITCH TO GUEST MODE
+    // =====================================================
+
+    func switchToGuest() {
+
+        if isAuthenticated {
+
+            notesViewModel.saveNotes()
+            memoryViewModel.save()
+            flashcardViewModel.save()
+            quizViewModel.save()
+            studySessionViewModel.save()
+        }
+
+        clearAllUserData()
+
+        isGuestUser = true
+        isAuthenticated = true
+        currentUserEmail = guestUserID
+
+        UserDefaults.standard.set(
+            guestUserID,
+            forKey: "recalllq_account"
+        )
+
+        notesViewModel.switchUser(
+            userID: guestUserID
+        )
+
+        memoryViewModel.switchUser(
+            to: guestUserID
+        )
+
+        flashcardViewModel.switchUser(
+            to: guestUserID
+        )
+
+        quizViewModel.switchUser(
+            to: guestUserID
+        )
+
+        studySessionViewModel.switchUser(
+            to: guestUserID
+        )
+
+        selectedTab = 0
+
+        generateStudyRecommendations()
+
+        print("========================================")
+        print("🔄 SWITCHING TO RECALLIQ GUEST MODE")
+        print("========================================")
+        print("💾 Current user data saved.")
+        print("🧹 Previous user data cleared from memory.")
+        print("👤 Guest ID: \(guestUserID)")
+        print("📝 Guest notes loaded.")
+        print("🧠 Guest memories loaded.")
+        print("🗂 Guest flashcards loaded.")
+        print("❓ Guest quizzes loaded.")
+        print("📊 Guest study data loaded.")
+        print("🔐 User data remains isolated.")
+        print("➡️ Guest Dashboard is now active.")
+        print("========================================")
+    }
+
+    // =====================================================
+    // SAVE CURRENT USER DATA
+    // =====================================================
+
+    private func saveCurrentUserData() {
+
+        guard isAuthenticated else {
+            return
+        }
+
+        notesViewModel.saveNotes()
+        memoryViewModel.save()
+        flashcardViewModel.save()
+        quizViewModel.save()
+        studySessionViewModel.save()
+
+        print(
+            "💾 Current user learning data saved before account switch."
+        )
+    }
+
+    // =====================================================
     // LOGIN
     // =====================================================
 
-    func login(email: String) {
+    func login(
+        email: String
+    ) {
 
-        // =================================================
-        // CLEAN EMAIL
-        // =================================================
-
-        let cleanEmail = email
-            .trimmingCharacters(
-                in: .whitespacesAndNewlines
-            )
-            .lowercased()
+        let cleanEmail =
+            email
+                .trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                )
+                .lowercased()
 
         guard !cleanEmail.isEmpty else {
 
-            print("❌ Cannot login without an email.")
+            print(
+                "❌ Cannot login without an email."
+            )
 
             return
         }
 
-        // =================================================
-        // IMPORTANT SECURITY STEP
-        // =================================================
-        //
-        // Remove the previous user's data from the active
-        // ViewModels before loading the new account.
-        //
-        // =================================================
+        if isAuthenticated {
+            saveCurrentUserData()
+        }
+
+        isGuestUser = false
 
         clearAllUserData()
 
-        // =================================================
-        // SET CURRENT USER
-        // =================================================
-
         currentUserEmail = cleanEmail
-
-        // =================================================
-        // SAVE CURRENT ACCOUNT
-        // =================================================
 
         UserDefaults.standard.set(
             cleanEmail,
             forKey: "recalllq_account"
         )
 
-        // =================================================
-        // LOAD USER-SPECIFIC NOTES
-        // =================================================
-
         notesViewModel.switchUser(
             userID: cleanEmail
         )
-
-        // =================================================
-        // LOAD USER-SPECIFIC MEMORIES
-        // =================================================
 
         memoryViewModel.switchUser(
             to: cleanEmail
         )
 
-        // =================================================
-        // LOAD USER-SPECIFIC FLASHCARDS
-        // =================================================
-
         flashcardViewModel.switchUser(
             to: cleanEmail
         )
-
-        // =================================================
-        // LOAD USER-SPECIFIC QUIZZES
-        // =================================================
 
         quizViewModel.switchUser(
             to: cleanEmail
         )
 
-        // =================================================
-        // LOAD USER-SPECIFIC STUDY SESSION DATA
-        // =================================================
-
         studySessionViewModel.switchUser(
             to: cleanEmail
         )
-
-        // =================================================
-        // AUTHENTICATE
-        // =================================================
 
         isAuthenticated = true
 
         selectedTab = 0
 
-        // =================================================
-        // UPDATE RECOMMENDATIONS
-        // =================================================
-
         generateStudyRecommendations()
-
-        // =================================================
-        // LOG
-        // =================================================
 
         print("========================================")
         print("✅ USER AUTHENTICATED")
@@ -375,55 +499,25 @@ final class AppState: ObservableObject {
 
     private func clearAllUserData() {
 
-        // =================================================
-        // NOTES
-        // =================================================
-
         notesViewModel.clearCurrentUserData()
-
-        // =================================================
-        // MEMORIES
-        // =================================================
 
         memoryViewModel.clearCurrentUserData()
 
-        // =================================================
-        // FLASHCARDS
-        // =================================================
-
         flashcardViewModel.clearCurrentUserData()
-
-        // =================================================
-        // QUIZZES
-        // =================================================
 
         quizViewModel.clearCurrentUserData()
 
-        // =================================================
-        // STUDY SESSIONS
-        // =================================================
-
         studySessionViewModel.clearCurrentUserData()
-
-        // =================================================
-        // RECOMMENDATIONS
-        // =================================================
 
         studyRecommendations = []
 
-        // =================================================
-        // AI STATES
-        // =================================================
-
         isGeneratingMemory = false
+
         memoryGenerationError = nil
 
         isGeneratingQuiz = false
-        quizGenerationError = nil
 
-        // =================================================
-        // LOG
-        // =================================================
+        quizGenerationError = nil
 
         print(
             "🧹 All previous user data cleared from memory."
@@ -436,54 +530,21 @@ final class AppState: ObservableObject {
 
     func logout() {
 
-        // =================================================
-        // SAVE CURRENT USER'S DATA
-        // =================================================
-
         if isAuthenticated {
-
-            notesViewModel.saveNotes()
-
-            memoryViewModel.save()
-
-            flashcardViewModel.save()
-
-            quizViewModel.save()
-
-            studySessionViewModel.save()
+            saveCurrentUserData()
         }
-
-        // =================================================
-        // CLEAR ALL USER DATA FROM MEMORY
-        // =================================================
 
         clearAllUserData()
 
-        // =================================================
-        // CLEAR AUTHENTICATION
-        // =================================================
-
         isAuthenticated = false
-
+        isGuestUser = false
         currentUserEmail = nil
-
-        // =================================================
-        // REMOVE ACTIVE ACCOUNT
-        // =================================================
 
         UserDefaults.standard.removeObject(
             forKey: "recalllq_account"
         )
 
-        // =================================================
-        // RESET NAVIGATION
-        // =================================================
-
         selectedTab = 0
-
-        // =================================================
-        // LOG
-        // =================================================
 
         print("========================================")
         print("👋 USER LOGGED OUT")
@@ -504,10 +565,6 @@ final class AppState: ObservableObject {
         content: String
     ) {
 
-        // =================================================
-        // CLEAN INPUT
-        // =================================================
-
         let cleanedTitle =
             title.trimmingCharacters(
                 in: .whitespacesAndNewlines
@@ -517,10 +574,6 @@ final class AppState: ObservableObject {
             content.trimmingCharacters(
                 in: .whitespacesAndNewlines
             )
-
-        // =================================================
-        // VALIDATE TITLE
-        // =================================================
 
         guard !cleanedTitle.isEmpty else {
 
@@ -534,10 +587,6 @@ final class AppState: ObservableObject {
             return
         }
 
-        // =================================================
-        // VALIDATE CONTENT
-        // =================================================
-
         guard !cleanedContent.isEmpty else {
 
             print(
@@ -549,10 +598,6 @@ final class AppState: ObservableObject {
 
             return
         }
-
-        // =================================================
-        // REQUIRE AUTHENTICATED USER
-        // =================================================
 
         guard isAuthenticated,
               let userID = currentUserEmail,
@@ -568,10 +613,6 @@ final class AppState: ObservableObject {
             return
         }
 
-        // =================================================
-        // MAKE SURE MEMORY VIEW MODEL IS USING CURRENT USER
-        // =================================================
-
         if memoryViewModel.currentUserID != userID {
 
             memoryViewModel.switchUser(
@@ -579,42 +620,26 @@ final class AppState: ObservableObject {
             )
         }
 
-        // =================================================
-        // RESET STATE
-        // =================================================
-
         isGeneratingMemory = true
         memoryGenerationError = nil
-
-        // =================================================
-        // AI MEMORY GENERATION
-        // =================================================
 
         Task { @MainActor in
 
             do {
 
                 print("========================================")
-                print("🤖 RECALLlQ AI MEMORY PIPELINE")
+                print("🤖 RECALLIQ AI MEMORY PIPELINE")
                 print("========================================")
                 print("👤 User: \(userID)")
                 print("Title: \(cleanedTitle)")
                 print("Attempting AI memory generation...")
                 print("========================================")
 
-                // =============================================
-                // CALL AI SERVICE
-                // =============================================
-
                 let aiResponse =
                     try await aiService.generateMemory(
                         title: cleanedTitle,
                         content: cleanedContent
                     )
-
-                // =============================================
-                // CREATE MEMORY
-                // =============================================
 
                 let memory =
                     Memory(
@@ -626,10 +651,6 @@ final class AppState: ObservableObject {
                         importance: aiResponse.importance,
                         source: "ai"
                     )
-
-                // =============================================
-                // VERIFY USER DID NOT CHANGE
-                // =============================================
 
                 guard currentUserEmail == userID,
                       isAuthenticated else {
@@ -643,10 +664,6 @@ final class AppState: ObservableObject {
                     return
                 }
 
-                // =============================================
-                // SAVE MEMORY
-                // =============================================
-
                 memoryViewModel.memories.insert(
                     memory,
                     at: 0
@@ -654,37 +671,18 @@ final class AppState: ObservableObject {
 
                 memoryViewModel.save()
 
-                // =============================================
-                // UPDATE SUGGESTIONS
-                // =============================================
-
                 memoryViewModel.generateSuggestions()
 
-                // =============================================
-                // UPDATE RECOMMENDATIONS
-                // =============================================
-
                 generateStudyRecommendations()
-
-                // =============================================
-                // NOTIFY APP
-                // =============================================
 
                 NotificationCenter.default.post(
                     name: .memoryCreatedFromNote,
                     object: memory
                 )
 
-                // =============================================
-                // CLEAR STATE
-                // =============================================
-
                 isGeneratingMemory = false
-                memoryGenerationError = nil
 
-                // =============================================
-                // SUCCESS LOG
-                // =============================================
+                memoryGenerationError = nil
 
                 print("========================================")
                 print("✅ AI MEMORY CREATED")
@@ -700,28 +698,12 @@ final class AppState: ObservableObject {
 
             } catch {
 
-                // =============================================
-                // AI FAILED
-                // =============================================
-
                 print("========================================")
                 print("⚠️ AI MEMORY GENERATION FAILED")
                 print("========================================")
-
-                print(
-                    "Using local MemoryEngine fallback."
-                )
-
-                print(
-                    "Reason:",
-                    error.localizedDescription
-                )
-
+                print("Using local MemoryEngine fallback.")
+                print("Reason:", error.localizedDescription)
                 print("========================================")
-
-                // =============================================
-                // VERIFY USER DID NOT CHANGE
-                // =============================================
 
                 guard currentUserEmail == userID,
                       isAuthenticated else {
@@ -735,19 +717,11 @@ final class AppState: ObservableObject {
                     return
                 }
 
-                // =============================================
-                // LOCAL FALLBACK
-                // =============================================
-
                 let memory =
                     memoryEngine.generateMemory(
                         from: cleanedTitle,
                         content: cleanedContent
                     )
-
-                // =============================================
-                // SAVE LOCAL MEMORY
-                // =============================================
 
                 memoryViewModel.memories.insert(
                     memory,
@@ -756,37 +730,18 @@ final class AppState: ObservableObject {
 
                 memoryViewModel.save()
 
-                // =============================================
-                // UPDATE SUGGESTIONS
-                // =============================================
-
                 memoryViewModel.generateSuggestions()
 
-                // =============================================
-                // UPDATE RECOMMENDATIONS
-                // =============================================
-
                 generateStudyRecommendations()
-
-                // =============================================
-                // NOTIFY APP
-                // =============================================
 
                 NotificationCenter.default.post(
                     name: .memoryCreatedFromNote,
                     object: memory
                 )
 
-                // =============================================
-                // UPDATE STATE
-                // =============================================
-
                 isGeneratingMemory = false
-                memoryGenerationError = nil
 
-                // =============================================
-                // SUCCESSFUL FALLBACK LOG
-                // =============================================
+                memoryGenerationError = nil
 
                 print("========================================")
                 print("✅ LOCAL MEMORY CREATED")
@@ -995,6 +950,19 @@ final class AppState: ObservableObject {
     // START QUIZ FROM FLASHCARDS
     // =====================================================
 
+    //
+    // Flashcards
+    //      ↓
+    // QuizQuestion
+    //      ↓
+    // createQuiz()
+    //      ↓
+    // Quiz
+    //      ↓
+    // startQuiz()
+    //
+    // =====================================================
+
     func startQuiz() {
 
         let flashcards =
@@ -1020,11 +988,8 @@ final class AppState: ObservableObject {
                     flashcard.answer
 
                 let incorrectAnswers = [
-
                     "None of the above.",
-
                     "This information is unrelated.",
-
                     "There is not enough information."
                 ]
 
@@ -1038,47 +1003,76 @@ final class AppState: ObservableObject {
                 return QuizQuestion(
                     memoryID:
                         flashcard.memoryID,
-
                     question:
                         flashcard.question,
-
                     options:
                         options,
-
                     correctAnswer:
                         correctAnswer,
-
                     explanation:
                         "The correct answer is based on your RecalllQ flashcard."
                 )
             }
 
         // =================================================
-        // CREATE QUIZ
+        // CREATE COMPLETE QUIZ
         // =================================================
 
-        quizViewModel.createQuiz(
-            title: "RecalllQ Study Quiz",
-            questions: questions
+        guard let quiz =
+            quizViewModel.createQuiz(
+                title: "RecalllQ Study Quiz",
+                questions: questions
+            )
+        else {
+
+            print(
+                "❌ Quiz could not be created."
+            )
+
+            return
+        }
+
+        // =================================================
+        // START NEWLY CREATED QUIZ
+        // =================================================
+
+        quizViewModel.startQuiz(
+            quiz
         )
 
         // =================================================
-        // START QUIZ
+        // OPEN QUIZ TAB
         // =================================================
 
-        if let quiz =
-            quizViewModel.quizzes.first {
+        selectedTab = 4
 
-            quizViewModel.startQuiz(
-                id: quiz.id
-            )
-
-            selectedTab = 4
-        }
+        print("========================================")
+        print("📝 RECALLIQ STUDY QUIZ STARTED")
+        print("========================================")
+        print("Quiz:", quiz.title)
+        print("Questions:", quiz.questions.count)
+        print("➡️ Quiz tab opened.")
+        print("========================================")
     }
 
     // =====================================================
     // AI QUIZ FROM MEMORY
+    // =====================================================
+
+    //
+    // QuizViewModel is responsible for:
+    //
+    // AI
+    // ↓
+    // [QuizQuestion]
+    // ↓
+    // Quiz
+    // ↓
+    // QuizStorageService
+    //
+    // AppState only handles authentication state
+    // and navigation.
+    //
     // =====================================================
 
     func generateAIQuiz(
@@ -1096,7 +1090,7 @@ final class AppState: ObservableObject {
         }
 
         guard isAuthenticated,
-              let userID = currentUserEmail else {
+              currentUserEmail != nil else {
 
             print(
                 "❌ Cannot generate quiz: no authenticated user."
@@ -1107,6 +1101,10 @@ final class AppState: ObservableObject {
 
             return
         }
+
+        // =================================================
+        // LIMIT QUESTION COUNT
+        // =================================================
 
         let questionCount =
             max(
@@ -1120,92 +1118,131 @@ final class AppState: ObservableObject {
         isGeneratingQuiz = true
         quizGenerationError = nil
 
+        let userIDAtStart =
+            currentUserEmail
+
         Task { @MainActor in
 
-            do {
+            // =============================================
+            // VERIFY USER BEFORE GENERATION
+            // =============================================
 
-                let questions =
-                    try await quizAPIService.generateQuiz(
-                        from: memory,
-                        numberOfQuestions: questionCount
-                    )
-
-                // =============================================
-                // VERIFY USER IS STILL LOGGED IN
-                // =============================================
-
-                guard isAuthenticated,
-                      currentUserEmail == userID else {
-
-                    print(
-                        "⚠️ User changed while quiz was generating."
-                    )
-
-                    isGeneratingQuiz = false
-
-                    return
-                }
-
-                guard !questions.isEmpty else {
-
-                    throw QuizAPIService
-                        .QuizAPIError
-                        .emptyQuestions
-                }
-
-                // =============================================
-                // CREATE QUIZ
-                // =============================================
-
-                quizViewModel.createQuiz(
-                    title: "\(memory.title) AI Quiz",
-                    questions: questions,
-                    memoryID: memory.id
-                )
-
-                // =============================================
-                // FIND CREATED QUIZ
-                // =============================================
-
-                guard let quiz =
-                    quizViewModel.quizzes.first else {
-
-                    throw QuizAPIService
-                        .QuizAPIError
-                        .invalidData
-                }
-
-                // =============================================
-                // START QUIZ
-                // =============================================
-
-                quizViewModel.startQuiz(
-                    id: quiz.id
-                )
-
-                selectedTab = 4
-
-                isGeneratingQuiz = false
-                quizGenerationError = nil
-
-            } catch {
-
-                print("========================================")
-                print("❌ AI QUIZ GENERATION FAILED")
-                print("========================================")
+            guard isAuthenticated,
+                  currentUserEmail == userIDAtStart else {
 
                 print(
-                    "Reason:",
-                    error.localizedDescription
+                    "⚠️ User changed before quiz generation started."
                 )
-
-                print("========================================")
 
                 isGeneratingQuiz = false
 
-                quizGenerationError =
-                    error.localizedDescription
+                return
             }
+
+            // =============================================
+            // GENERATE AI QUIZ
+            // =============================================
+
+            await quizViewModel.generateAIQuizFromMemory(
+                memory,
+                numberOfQuestions: questionCount
+            )
+
+            // =============================================
+            // VERIFY USER AFTER GENERATION
+            // =============================================
+
+            guard isAuthenticated,
+                  currentUserEmail == userIDAtStart else {
+
+                print(
+                    "⚠️ User changed while quiz was generating."
+                )
+
+                isGeneratingQuiz = false
+
+                return
+            }
+
+            // =============================================
+            // CHECK AI QUIZ ERROR
+            // =============================================
+
+            if let error =
+                quizViewModel.aiQuizError {
+
+                quizGenerationError =
+                    error
+
+                print(
+                    "⚠️ QuizViewModel reported: \(error)"
+                )
+
+                isGeneratingQuiz = false
+
+                return
+            }
+
+            // =============================================
+            // GET GENERATED QUIZ
+            // =============================================
+
+            guard let quiz =
+                quizViewModel.currentQuiz else {
+
+                print(
+                    "⚠️ No generated quiz is currently open."
+                )
+
+                quizGenerationError =
+                    "The quiz could not be created."
+
+                isGeneratingQuiz = false
+
+                return
+            }
+
+            // =============================================
+            // OPEN QUIZ TAB
+            // =============================================
+
+            selectedTab = 4
+
+            // =============================================
+            // RESET GENERATION STATE
+            // =============================================
+
+            isGeneratingQuiz = false
+            quizGenerationError = nil
+
+            // =============================================
+            // LOG
+            // =============================================
+
+            print("========================================")
+            print("✅ AI QUIZ READY")
+            print("========================================")
+
+            print(
+                "👤 User:",
+                userIDAtStart ?? "unknown"
+            )
+
+            print(
+                "Quiz:",
+                quiz.title
+            )
+
+            print(
+                "Questions:",
+                quiz.questions.count
+            )
+
+            print(
+                "➡️ Quiz tab opened."
+            )
+
+            print("========================================")
         }
     }
 
@@ -1234,34 +1271,328 @@ final class AppState: ObservableObject {
     // CREATE QUIZ FROM ONE MEMORY
     // =====================================================
 
+    //
+    // PURPOSE:
+    //
+    // Creates a local quiz from one Memory.
+    //
+    // QuizViewModel requires:
+    //
+    //     Memory
+    //     title
+    //     questions
+    //
+    // =====================================================
+
     func createQuizFromMemory(
         _ memory: Memory
     ) {
 
-        quizViewModel.createFromMemory(
-            memory
-        )
+        // =================================================
+        // DETERMINE CORRECT ANSWER
+        // =================================================
 
-        if let quiz =
-            quizViewModel.quizzes.first {
+        let cleanedSummary =
+            memory.summary
+                .trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                )
 
-            quizViewModel.startQuiz(
-                id: quiz.id
+        let cleanedContent =
+            memory.content
+                .trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                )
+
+        let correctAnswer =
+            cleanedSummary.isEmpty
+            ? cleanedContent
+            : cleanedSummary
+
+        // =================================================
+        // VALIDATE ANSWER
+        // =================================================
+
+        guard !correctAnswer.isEmpty else {
+
+            print(
+                "❌ Cannot create quiz: memory has no content."
             )
 
-            selectedTab = 4
+            quizGenerationError =
+                "This memory does not contain enough information to create a quiz."
+
+            return
         }
+
+        // =================================================
+        // CREATE INCORRECT ANSWERS
+        // =================================================
+
+        let incorrectAnswers = [
+            "This information is unrelated.",
+            "There is not enough information.",
+            "None of the above."
+        ]
+
+        // =================================================
+        // CREATE OPTIONS
+        // =================================================
+
+        let options =
+            (
+                [correctAnswer] +
+                incorrectAnswers
+            )
+            .shuffled()
+
+        // =================================================
+        // CREATE QUESTION
+        // =================================================
+
+        let question =
+            QuizQuestion(
+                memoryID:
+                    memory.id,
+                question:
+                    "What is the main idea of \(memory.title)?",
+                options:
+                    options,
+                correctAnswer:
+                    correctAnswer,
+                explanation:
+                    "The correct answer is based on the selected RecalllQ memory."
+            )
+
+        // =================================================
+        // CREATE QUIZ
+        // =================================================
+
+        guard let quiz =
+            quizViewModel.createFromMemory(
+                memory,
+                title: "Quiz: \(memory.title)",
+                questions: [question]
+            )
+        else {
+
+            print(
+                "❌ Quiz could not be created from memory."
+            )
+
+            quizGenerationError =
+                "The quiz could not be created."
+
+            return
+        }
+
+        // =================================================
+        // START QUIZ
+        // =================================================
+
+        quizViewModel.startQuiz(
+            quiz
+        )
+
+        // =================================================
+        // OPEN QUIZ TAB
+        // =================================================
+
+        selectedTab = 4
+
+        // =================================================
+        // LOG
+        // =================================================
+
+        print("========================================")
+        print("🧠 MEMORY QUIZ CREATED")
+        print("========================================")
+
+        print(
+            "Memory:",
+            memory.title
+        )
+
+        print(
+            "Quiz:",
+            quiz.title
+        )
+
+        print(
+            "Questions:",
+            quiz.questions.count
+        )
+
+        print(
+            "➡️ Quiz tab opened."
+        )
+
+        print("========================================")
     }
 
     // =====================================================
     // CREATE QUIZZES FROM ALL MEMORIES
     // =====================================================
 
+    //
+    // PURPOSE:
+    //
+    // Creates one quiz containing one question for
+    // each available memory.
+    //
+    // =====================================================
+
     func createQuizzesFromMemories() {
 
-        quizViewModel.createFromMemories(
+        let memories =
             memoryViewModel.memories
+
+        // =================================================
+        // VALIDATE MEMORIES
+        // =================================================
+
+        guard !memories.isEmpty else {
+
+            print(
+                "❌ Cannot create quiz: no memories available."
+            )
+
+            quizGenerationError =
+                "Create a memory first before creating a quiz."
+
+            return
+        }
+
+        // =================================================
+        // CREATE QUESTIONS
+        // =================================================
+
+        let questions: [QuizQuestion] =
+            memories.compactMap { memory in
+
+                let cleanedSummary =
+                    memory.summary
+                        .trimmingCharacters(
+                            in: .whitespacesAndNewlines
+                        )
+
+                let cleanedContent =
+                    memory.content
+                        .trimmingCharacters(
+                            in: .whitespacesAndNewlines
+                        )
+
+                let correctAnswer =
+                    cleanedSummary.isEmpty
+                    ? cleanedContent
+                    : cleanedSummary
+
+                guard !correctAnswer.isEmpty else {
+                    return nil
+                }
+
+                let incorrectAnswers = [
+                    "This information is unrelated.",
+                    "There is not enough information.",
+                    "None of the above."
+                ]
+
+                let options =
+                    (
+                        [correctAnswer] +
+                        incorrectAnswers
+                    )
+                    .shuffled()
+
+                return QuizQuestion(
+                    memoryID:
+                        memory.id,
+                    question:
+                        "What is the main idea of \(memory.title)?",
+                    options:
+                        options,
+                    correctAnswer:
+                        correctAnswer,
+                    explanation:
+                        "The correct answer is based on the saved RecalllQ memory."
+                )
+            }
+
+        // =================================================
+        // VALIDATE QUESTIONS
+        // =================================================
+
+        guard !questions.isEmpty else {
+
+            print(
+                "❌ Cannot create quiz: no valid questions."
+            )
+
+            quizGenerationError =
+                "Your memories do not contain enough information to create a quiz."
+
+            return
+        }
+
+        // =================================================
+        // CREATE COMPLETE QUIZ
+        // =================================================
+
+        guard let quiz =
+            quizViewModel.createFromMemories(
+                memories,
+                title: "RecalllQ Memory Quiz",
+                questions: questions
+            )
+        else {
+
+            print(
+                "❌ Quiz could not be created."
+            )
+
+            quizGenerationError =
+                "The quiz could not be created."
+
+            return
+        }
+
+        // =================================================
+        // START QUIZ
+        // =================================================
+
+        quizViewModel.startQuiz(
+            quiz
         )
+
+        // =================================================
+        // OPEN QUIZ TAB
+        // =================================================
+
+        selectedTab = 4
+
+        // =================================================
+        // LOG
+        // =================================================
+
+        print("========================================")
+        print("🧠 MEMORY QUIZ STARTED")
+        print("========================================")
+
+        print(
+            "Quiz:",
+            quiz.title
+        )
+
+        print(
+            "Questions:",
+            quiz.questions.count
+        )
+
+        print(
+            "➡️ Quiz tab opened."
+        )
+
+        print("========================================")
     }
 
     // =====================================================

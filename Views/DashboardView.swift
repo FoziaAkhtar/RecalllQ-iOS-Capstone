@@ -160,14 +160,20 @@ struct DashboardView: View {
             .padding(.horizontal, 18)
             .padding(.top, 12)
         }
+
         .background(
             RecalllQTheme.background
                 .ignoresSafeArea()
         )
+
         .navigationTitle("Dashboard")
+
         .navigationBarTitleDisplayMode(.inline)
+
         .onAppear {
+
             memoryVM.generateSuggestions()
+
             appState.generateStudyRecommendations()
         }
     }
@@ -391,11 +397,14 @@ struct DashboardView: View {
                 .white.opacity(0.90)
             )
         }
+
         .padding(20)
+
         .frame(
             maxWidth: .infinity,
             alignment: .leading
         )
+
         .background(
             LinearGradient(
                 colors: [
@@ -407,11 +416,13 @@ struct DashboardView: View {
                 endPoint: .bottomTrailing
             )
         )
+
         .clipShape(
             RoundedRectangle(
                 cornerRadius: 26
             )
         )
+
         .shadow(
             color:
                 RecalllQTheme.primary.opacity(0.25),
@@ -428,22 +439,27 @@ struct DashboardView: View {
     private var assistantMessage: String {
 
         if memoryVM.memories.isEmpty {
+
             return "Create your first note and RecalllQ will transform it into an organized memory."
         }
 
         if flashcardVM.totalFlashcards == 0 {
+
             return "You have memories ready to study. Generate flashcards to start active recall."
         }
 
         if flashcardVM.reviewedFlashcards == 0 {
+
             return "Your flashcards are ready. Start reviewing them to build your learning accuracy."
         }
 
         if flashcardVM.overallAccuracy < 0.60 {
+
             return "Keep practicing your flashcards. Repetition will help strengthen your recall."
         }
 
         if flashcardVM.masteredFlashcards < flashcardVM.totalFlashcards {
+
             return "You're making progress! Continue reviewing difficult cards to improve mastery."
         }
 
@@ -516,17 +532,22 @@ struct DashboardView: View {
     private var learningStats: some View {
 
         LazyVGrid(
+
             columns: [
+
                 GridItem(
                     .flexible(),
                     spacing: 12
                 ),
+
                 GridItem(
                     .flexible(),
                     spacing: 12
                 )
             ],
+
             spacing: 12
+
         ) {
 
             dashboardStatCard(
@@ -630,12 +651,15 @@ struct DashboardView: View {
                     RecalllQTheme.secondaryText
                 )
         }
+
         .padding(16)
+
         .frame(
             maxWidth: .infinity,
             minHeight: 130,
             alignment: .leading
         )
+
         .background(
             RoundedRectangle(
                 cornerRadius: 19
@@ -644,6 +668,7 @@ struct DashboardView: View {
                 RecalllQTheme.cardBackground
             )
         )
+
         .overlay(
             RoundedRectangle(
                 cornerRadius: 19
@@ -653,6 +678,7 @@ struct DashboardView: View {
                 lineWidth: 1
             )
         )
+
         .shadow(
             color:
                 Color.black.opacity(0.04),
@@ -739,10 +765,13 @@ struct DashboardView: View {
                     )
             }
         }
+
         .padding(16)
+
         .frame(
             maxWidth: .infinity
         )
+
         .background(
             LinearGradient(
                 colors: [
@@ -753,11 +782,13 @@ struct DashboardView: View {
                 endPoint: .trailing
             )
         )
+
         .clipShape(
             RoundedRectangle(
                 cornerRadius: 20
             )
         )
+
         .overlay(
             RoundedRectangle(
                 cornerRadius: 20
@@ -846,11 +877,14 @@ struct DashboardView: View {
                     vertical: true
                 )
         }
+
         .padding(18)
+
         .frame(
             maxWidth: .infinity,
             alignment: .leading
         )
+
         .background(
             LinearGradient(
                 colors: [
@@ -861,11 +895,13 @@ struct DashboardView: View {
                 endPoint: .bottomTrailing
             )
         )
+
         .clipShape(
             RoundedRectangle(
                 cornerRadius: 21
             )
         )
+
         .overlay(
             RoundedRectangle(
                 cornerRadius: 21
@@ -884,18 +920,22 @@ struct DashboardView: View {
     private var flashcardPerformanceMessage: String {
 
         if flashcardVM.totalFlashcards == 0 {
+
             return "Generate flashcards from your memories to begin."
         }
 
         if flashcardVM.reviewedFlashcards == 0 {
+
             return "Start reviewing to measure your recall accuracy."
         }
 
         if flashcardVM.overallAccuracy >= 0.80 {
+
             return "Excellent recall! Keep reviewing to maintain your knowledge."
         }
 
         if flashcardVM.overallAccuracy >= 0.60 {
+
             return "Good progress. Keep practicing to improve your recall."
         }
 
@@ -979,11 +1019,14 @@ struct DashboardView: View {
                     vertical: true
                 )
         }
+
         .padding(18)
+
         .frame(
             maxWidth: .infinity,
             alignment: .leading
         )
+
         .background(
             LinearGradient(
                 colors: [
@@ -994,11 +1037,13 @@ struct DashboardView: View {
                 endPoint: .bottomTrailing
             )
         )
+
         .clipShape(
             RoundedRectangle(
                 cornerRadius: 21
             )
         )
+
         .overlay(
             RoundedRectangle(
                 cornerRadius: 21
@@ -1017,18 +1062,22 @@ struct DashboardView: View {
     private var quizPerformanceMessage: String {
 
         if quizVM.totalQuizzes == 0 {
+
             return "Create a quiz from your knowledge to test yourself."
         }
 
         if quizVM.completedQuizzes == 0 {
+
             return "Complete your first quiz to see your performance."
         }
 
         if quizVM.overallPercentage >= 80 {
+
             return "Excellent quiz performance! Your knowledge is improving."
         }
 
         if quizVM.overallPercentage >= 60 {
+
             return "Good work. Continue testing yourself to strengthen recall."
         }
 
@@ -1119,11 +1168,14 @@ struct DashboardView: View {
                 RecalllQTheme.secondaryText
             )
         }
+
         .padding(18)
+
         .frame(
             maxWidth: .infinity,
             alignment: .leading
         )
+
         .background(
             LinearGradient(
                 colors: [
@@ -1134,11 +1186,13 @@ struct DashboardView: View {
                 endPoint: .bottomTrailing
             )
         )
+
         .clipShape(
             RoundedRectangle(
                 cornerRadius: 21
             )
         )
+
         .overlay(
             RoundedRectangle(
                 cornerRadius: 21
@@ -1229,10 +1283,13 @@ struct DashboardView: View {
                 .center
             )
         }
+
         .frame(
             maxWidth: .infinity
         )
+
         .padding(24)
+
         .background(
             RoundedRectangle(
                 cornerRadius: 21
@@ -1241,6 +1298,7 @@ struct DashboardView: View {
                 RecalllQTheme.cardBackground
             )
         )
+
         .overlay(
             RoundedRectangle(
                 cornerRadius: 21
@@ -1305,10 +1363,13 @@ struct DashboardView: View {
                         .center
                     )
                 }
+
                 .frame(
                     maxWidth: .infinity
                 )
+
                 .padding(24)
+
                 .background(
                     RoundedRectangle(
                         cornerRadius: 21
@@ -1342,10 +1403,10 @@ struct DashboardView: View {
 
         NavigationLink {
 
-            FlashcardsView()
-                .environmentObject(
-                    appState
-                )
+            FlashcardsView(
+                viewModel: appState.flashcardViewModel
+            )
+            .environmentObject(appState)
 
         } label: {
 
@@ -1434,11 +1495,14 @@ struct DashboardView: View {
                     )
                 }
             }
+
             .padding(16)
+
             .frame(
                 maxWidth: .infinity,
                 alignment: .leading
             )
+
             .background(
                 RoundedRectangle(
                     cornerRadius: 19
@@ -1447,6 +1511,7 @@ struct DashboardView: View {
                     RecalllQTheme.cardBackground
                 )
             )
+
             .overlay(
                 RoundedRectangle(
                     cornerRadius: 19
@@ -1456,6 +1521,7 @@ struct DashboardView: View {
                     lineWidth: 1
                 )
             )
+
             .shadow(
                 color:
                     Color.black.opacity(0.035),
@@ -1464,6 +1530,7 @@ struct DashboardView: View {
                 y: 3
             )
         }
+
         .buttonStyle(.plain)
     }
 
@@ -1501,6 +1568,7 @@ struct DashboardView: View {
                         RecalllQTheme.smartPurple
                 )
             }
+
             .buttonStyle(.plain)
 
             // =================================================
@@ -1509,10 +1577,12 @@ struct DashboardView: View {
 
             NavigationLink {
 
-                FlashcardsView()
-                    .environmentObject(
-                        appState
-                    )
+                FlashcardsView(
+                    viewModel: appState.flashcardViewModel
+                )
+                .environmentObject(
+                    appState
+                )
 
             } label: {
 
@@ -1529,6 +1599,7 @@ struct DashboardView: View {
                         RecalllQTheme.warning
                 )
             }
+
             .buttonStyle(.plain)
 
             // =================================================
@@ -1557,6 +1628,7 @@ struct DashboardView: View {
                         RecalllQTheme.smartPurple
                 )
             }
+
             .buttonStyle(.plain)
 
             // =================================================
@@ -1585,6 +1657,7 @@ struct DashboardView: View {
                         RecalllQTheme.primary
                 )
             }
+
             .buttonStyle(.plain)
         }
     }
@@ -1665,11 +1738,14 @@ struct DashboardView: View {
                 .foregroundColor(.white)
             }
         }
+
         .padding(16)
+
         .frame(
             maxWidth: .infinity,
             alignment: .leading
         )
+
         .background(
             LinearGradient(
                 colors: [
@@ -1680,11 +1756,13 @@ struct DashboardView: View {
                 endPoint: .trailing
             )
         )
+
         .clipShape(
             RoundedRectangle(
                 cornerRadius: 21
             )
         )
+
         .shadow(
             color:
                 color.opacity(0.20),
@@ -1694,3 +1772,4 @@ struct DashboardView: View {
         )
     }
 }
+

@@ -1,120 +1,110 @@
-  
+
+//
+//  QuizViewModel.swift
+//  RecalllQ
+//
+//  Created by Fozia Akhtar
+//
+
+// ============================================================
+// QUIZ VIEW MODEL
+// ============================================================
+//
+// This ViewModel manages:
+//
+// • Quiz creation
+// • Quiz storage
+// • Quiz loading
+// • Quiz deletion
+// • Quiz gameplay
+// • Answer selection
+// • Quiz scoring
+// • Quiz progress
+// • AI-generated quizzes
+// • Local fallback quizzes
+// • User-specific quiz isolation
+//
+// SECURITY UPDATE
+// ------------------------------------------------------------
+//
+// Quiz content is NO LONGER stored directly in UserDefaults.
+//
+// Quiz data is now stored through:
+//
+//      QuizStorageService
+//
+// Each account receives its own protected JSON file:
+//
+//      quizzes_<user>.json
+//
+// UserDefaults is still allowed for lightweight application
+// settings such as the active account identifier, but it is
+// NOT used to store quiz content.
+//
+// ============================================================
+
 import Foundation
 import Combine
 
-// =====================================================
-// VIEWMODEL: QuizViewModel
-// =====================================================
-//
-// PURPOSE:
-// Controls the complete RecalllQ quiz system.
-//
-// FEATURES:
-// - Create quizzes
-// - Create quizzes from Memories
-// - Generate AI quizzes
-// - OpenAI / QuizAPIService integration
-// - Local fallback quizzes
-// - Start quizzes
-// - Select answers
-// - Submit answers
-// - Track score
-// - Complete quizzes
-// - Restart quizzes
-// - Delete quizzes
-// - Save quizzes locally
-// - Load quizzes locally
-// - User-specific quiz storage
-// - Study Session integration
-// - Quiz statistics
-//
-// USER DATA ISOLATION:
-// Every authenticated user has a separate quiz storage key.
-//
-// Example:
-//
-// recalllq_quizzes_user_student1@example.com
-// recalllq_quizzes_user_student2@example.com
-//
-// This prevents one student's quizzes from appearing
-// when another student logs in.
-//
-// =====================================================
+// ============================================================
+// MARK: - Quiz View Model
+// ============================================================
 
 @MainActor
 final class QuizViewModel: ObservableObject {
 
-    // =====================================================
-    // APP STATE
-    // =====================================================
+    // ============================================================
+    // MARK: - App State Reference
+    // ============================================================
 
     weak var appState: AppState?
 
-    // =====================================================
-    // QUIZ STORAGE
-    // =====================================================
+    // ============================================================
+    // MARK: - Published Quiz Data
+    // ============================================================
 
     @Published var quizzes: [Quiz] = []
 
-    // =====================================================
-    // CURRENT QUIZ
-    // =====================================================
-
     @Published var currentQuiz: Quiz?
-
-    // =====================================================
-    // UI STATE
-    // =====================================================
 
     @Published var showResult: Bool = false
 
-    // =====================================================
-    // AI QUIZ STATE
-    // =====================================================
-
     @Published var isGeneratingAIQuiz: Bool = false
+
     @Published var aiQuizError: String?
 
-    // =====================================================
-    // CURRENT USER
-    // =====================================================
+    // ============================================================
+    // MARK: - Current User
+    // ============================================================
+    //
+    // This identifies which account currently owns the quiz data.
+    //
+    // Every account receives its own QuizStorageService.
+    //
+    // ============================================================
 
     private(set) var currentUserID: String?
 
-    // =====================================================
-    // AI QUIZ SERVICE
-    // =====================================================
+    // ============================================================
+    // MARK: - Services
+    // ============================================================
 
     private let quizAPIService = QuizAPIService()
 
-    // =====================================================
-    // STORAGE PREFIX
-    // =====================================================
+    // Secure per-user quiz storage.
+    //
+    // This replaces the previous UserDefaults-based storage.
 
-    private let storageKeyPrefix = "recalllq_quizzes_user_"
+    private var storage: QuizStorageService?
 
-    // =====================================================
-    // LEGACY STORAGE KEY
-    // =====================================================
+    // ============================================================
+    // MARK: - Compatibility Properties
+    // ============================================================
     //
-    // Kept only so we can avoid accidentally using the old
-    // shared quiz storage.
+    // These properties are retained because AppState/project code
+    // may check whether this ViewModel supports these operations.
     //
-    // =====================================================
-
-    private let legacyStorageKey = "saved_quizzes"
-
-    // =====================================================
-    // COMPATIBILITY PROPERTIES
-    // =====================================================
-    //
-    // AppState currently checks these properties before
-    // calling user-management methods.
-    //
-    // They are always true because this ViewModel now fully
-    // supports user-specific data management.
-    //
-    // =====================================================
+    // ============================================================
 
     var respondsToSwitchUser: Bool {
         true
@@ -128,309 +118,344 @@ final class QuizViewModel: ObservableObject {
         true
     }
 
-    // =====================================================
-    // INIT
-    // =====================================================
+    // ============================================================
+    // MARK: - Initialization
+    // ============================================================
+    //
+    // We intentionally do NOT load quizzes here.
+    //
+    // At initialization time we may not yet know which user is
+    // signed in.
+    //
+    // AppState will call:
+    //
+    //      switchUser(to:)
+    //
+    // after authentication.
+    //
+    // ============================================================
 
     init() {
 
-        // -------------------------------------------------
-        // IMPORTANT:
-        //
-        // Do NOT load the old global quiz storage here.
-        //
-        // A user must log in first so we know which
-        // account's quizzes should be loaded.
-        // -------------------------------------------------
-
         quizzes = []
+
+        currentQuiz = nil
+    }
+
+    // ============================================================
+    // MARK: - Switch User
+    // ============================================================
+    //
+    // Loads ONLY the quizzes belonging to the selected account.
+    //
+    // This is one of the most important methods for account
+    // isolation.
+    //
+    // ============================================================
+
+    func switchUser(
+        to userID: String
+    ) {
+
+        // ========================================================
+        // CLEAR CURRENT ACCOUNT FROM MEMORY
+        // ========================================================
+
+        quizzes.removeAll()
+
         currentQuiz = nil
 
-        print("========================================")
-        print("🧠 QuizViewModel initialized")
-        print("🔐 Waiting for authenticated user")
-        print("========================================")
-    }
+        showResult = false
 
-    // =====================================================
-    // USER-SPECIFIC STORAGE KEY
-    // =====================================================
+        isGeneratingAIQuiz = false
 
-    private func storageKey(for userID: String) -> String {
+        aiQuizError = nil
 
-        let cleanUserID = userID
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
+        // ========================================================
+        // REMOVE PREVIOUS STORAGE SERVICE
+        // ========================================================
 
-        return storageKeyPrefix + cleanUserID
-    }
+        storage = nil
 
-    // =====================================================
-    // SWITCH USER
-    // =====================================================
-    //
-    // Called by AppState when a new student logs in.
-    //
-    // IMPORTANT:
-    //
-    // 1. Clear the previous user's quizzes.
-    // 2. Set the new user.
-    // 3. Load only the new user's quizzes.
-    //
-    // =====================================================
+        // ========================================================
+        // NORMALIZE USER IDENTIFIER
+        // ========================================================
 
-    func switchUser(to userID: String) {
-
-        let cleanUserID = userID
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .lowercased()
+        let cleanUserID =
+            userID
+                .trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                )
+                .lowercased()
 
         guard !cleanUserID.isEmpty else {
-
-            print("❌ QuizViewModel cannot switch to empty user.")
-
-            clearCurrentUserData()
 
             currentUserID = nil
 
             return
         }
 
-        // -------------------------------------------------
-        // Clear previous user's active data first.
-        // -------------------------------------------------
-
-        quizzes = []
-        currentQuiz = nil
-        showResult = false
-        aiQuizError = nil
-        isGeneratingAIQuiz = false
-
-        // -------------------------------------------------
-        // Set new user.
-        // -------------------------------------------------
+        // ========================================================
+        // SET NEW ACTIVE USER
+        // ========================================================
 
         currentUserID = cleanUserID
 
-        // -------------------------------------------------
-        // Load ONLY this user's quizzes.
-        // -------------------------------------------------
+        // ========================================================
+        // CREATE USER-SPECIFIC STORAGE
+        // ========================================================
+
+        storage =
+            QuizStorageService(
+                userID: cleanUserID
+            )
+
+        // ========================================================
+        // LOAD ONLY THIS USER'S QUIZZES
+        // ========================================================
 
         loadQuizzes()
-
-        print("========================================")
-        print("🔄 QUIZ USER SWITCHED")
-        print("========================================")
-        print("👤 User: \(cleanUserID)")
-        print("❓ Quizzes loaded: \(quizzes.count)")
-        print("🔐 Storage key: \(storageKey(for: cleanUserID))")
-        print("========================================")
     }
 
-    // =====================================================
-    // CLEAR CURRENT USER DATA
-    // =====================================================
+    // ============================================================
+    // MARK: - Clear Current User Data From Memory
+    // ============================================================
+    //
+    // This clears the currently active user's quiz data from RAM.
     //
     // IMPORTANT:
     //
-    // This clears the ViewModel's active memory only.
+    // This does NOT delete the user's saved quiz file.
     //
-    // It does NOT delete the user's saved quizzes.
+    // It is used when switching accounts or logging out.
     //
-    // This allows logout/login to safely switch accounts.
-    //
-    // =====================================================
+    // ============================================================
 
     func clearCurrentUserData() {
 
-        quizzes = []
+        quizzes.removeAll()
+
         currentQuiz = nil
 
         showResult = false
 
         isGeneratingAIQuiz = false
+
         aiQuizError = nil
 
-        print("🧹 QuizViewModel active quiz data cleared.")
+        storage = nil
+
+        currentUserID = nil
     }
 
-    // =====================================================
-    // SAVE
-    // =====================================================
+    // ============================================================
+    // MARK: - Save
+    // ============================================================
     //
-    // Public compatibility method used by AppState.
+    // Compatibility method used by AppState.
     //
-    // =====================================================
+    // ============================================================
 
     func save() {
+
         saveQuizzes()
     }
 
-    // =====================================================
-    // CREATE QUIZ
-    // =====================================================
+    // ============================================================
+    // MARK: - Create Quiz
+    // ============================================================
+    //
+    // Creates a new quiz for the currently authenticated user.
+    //
+    // ============================================================
 
+    @discardableResult
     func createQuiz(
         title: String,
-        questions: [QuizQuestion],
-        memoryID: UUID? = nil
-    ) {
+        questions: [QuizQuestion]
+    ) -> Quiz? {
 
-        // -------------------------------------------------
-        // REQUIRE USER
-        // -------------------------------------------------
+        // ========================================================
+        // A QUIZ MUST BELONG TO AN ACTIVE USER
+        // ========================================================
 
         guard currentUserID != nil else {
 
-            print("❌ Cannot create quiz: no authenticated user.")
-
-            aiQuizError = "Please sign in before creating a quiz."
-
-            return
+            return nil
         }
 
-        // -------------------------------------------------
-        // VALIDATE QUESTIONS
-        // -------------------------------------------------
+        // ========================================================
+        // A QUIZ MUST CONTAIN AT LEAST ONE QUESTION
+        // ========================================================
 
         guard !questions.isEmpty else {
 
-            print("❌ Cannot create quiz: no questions.")
-
-            return
+            return nil
         }
 
-        // -------------------------------------------------
-        // CLEAN TITLE
-        // -------------------------------------------------
+        // ========================================================
+        // CLEAN QUIZ TITLE
+        // ========================================================
 
-        let cleanedTitle = title
-            .trimmingCharacters(
-                in: .whitespacesAndNewlines
+        let cleanTitle =
+            title
+                .trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                )
+
+        // ========================================================
+        // CREATE QUIZ
+        // ========================================================
+
+        let quiz =
+            Quiz(
+                id: UUID(),
+                title: cleanTitle,
+                questions: questions,
+                memoryID: nil,
+                dateCreated: Date(),
+                currentQuestionIndex: 0,
+                isCompleted: false,
+                score: 0
             )
 
-        let finalTitle = cleanedTitle.isEmpty
-            ? "Untitled Quiz"
-            : cleanedTitle
-
-        // -------------------------------------------------
-        // CREATE QUIZ
-        // -------------------------------------------------
-
-        let quiz = Quiz(
-            title: finalTitle,
-            questions: questions,
-            memoryID: memoryID
-        )
-
-        // -------------------------------------------------
-        // ADD TO USER'S QUIZ COLLECTION
-        // -------------------------------------------------
+        // ========================================================
+        // ADD NEWEST QUIZ TO BEGINNING OF LIST
+        // ========================================================
 
         quizzes.insert(
             quiz,
             at: 0
         )
 
-        // -------------------------------------------------
-        // SAVE TO USER-SPECIFIC STORAGE
-        // -------------------------------------------------
+        // ========================================================
+        // SAVE QUIZ
+        // ========================================================
 
         saveQuizzes()
 
-        print("========================================")
-        print("✅ QUIZ CREATED")
-        print("========================================")
-        print("👤 User: \(currentUserID ?? "unknown")")
-        print("Title: \(finalTitle)")
-        print("Questions: \(questions.count)")
-        print("========================================")
+        return quiz
     }
 
-    // =====================================================
-    // CREATE QUIZ FROM MEMORY
-    // =====================================================
+    // ============================================================
+    // MARK: - Create Quiz From One Memory
+    // ============================================================
 
+    @discardableResult
     func createFromMemory(
-        _ memory: Memory
-    ) {
+        _ memory: Memory,
+        title: String,
+        questions: [QuizQuestion]
+    ) -> Quiz? {
 
-        let answer = memory.summary
-            .trimmingCharacters(
-                in: .whitespacesAndNewlines
+        // ========================================================
+        // CREATE QUIZ
+        // ========================================================
+
+        guard let quiz =
+            createQuiz(
+                title: title,
+                questions: questions
             )
+        else {
 
-        let finalAnswer = answer.isEmpty
-            ? memory.content.trimmingCharacters(
-                in: .whitespacesAndNewlines
-            )
-            : answer
-
-        guard !finalAnswer.isEmpty else {
-
-            print(
-                "❌ Cannot create quiz: memory has no usable information."
-            )
-
-            return
+            return nil
         }
 
-        let question = QuizQuestion(
-            memoryID: memory.id,
-            question:
-                "What is the main idea of \(memory.title)?",
-            options:
-                makeLocalOptions(
-                    correctAnswer: finalAnswer
-                ),
-            correctAnswer: finalAnswer,
-            explanation:
-                "The correct answer is based on the information stored in this RecalllQ Memory."
-        )
+        // ========================================================
+        // ATTACH SOURCE MEMORY
+        // ========================================================
 
-        createQuiz(
-            title: "\(memory.title) Quiz",
-            questions: [question],
-            memoryID: memory.id
-        )
+        guard let index =
+            quizzes.firstIndex(
+                where: {
+                    $0.id == quiz.id
+                }
+            )
+        else {
+
+            return quiz
+        }
+
+        quizzes[index].memoryID =
+            memory.id
+
+        // ========================================================
+        // SAVE UPDATED QUIZ
+        // ========================================================
+
+        saveQuizzes()
+
+        return quizzes[index]
     }
 
-    // =====================================================
-    // CREATE QUIZZES FROM MULTIPLE MEMORIES
-    // =====================================================
+    // ============================================================
+    // MARK: - Create Quiz From Multiple Memories
+    // ============================================================
 
+    @discardableResult
     func createFromMemories(
-        _ memories: [Memory]
-    ) {
+        _ memories: [Memory],
+        title: String,
+        questions: [QuizQuestion]
+    ) -> Quiz? {
 
-        guard !memories.isEmpty else {
+        // ========================================================
+        // MULTIPLE MEMORIES CAN CONTRIBUTE TO THE QUIZ
+        // ========================================================
+        //
+        // The current Quiz model supports only one optional
+        // memoryID, so we create the quiz without assigning a
+        // single source memory.
+        //
+        // ========================================================
 
-            print(
-                "❌ No memories available for quizzes."
-            )
-
-            return
-        }
-
-        for memory in memories {
-            createFromMemory(memory)
-        }
-
-        print(
-            "✅ Created quizzes from \(memories.count) memories."
+        return createQuiz(
+            title: title,
+            questions: questions
         )
     }
 
-    // =====================================================
-    // GENERATE AI QUIZ FROM MEMORY
-    // =====================================================
+    // ============================================================
+    // MARK: - Generate AI Quiz
+    // ============================================================
+    //
+    // Generates a quiz using QuizAPIService.
+    //
+    // IMPORTANT:
+    //
+    // QuizAPIService returns:
+    //
+    //      [QuizQuestion]
+    //
+    // It does NOT return a complete Quiz object.
+    //
+    // Therefore we must:
+    //
+    //      AI
+    //       ↓
+    //      [QuizQuestion]
+    //       ↓
+    //      createQuiz()
+    //       ↓
+    //      Quiz
+    //       ↓
+    //      User's QuizStorageService
+    //
+    // This also keeps user-specific quiz isolation working.
+    //
+    // ============================================================
 
     func generateAIQuizFromMemory(
         _ memory: Memory,
         numberOfQuestions: Int = 5
     ) async {
 
-        guard currentUserID != nil else {
+        // ========================================================
+        // MAKE SURE USER IS STILL AUTHENTICATED
+        // ========================================================
+
+        guard let userID = currentUserID else {
 
             aiQuizError =
                 "Please sign in before generating a quiz."
@@ -438,420 +463,152 @@ final class QuizViewModel: ObservableObject {
             return
         }
 
+        // ========================================================
+        // PREVENT DUPLICATE GENERATION REQUESTS
+        // ========================================================
+
         guard !isGeneratingAIQuiz else {
 
-            print(
-                "⚠️ AI quiz generation is already running."
-            )
-
             return
         }
 
-        guard numberOfQuestions > 0 else {
+        // ========================================================
+        // RESET PREVIOUS ERROR
+        // ========================================================
 
-            aiQuizError =
-                "Please generate at least one question."
-
-            return
-        }
-
-        let title = memory.title
-            .trimmingCharacters(
-                in: .whitespacesAndNewlines
-            )
-
-        let content = memory.content
-            .trimmingCharacters(
-                in: .whitespacesAndNewlines
-            )
-
-        let summary = memory.summary
-            .trimmingCharacters(
-                in: .whitespacesAndNewlines
-            )
-
-        guard !title.isEmpty else {
-
-            aiQuizError =
-                "This memory does not have a title."
-
-            return
-        }
-
-        guard !content.isEmpty || !summary.isEmpty else {
-
-            aiQuizError =
-                "This memory does not contain enough information to create a quiz."
-
-            return
-        }
-
-        isGeneratingAIQuiz = true
         aiQuizError = nil
 
-        let userIDAtStart = currentUserID
+        isGeneratingAIQuiz = true
 
         defer {
+
             isGeneratingAIQuiz = false
         }
 
-        print("========================================")
-        print("🤖 AI QUIZ GENERATION")
-        print("========================================")
-        print("👤 User: \(userIDAtStart ?? "unknown")")
-        print("Memory: \(title)")
-        print("Questions requested: \(numberOfQuestions)")
-        print("========================================")
+        // ========================================================
+        // GENERATE QUESTIONS
+        // ========================================================
 
-        do {
-
-            let generatedQuestions =
-                try await quizAPIService.generateQuiz(
-                    from: memory,
-                    numberOfQuestions: numberOfQuestions
-                )
-
-            // -------------------------------------------------
-            // VERIFY USER DID NOT CHANGE
-            // -------------------------------------------------
-
-            guard currentUserID == userIDAtStart else {
-
-                print(
-                    "⚠️ User changed while AI quiz was generating."
-                )
-
-                return
-            }
-
-            guard !generatedQuestions.isEmpty else {
-
-                throw QuizAPIService
-                    .QuizAPIError
-                    .emptyQuestions
-            }
-
-            createQuiz(
-                title: "\(title) AI Quiz",
-                questions: generatedQuestions,
-                memoryID: memory.id
-            )
-
-            aiQuizError = nil
-
-            print("========================================")
-            print("✅ AI QUIZ CREATED")
-            print("Questions: \(generatedQuestions.count)")
-            print("========================================")
-
-        } catch {
-
-            // -------------------------------------------------
-            // VERIFY USER
-            // -------------------------------------------------
-
-            guard currentUserID == userIDAtStart else {
-
-                print(
-                    "⚠️ User changed while AI quiz was generating."
-                )
-
-                return
-            }
-
-            // -------------------------------------------------
-            // LOCAL FALLBACK
-            // -------------------------------------------------
-
-            print("========================================")
-            print("⚠️ AI QUIZ GENERATION FAILED")
-            print("Reason: \(error.localizedDescription)")
-            print("🧠 Creating local fallback quiz...")
-            print("========================================")
-
-            createLocalFallbackQuiz(
-                from: memory,
+        let generatedQuestions =
+            await quizAPIService.generateQuiz(
+                from: [memory],
                 numberOfQuestions: numberOfQuestions
             )
+
+        // ========================================================
+        // MAKE SURE USER HAS NOT CHANGED
+        // ========================================================
+
+        guard currentUserID == userID else {
+
+            return
         }
-    }
 
-    // =====================================================
-    // GENERATE AI QUIZ FROM MULTIPLE MEMORIES
-    // =====================================================
+        // ========================================================
+        // VALIDATE GENERATED QUESTIONS
+        // ========================================================
 
-    func generateAIQuizFromMemories(
-        _ memories: [Memory],
-        numberOfQuestions: Int = 5
-    ) async {
-
-        guard !memories.isEmpty else {
+        guard !generatedQuestions.isEmpty else {
 
             aiQuizError =
-                "No memories are available for the quiz."
+                "The quiz could not be generated."
 
             return
         }
 
-        guard !isGeneratingAIQuiz else {
+        // ========================================================
+        // CREATE COMPLETE QUIZ
+        // ========================================================
 
-            print(
-                "⚠️ AI quiz generation is already running."
+        guard let generatedQuiz =
+            createQuiz(
+                title: "AI Quiz: \(memory.title)",
+                questions: generatedQuestions
             )
-
-            return
-        }
-
-        guard numberOfQuestions > 0 else {
-
-            aiQuizError =
-                "Please generate at least one question."
-
-            return
-        }
-
-        guard let memory = memories.first else {
-
-            aiQuizError =
-                "No valid memory was found."
-
-            return
-        }
-
-        await generateAIQuizFromMemory(
-            memory,
-            numberOfQuestions: numberOfQuestions
-        )
-    }
-
-    // =====================================================
-    // LOCAL FALLBACK QUIZ
-    // =====================================================
-
-    private func createLocalFallbackQuiz(
-        from memory: Memory,
-        numberOfQuestions: Int
-    ) {
-
-        var questions: [QuizQuestion] = []
-
-        let summary = memory.summary
-            .trimmingCharacters(
-                in: .whitespacesAndNewlines
-            )
-
-        let content = memory.content
-            .trimmingCharacters(
-                in: .whitespacesAndNewlines
-            )
-
-        let finalAnswer = summary.isEmpty
-            ? content
-            : summary
-
-        guard !finalAnswer.isEmpty else {
-
-            aiQuizError =
-                "This memory does not contain enough information to create a quiz."
-
-            return
-        }
-
-        let questionTemplates: [
-            (String, QuizQuestion.Difficulty)
-        ] = [
-
-            (
-                "What is the main idea of \(memory.title)?",
-                .medium
-            ),
-
-            (
-                "What is the most important information about \(memory.title)?",
-                .medium
-            ),
-
-            (
-                "Which statement best describes \(memory.title)?",
-                .easy
-            ),
-
-            (
-                "What should you remember about \(memory.title)?",
-                .easy
-            ),
-
-            (
-                "What does the memory explain about \(memory.title)?",
-                .hard
-            )
-        ]
-
-        let count = min(
-            max(numberOfQuestions, 1),
-            questionTemplates.count
-        )
-
-        for index in 0..<count {
-
-            let template =
-                questionTemplates[index]
-
-            let question = QuizQuestion(
-                memoryID: memory.id,
-                question: template.0,
-                options:
-                    makeLocalOptions(
-                        correctAnswer: finalAnswer
-                    ),
-                correctAnswer: finalAnswer,
-                explanation:
-                    "This answer is based on the information stored in your RecalllQ Memory.",
-                difficulty: template.1
-            )
-
-            questions.append(question)
-        }
-
-        guard !questions.isEmpty else {
-
-            aiQuizError =
-                "Could not create quiz questions."
-
-            return
-        }
-
-        createQuiz(
-            title:
-                "\(memory.title) Study Quiz",
-            questions:
-                questions,
-            memoryID:
-                memory.id
-        )
-
-        aiQuizError = nil
-
-        print(
-            "✅ Local fallback quiz created with \(questions.count) questions."
-        )
-    }
-
-    // =====================================================
-    // LOCAL OPTIONS
-    // =====================================================
-
-    private func makeLocalOptions(
-        correctAnswer: String
-    ) -> [String] {
-
-        let incorrectAnswers = [
-
-            "This information describes a different academic topic.",
-
-            "This statement does not match the information in the memory.",
-
-            "This interpretation is not supported by the memory."
-        ]
-
-        return (
-            [correctAnswer] +
-            incorrectAnswers
-        ).shuffled()
-    }
-
-    // =====================================================
-    // CLEAR AI ERROR
-    // =====================================================
-
-    func clearAIQuizError() {
-        aiQuizError = nil
-    }
-
-    // =====================================================
-    // START QUIZ BY ID
-    // =====================================================
-
-    func startQuiz(
-        id: UUID
-    ) {
-
-        guard let existingQuiz =
-                quizzes.first(
-                    where: {
-                        $0.id == id
-                    }
-                )
         else {
 
-            print(
-                "❌ Quiz not found."
-            )
+            aiQuizError =
+                "The quiz could not be saved."
 
             return
         }
 
-        var quiz = existingQuiz
+        // ========================================================
+        // FIND NEWLY CREATED QUIZ
+        // ========================================================
 
-        quiz.currentQuestionIndex = 0
-        quiz.isCompleted = false
-        quiz.score = 0
-
-        for index in quiz.questions.indices {
-
-            quiz.questions[index].selectedAnswer =
-                nil
-        }
-
-        currentQuiz = quiz
-        showResult = false
-
-        saveCurrentQuiz()
-
-        print(
-            "▶️ Started quiz: \(quiz.title)"
-        )
-    }
-
-    // =====================================================
-    // START FIRST AVAILABLE QUIZ
-    // =====================================================
-
-    func startQuiz() {
-
-        guard let firstQuiz =
-                quizzes.first
+        guard let index =
+            quizzes.firstIndex(
+                where: {
+                    $0.id == generatedQuiz.id
+                }
+            )
         else {
 
-            currentQuiz = nil
-            showResult = false
-
-            print(
-                "❌ No quizzes available."
+            startQuiz(
+                generatedQuiz
             )
 
             return
         }
+
+        // ========================================================
+        // ATTACH SOURCE MEMORY
+        // ========================================================
+
+        quizzes[index].memoryID =
+            memory.id
+
+        // ========================================================
+        // SAVE UPDATED QUIZ
+        // ========================================================
+
+        saveQuizzes()
+
+        // ========================================================
+        // OPEN GENERATED QUIZ
+        // ========================================================
 
         startQuiz(
-            id: firstQuiz.id
+            quizzes[index]
         )
     }
 
-    // =====================================================
-    // CURRENT QUESTION
-    // =====================================================
+    // ============================================================
+    // MARK: - Start Quiz
+    // ============================================================
+
+    func startQuiz(
+        _ quiz: Quiz
+    ) {
+
+        currentQuiz = quiz
+
+        showResult = false
+
+        aiQuizError = nil
+    }
+
+    // ============================================================
+    // MARK: - Current Question
+    // ============================================================
 
     var currentQuestion: QuizQuestion? {
 
         guard let quiz = currentQuiz else {
+
             return nil
         }
 
-        guard
-            quiz.currentQuestionIndex >= 0,
-            quiz.currentQuestionIndex < quiz.questions.count
+        guard quiz.currentQuestionIndex >= 0 else {
+
+            return nil
+        }
+
+        guard quiz.currentQuestionIndex <
+                quiz.questions.count
         else {
+
             return nil
         }
 
@@ -860,263 +617,201 @@ final class QuizViewModel: ObservableObject {
         ]
     }
 
-    // =====================================================
-    // CURRENT INDEX
-    // =====================================================
-
-    var currentIndex: Int {
-        currentQuiz?.currentQuestionIndex ?? 0
-    }
-
-    // =====================================================
-    // QUESTION NUMBER
-    // =====================================================
-
-    var currentQuestionNumber: Int {
-
-        guard currentQuiz != nil else {
-            return 0
-        }
-
-        return currentIndex + 1
-    }
-
-    // =====================================================
-    // TOTAL QUESTIONS
-    // =====================================================
-
-    var totalQuestions: Int {
-        currentQuiz?.totalQuestions ?? 0
-    }
-
-    // =====================================================
-    // QUESTIONS
-    // =====================================================
-
-    var questions: [QuizQuestion] {
-        currentQuiz?.questions ?? []
-    }
-
-    // =====================================================
-    // ANSWERED QUESTIONS
-    // =====================================================
-
-    var answeredQuestions: Int {
-        currentQuiz?.answeredQuestions ?? 0
-    }
-
-    // =====================================================
-    // CORRECT ANSWERS
-    // =====================================================
-
-    var correctAnswers: Int {
-        currentQuiz?.correctAnswers ?? 0
-    }
-
-    // =====================================================
-    // INCORRECT ANSWERS
-    // =====================================================
-
-    var incorrectAnswers: Int {
-        currentQuiz?.incorrectAnswers ?? 0
-    }
-
-    // =====================================================
-    // SCORE
-    // =====================================================
-
-    var score: Int {
-        currentQuiz?.score ?? 0
-    }
-
-    // =====================================================
-    // SCORE PERCENTAGE
-    // =====================================================
-
-    var scorePercentage: Double {
-        currentQuiz?.percentage ?? 0
-    }
-
-    // =====================================================
-    // QUIZ PROGRESS
-    // =====================================================
-
-    var progress: Double {
-        currentQuiz?.progress ?? 0
-    }
-
-    // =====================================================
-    // QUIZ COMPLETE
-    // =====================================================
-
-    var isQuizComplete: Bool {
-        currentQuiz?.isCompleted ?? false
-    }
-
-    // =====================================================
-    // LAST QUESTION
-    // =====================================================
-
-    var isLastQuestion: Bool {
-        currentQuiz?.isLastQuestion ?? false
-    }
-
-    // =====================================================
-    // CURRENT QUESTION ANSWERED
-    // =====================================================
-
-    var hasAnsweredCurrentQuestion: Bool {
-        currentQuiz?.hasAnsweredCurrentQuestion ?? false
-    }
-
-    // =====================================================
-    // SELECT ANSWER
-    // =====================================================
+    // ============================================================
+    // MARK: - Select Answer
+    // ============================================================
 
     func selectAnswer(
-        _ answer: String
+        _ answerIndex: Int
     ) {
 
-        guard !showResult else {
-            return
-        }
-
-        guard !isQuizComplete else {
-            return
-        }
-
         guard var quiz = currentQuiz else {
+
             return
         }
 
-        let index =
-            quiz.currentQuestionIndex
+        guard quiz.currentQuestionIndex >= 0 else {
 
-        guard
-            index >= 0,
-            index < quiz.questions.count
+            return
+        }
+
+        guard quiz.currentQuestionIndex <
+                quiz.questions.count
         else {
+
             return
         }
 
-        let cleanedAnswer =
-            answer.trimmingCharacters(
-                in: .whitespacesAndNewlines
-            )
+        guard answerIndex >= 0 else {
 
-        guard !cleanedAnswer.isEmpty else {
             return
         }
 
-        quiz.questions[index].selectedAnswer =
-            cleanedAnswer
+        // ========================================================
+        // GET CURRENT QUESTION
+        // ========================================================
+
+        let currentQuestion =
+            quiz.questions[
+                quiz.currentQuestionIndex
+            ]
+
+        // ========================================================
+        // QUIZ QUESTION USES "OPTIONS"
+        // ========================================================
+
+        guard answerIndex <
+                currentQuestion.options.count
+        else {
+
+            return
+        }
+
+        // ========================================================
+        // STORE SELECTED ANSWER
+        // ========================================================
+
+        quiz.questions[
+            quiz.currentQuestionIndex
+        ].selectedAnswer =
+            currentQuestion.options[
+                answerIndex
+            ]
+
+        // ========================================================
+        // UPDATE CURRENT QUIZ
+        // ========================================================
 
         currentQuiz = quiz
+
+        // ========================================================
+        // SAVE PROGRESS
+        // ========================================================
 
         saveCurrentQuiz()
     }
 
-    // =====================================================
-    // SUBMIT ANSWER
-    // =====================================================
+    // ============================================================
+    // MARK: - Submit Answer
+    // ============================================================
+    //
+    // IMPORTANT:
+    //
+    // This method must turn on showResult after the answer is
+    // submitted.
+    //
+    // Without:
+    //
+    //      showResult = true
+    //
+    // QuizView continues showing the Submit Answer button and
+    // the user sees no visible result.
+    //
+    // ============================================================
 
     func submitAnswer() {
 
-        guard !isQuizComplete else {
-            return
-        }
-
-        guard !showResult else {
-            return
-        }
-
         guard var quiz = currentQuiz else {
+
             return
         }
 
-        let index =
+        guard quiz.currentQuestionIndex >= 0 else {
+
+            return
+        }
+
+        guard quiz.currentQuestionIndex <
+                quiz.questions.count
+        else {
+
+            return
+        }
+
+        // ========================================================
+        // MAKE SURE ANSWER HAS BEEN SELECTED
+        // ========================================================
+
+        guard quiz.questions[
             quiz.currentQuestionIndex
-
-        guard
-            index >= 0,
-            index < quiz.questions.count
+        ].selectedAnswer != nil
         else {
+
             return
         }
 
-        guard
-            quiz.questions[index].selectedAnswer != nil
-        else {
-
-            print(
-                "⚠️ Please select an answer first."
-            )
-
-            return
-        }
+        // ========================================================
+        // UPDATE QUIZ SCORE
+        // ========================================================
 
         quiz.updateScore()
 
+        // ========================================================
+        // UPDATE CURRENT QUIZ
+        // ========================================================
+
         currentQuiz = quiz
+
+        // ========================================================
+        // SHOW ANSWER RESULT
+        // ========================================================
+        //
+        // This is the important fix.
+        //
+        // QuizView uses this property to switch from:
+        //
+        //      Submit Answer
+        //
+        // to:
+        //
+        //      Correct / Not Quite
+        //      Correct Answer
+        //      Explanation
+        //      Next Question
+        //
+        // ========================================================
 
         showResult = true
 
+        // ========================================================
+        // SAVE PROGRESS
+        // ========================================================
+
         saveCurrentQuiz()
-
-        print(
-            "📝 Answer submitted."
-        )
-
-        print(
-            "Current score: \(quiz.score)/\(quiz.totalQuestions)"
-        )
     }
 
-    // =====================================================
-    // NEXT QUESTION
-    // =====================================================
+    // ============================================================
+    // MARK: - Next Question
+    // ============================================================
 
     func nextQuestion() {
 
         guard var quiz = currentQuiz else {
-            return
-        }
-
-        guard !quiz.isCompleted else {
-            return
-        }
-
-        guard
-            quiz.currentQuestionIndex >= 0,
-            quiz.currentQuestionIndex < quiz.questions.count
-        else {
-            return
-        }
-
-        let currentIndex =
-            quiz.currentQuestionIndex
-
-        guard
-            quiz.questions[currentIndex].isAnswered
-        else {
-
-            print(
-                "⚠️ Please answer the current question first."
-            )
 
             return
         }
 
-        // -------------------------------------------------
-        // FINISH QUIZ
-        // -------------------------------------------------
+        // ========================================================
+        // IF THERE ARE NO QUESTIONS, STOP
+        // ========================================================
 
-        if currentIndex >=
+        guard !quiz.questions.isEmpty else {
+
+            return
+        }
+
+        // ========================================================
+        // DETERMINE WHETHER THIS IS THE FINAL QUESTION
+        // ========================================================
+
+        if quiz.currentQuestionIndex >=
             quiz.questions.count - 1 {
 
-            quiz.updateScore()
+            // ====================================================
+            // QUIZ IS COMPLETE
+            // ====================================================
 
-            quiz.isCompleted = true
+            quiz.complete()
 
             currentQuiz = quiz
 
@@ -1124,25 +819,12 @@ final class QuizViewModel: ObservableObject {
 
             saveCurrentQuiz()
 
-            appState?.recordQuizCompleted()
-
-            print("========================================")
-            print("🎉 QUIZ COMPLETED")
-            print("Quiz: \(quiz.title)")
-            print(
-                "Score: \(quiz.score)/\(quiz.totalQuestions)"
-            )
-            print(
-                "Percentage: \(Int(quiz.percentage))%"
-            )
-            print("========================================")
-
             return
         }
 
-        // -------------------------------------------------
+        // ========================================================
         // MOVE TO NEXT QUESTION
-        // -------------------------------------------------
+        // ========================================================
 
         quiz.currentQuestionIndex += 1
 
@@ -1151,103 +833,119 @@ final class QuizViewModel: ObservableObject {
         showResult = false
 
         saveCurrentQuiz()
-
-        print(
-            "➡️ Moving to question \(quiz.currentQuestionIndex + 1)"
-        )
     }
 
-    // =====================================================
-    // RESET CURRENT QUIZ
-    // =====================================================
+    // ============================================================
+    // MARK: - Reset Quiz
+    // ============================================================
 
-    func resetCurrentQuiz() {
+    func resetQuiz() {
 
-        guard let quiz = currentQuiz else {
+        guard var quiz = currentQuiz else {
+
             return
         }
 
-        startQuiz(
-            id: quiz.id
-        )
+        // ========================================================
+        // RESET QUIZ
+        // ========================================================
+
+        quiz.reset()
+
+        // ========================================================
+        // UPDATE CURRENT QUIZ
+        // ========================================================
+
+        currentQuiz = quiz
+
+        showResult = false
+
+        // ========================================================
+        // SAVE RESET STATE
+        // ========================================================
+
+        saveCurrentQuiz()
     }
 
-    // =====================================================
-    // RESTART QUIZ
-    // =====================================================
+    // ============================================================
+    // MARK: - Restart Quiz
+    // ============================================================
 
     func restartQuiz() {
-        resetCurrentQuiz()
+
+        resetQuiz()
     }
 
-    // =====================================================
-    // EXIT CURRENT QUIZ
-    // =====================================================
+    // ============================================================
+    // MARK: - Exit Quiz
+    // ============================================================
 
     func exitQuiz() {
 
         currentQuiz = nil
-        showResult = false
 
-        print(
-            "⏹️ Quiz session ended."
-        )
+        showResult = false
     }
 
-    // =====================================================
-    // DELETE QUIZ
-    // =====================================================
+    // ============================================================
+    // MARK: - Delete Quiz
+    // ============================================================
 
     func deleteQuiz(
-        id: UUID
+        _ quiz: Quiz
     ) {
 
         quizzes.removeAll {
-            $0.id == id
+            existingQuiz in
+
+            existingQuiz.id == quiz.id
         }
 
-        if currentQuiz?.id == id {
+        // ========================================================
+        // CLOSE IF CURRENT QUIZ WAS DELETED
+        // ========================================================
+
+        if currentQuiz?.id == quiz.id {
 
             currentQuiz = nil
+
             showResult = false
         }
 
-        saveQuizzes()
+        // ========================================================
+        // SAVE UPDATED COLLECTION
+        // ========================================================
 
-        print(
-            "🗑️ Quiz deleted."
-        )
+        saveQuizzes()
     }
 
-    // =====================================================
-    // DELETE ALL QUIZZES
-    // =====================================================
+    // ============================================================
+    // MARK: - Delete All Quizzes
+    // ============================================================
 
-    func deleteAllQuizzes() {
+    func deleteAll() {
 
         quizzes.removeAll()
 
         currentQuiz = nil
+
         showResult = false
 
-        saveQuizzes()
+        // ========================================================
+        // SAVE EMPTY COLLECTION
+        // ========================================================
 
-        print(
-            "🗑️ All quizzes deleted for current user."
-        )
+        saveQuizzes()
     }
 
-    // =====================================================
-    // TOTAL QUIZZES
-    // =====================================================
+    // ============================================================
+    // MARK: - Quiz Statistics
+    // ============================================================
 
     var totalQuizzes: Int {
+
         quizzes.count
     }
-
-    // =====================================================
-    // COMPLETED QUIZZES
-    // =====================================================
 
     var completedQuizzes: Int {
 
@@ -1256,10 +954,6 @@ final class QuizViewModel: ObservableObject {
         }.count
     }
 
-    // =====================================================
-    // UNCOMPLETED QUIZZES
-    // =====================================================
-
     var incompleteQuizzes: Int {
 
         quizzes.filter {
@@ -1267,55 +961,19 @@ final class QuizViewModel: ObservableObject {
         }.count
     }
 
-    // =====================================================
-    // OVERALL SCORE
-    // =====================================================
+    // ============================================================
+    // MARK: - Overall Percentage
+    // ============================================================
 
     var overallPercentage: Double {
 
         let completed =
             quizzes.filter {
-                $0.isCompleted &&
-                $0.totalQuestions > 0
+                $0.isCompleted
             }
 
         guard !completed.isEmpty else {
-            return 0
-        }
 
-        let totalQuestions =
-            completed.reduce(0) {
-                $0 + $1.totalQuestions
-            }
-
-        let totalCorrect =
-            completed.reduce(0) {
-                $0 + $1.correctAnswers
-            }
-
-        guard totalQuestions > 0 else {
-            return 0
-        }
-
-        return
-            Double(totalCorrect)
-            / Double(totalQuestions)
-            * 100
-    }
-
-    // =====================================================
-    // AVERAGE SCORE
-    // =====================================================
-
-    var averageScore: Double {
-
-        let completed =
-            quizzes.filter {
-                $0.isCompleted &&
-                $0.totalQuestions > 0
-            }
-
-        guard !completed.isEmpty else {
             return 0
         }
 
@@ -1324,40 +982,137 @@ final class QuizViewModel: ObservableObject {
                 $0.percentage
             }
 
-        let total =
-            percentages.reduce(0, +)
+        guard !percentages.isEmpty else {
 
-        return
-            total /
-            Double(percentages.count)
+            return 0
+        }
+
+        return percentages.reduce(
+            0,
+            +
+        ) /
+        Double(
+            percentages.count
+        )
     }
 
-    // =====================================================
-    // BEST SCORE
-    // =====================================================
+    // ============================================================
+    // MARK: - Current Quiz Score Percentage
+    // ============================================================
+    //
+    // This property is used by QuizView.
+    //
+    // It returns the percentage of the currently active quiz.
+    //
+    // If there is no active quiz, it safely returns 0.
+    //
+    // ============================================================
 
-    var bestScore: Double {
+    var scorePercentage: Double {
+
+        guard let quiz = currentQuiz else {
+
+            return 0
+        }
+
+        return quiz.percentage
+    }
+
+    // ============================================================
+    // MARK: - Current Quiz Correct Answers
+    // ============================================================
+    //
+    // Returns the number of questions answered correctly in the
+    // currently active quiz.
+    //
+    // QuizView uses this value on the final quiz completion screen.
+    //
+    // The calculation is based directly on QuizQuestion.isCorrect,
+    // so there is no separate score-tracking system to maintain.
+    //
+    // ============================================================
+
+    var correctAnswers: Int {
+
+        // ========================================================
+        // MAKE SURE A QUIZ IS ACTIVE
+        // ========================================================
+
+        guard let quiz = currentQuiz else {
+
+            return 0
+        }
+
+        // ========================================================
+        // COUNT CORRECT ANSWERS
+        // ========================================================
+
+        return quiz.questions.filter {
+            $0.isCorrect
+        }.count
+    }
+
+    // ============================================================
+    // MARK: - Average Score
+    // ============================================================
+
+    var averageScore: Double {
+
+        let completed =
+            quizzes.filter {
+                $0.isCompleted
+            }
+
+        guard !completed.isEmpty else {
+
+            return 0
+        }
+
+        let totalScore =
+            completed.reduce(0) {
+                $0 + $1.score
+            }
+
+        return Double(totalScore) /
+            Double(
+                completed.count
+            )
+    }
+
+    // ============================================================
+    // MARK: - Best Score
+    // ============================================================
+
+    var bestScore: Int {
 
         quizzes
             .filter {
-                $0.isCompleted &&
-                $0.totalQuestions > 0
+                $0.isCompleted
             }
             .map {
-                $0.percentage
+                $0.score
             }
             .max() ?? 0
     }
 
-    // =====================================================
-    // SAVE CURRENT QUIZ
-    // =====================================================
+    // ============================================================
+    // MARK: - Save Current Quiz
+    // ============================================================
+    //
+    // Updates the saved version of the currently active quiz.
+    //
+    // ============================================================
 
     private func saveCurrentQuiz() {
 
         guard let currentQuiz else {
+
             return
         }
+
+        // ========================================================
+        // FIND QUIZ IN USER COLLECTION
+        // ========================================================
 
         if let index =
             quizzes.firstIndex(
@@ -1366,148 +1121,111 @@ final class QuizViewModel: ObservableObject {
                 }
             ) {
 
+            // ====================================================
+            // UPDATE STORED QUIZ
+            // ====================================================
+
             quizzes[index] =
                 currentQuiz
-
-        } else {
-
-            quizzes.insert(
-                currentQuiz,
-                at: 0
-            )
         }
+
+        // ========================================================
+        // PERSIST CHANGES
+        // ========================================================
 
         saveQuizzes()
     }
 
-    // =====================================================
-    // SAVE QUIZZES
-    // =====================================================
+    // ============================================================
+    // MARK: - Save Quizzes
+    // ============================================================
+    //
+    // Saves quizzes through QuizStorageService.
+    //
+    // IMPORTANT:
+    //
+    // There is NO UserDefaults storage here anymore.
+    //
+    // ============================================================
 
     private func saveQuizzes() {
 
-        // -------------------------------------------------
-        // NEVER SAVE WITHOUT A USER.
-        // -------------------------------------------------
+        // ========================================================
+        // QUIZ MUST BELONG TO ACTIVE USER
+        // ========================================================
 
-        guard let userID = currentUserID,
-              !userID.isEmpty
-        else {
-
-            print(
-                "⚠️ Quiz save skipped: no authenticated user."
-            )
+        guard currentUserID != nil else {
 
             return
         }
 
-        do {
+        // ========================================================
+        // STORAGE MUST EXIST
+        // ========================================================
 
-            let encoder =
-                JSONEncoder()
+        guard let storage else {
 
-            encoder.dateEncodingStrategy =
-                .iso8601
-
-            let data =
-                try encoder.encode(
-                    quizzes
-                )
-
-            let key =
-                storageKey(
-                    for: userID
-                )
-
-            UserDefaults.standard.set(
-                data,
-                forKey: key
-            )
-
-            print(
-                "💾 Saved \(quizzes.count) quizzes for \(userID)."
-            )
-
-        } catch {
-
-            print(
-                "❌ Could not save quizzes: \(error)"
-            )
+            return
         }
+
+        // ========================================================
+        // SAVE ONLY THIS USER'S QUIZZES
+        // ========================================================
+
+        storage.save(
+            quizzes
+        )
     }
 
-    // =====================================================
-    // LOAD QUIZZES
-    // =====================================================
+    // ============================================================
+    // MARK: - Load Quizzes
+    // ============================================================
+    //
+    // Loads quizzes from the current user's QuizStorageService.
+    //
+    // ============================================================
 
     private func loadQuizzes() {
 
-        // -------------------------------------------------
-        // NEVER LOAD WITHOUT A USER.
-        // -------------------------------------------------
+        // ========================================================
+        // USER MUST BE ACTIVE
+        // ========================================================
 
-        guard let userID = currentUserID,
-              !userID.isEmpty
-        else {
+        guard let currentUserID else {
 
             quizzes = []
-
-            print(
-                "ℹ️ Quiz loading skipped: no authenticated user."
-            )
 
             return
         }
 
-        let key =
-            storageKey(
-                for: userID
-            )
+        // ========================================================
+        // MAKE SURE STORAGE EXISTS
+        // ========================================================
 
-        guard let data =
-                UserDefaults.standard.data(
-                    forKey: key
+        if storage == nil {
+
+            storage =
+                QuizStorageService(
+                    userID: currentUserID
                 )
-        else {
-
-            quizzes = []
-
-            print(
-                "ℹ️ No saved quizzes found for \(userID)."
-            )
-
-            return
         }
 
-        do {
+        // ========================================================
+        // LOAD ONLY THIS USER'S QUIZZES
+        // ========================================================
 
-            let decoder =
-                JSONDecoder()
+        quizzes =
+            storage?.load() ?? []
 
-            decoder.dateDecodingStrategy =
-                .iso8601
+        // ========================================================
+        // RESET ACTIVE QUIZ STATE
+        // ========================================================
 
-            quizzes =
-                try decoder.decode(
-                    [Quiz].self,
-                    from: data
-                )
+        currentQuiz = nil
 
-            print("========================================")
-            print("✅ USER QUIZZES LOADED")
-            print("========================================")
-            print("👤 User: \(userID)")
-            print("❓ Quizzes: \(quizzes.count)")
-            print("🔐 Key: \(key)")
-            print("========================================")
+        showResult = false
 
-        } catch {
-
-            print(
-                "❌ Could not load quizzes: \(error)"
-            )
-
-            quizzes = []
-        }
+        aiQuizError = nil
     }
 }
+
