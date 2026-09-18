@@ -1,11 +1,12 @@
-
 # 🧠 RecalllQ-iOS-Capstone
 
 ## AI-Powered Academic Memory Assistant for Students
 
 > **"Recall Less. Learn More. Think Smarter."**
 
-RecalllQ is an AI-powered academic memory assistant designed to help students capture, organize, store, and intelligently recall learning materials for improved productivity, knowledge retention, and personalized learning experiences.
+RecalllQ is an AI-powered academic memory assistant designed to help students capture, organize, transform, and recall learning materials through personalized academic memory systems.
+
+The application combines **SwiftUI, AI-powered memory generation, OCR, personalized study recommendations, Flashcards, Quizzes, authentication, and user-specific data management** into one academic learning environment.
 
 ---
 
@@ -15,36 +16,35 @@ Modern students consume enormous amounts of information every semester:
 
 * Lecture notes
 * Assignments
-* Deadlines
 * Study resources
 * Class discussions
 * Research materials
 * Learning content
 
-The challenge is no longer access to information.
+The challenge is no longer simply accessing information.
 
-**The challenge is remembering it.**
+**The challenge is remembering and understanding it.**
 
-RecalllQ is designed to transform how students interact with knowledge by creating an intelligent memory layer powered by Artificial Intelligence.
+RecalllQ is designed to create an intelligent academic memory layer that helps students transform learning materials into structured knowledge and reusable study resources.
 
-Instead of forcing students to manually manage everything, RecalllQ becomes a personalized academic companion that helps students remember what matters most.
+Instead of manually managing every piece of information, RecalllQ helps students organize academic content and convert it into memories, flashcards, quizzes, and personalized study recommendations.
 
 ---
 
 # ✨ Why RecalllQ Exists
 
-Students today experience:
+Students can experience:
 
 * Information overload
-* Forgotten deadlines
 * Disorganized study materials
 * Difficulty retrieving previous learning
-* Reduced productivity
+* Inefficient study sessions
+* Difficulty identifying what to review
 * Cognitive overload
 
 RecalllQ addresses these challenges through:
 
-**Artificial Intelligence + Personalized Memory Systems + Academic Productivity**
+**Artificial Intelligence + Academic Memory + Personalized Learning**
 
 ---
 
@@ -52,177 +52,412 @@ RecalllQ addresses these challenges through:
 
 ## 🧠 AI Memory Engine
 
-Transform academic content into structured memory systems.
+RecalllQ transforms academic notes into structured memories.
 
 Features include:
 
 * AI-generated memory creation
-* Smart knowledge organization
-* Context-aware memory retrieval
-* Personalized memory assistance
-* Intelligent recall suggestions
+* Structured summaries
+* Intelligent tags
+* Confidence scoring
+* Importance scoring
+* Source information
+* Local processing fallback
+* FastAPI AI integration
 
----
-
-## 📚 Smart Learning Workspace
-
-Manage educational content in one location.
-
-Features include:
-
-* Notes management
-* Assignment organization
-* Learning resources storage
-* Course categorization
-* Subject-based organization
-
----
-
-## 🔍 Intelligent Recall System
-
-Retrieve information faster and more efficiently.
-
-Features include:
-
-* Semantic search
-* Context-aware retrieval
-* AI-powered recommendations
-* Intelligent information lookup
-* Personalized recall suggestions
-
----
-
-## ⏰ Academic Productivity Tools
-
-Support productivity and learning efficiency.
-
-Features include:
-
-* Assignment reminders
-* Study planning assistance
-* Progress monitoring
-* Academic tracking
-* Productivity optimization
-
----
-
-## 🎯 Personalized Student Experience
-
-RecalllQ adapts learning experiences based on student behaviors and academic needs.
-
-Features include:
-
-* Personalized recommendations
-* Adaptive memory systems
-* Customized learning workflows
-* Intelligent study support
-
----
-
-# 📱 Application Vision
-
-Imagine a world where students no longer struggle to remember lectures, search endlessly through notes, or feel overwhelmed by information overload.
-
-**RecalllQ is built around one vision:**
-
-> *To create an intelligent academic memory system that learns with students, grows with students, and helps students remember what matters most.*
-
-RecalllQ is more than a note-taking application.
-
-It is designed to become an AI-powered academic companion that transforms scattered information into structured knowledge and transforms knowledge into long-term learning success.
-
----
-
-## 🚀 How RecalllQ Works
+The AI memory workflow is:
 
 ```text
-Capture Learning Experiences
-            ↓
-AI Understands Context
-            ↓
-Generate Personalized Memory
-            ↓
-Organize Academic Knowledge
-            ↓
-Retrieve Information Intelligently
-            ↓
-Transform Information Into Learning
+Student Note
+     ↓
+AIService
+     ↓
+FastAPI /api/memory
+     ↓
+AI-Generated Memory
+     ↓
+RecalllQ Memory
 ```
 
 ---
 
-# 🌟 Vision Goals
+# 🔐 Authentication & Guest Mode
 
-✓ Build an intelligent second brain for students
+RecalllQ supports multiple ways for students to access the application.
 
-✓ Reduce academic stress caused by information overload
+### Authentication
 
-✓ Create personalized learning experiences powered by AI
+Users can:
 
-✓ Improve productivity, retention, and academic confidence
+* Log in
+* Maintain their current account
+* Log out
+* Switch between accounts
 
-✓ Transform how students capture, organize, and recall knowledge
+### Guest Mode
 
----
+Students can also access RecalllQ through **Guest Mode** without creating a registered account.
 
-# 🌍 Impact on Target Users
-
-RecalllQ aims to create meaningful impact by changing how students interact with learning, information, and productivity.
-
----
-
-## 📚 Students
-
-Students often struggle with managing large volumes of information across multiple courses.
-
-### Impact:
-
-* Reduced information overload
-* Faster access to study materials
-* Better organization
-* Improved productivity
-* Increased learning confidence
+This provides a simple way to explore and use the application.
 
 ---
 
-## 🎓 College and University Learners
+# 👤 User-Specific Data Isolation
 
-Managing lectures, projects, assignments, and deadlines simultaneously creates learning challenges.
+RecalllQ separates academic data by user account.
 
-### Impact:
+Each user's information is stored and retrieved independently.
 
-* Improved knowledge retention
-* Reduced study inefficiencies
-* Better exam preparation
-* Enhanced learning experiences
-* Improved academic performance
+User-specific data includes:
+
+* Notes
+* Memories
+* Flashcards
+* Quizzes
+* Study sessions
+* Learning progress
+
+This prevents information belonging to one student account from being displayed when another student is using the application.
+
+### Account-Aware Storage
+
+The application includes dedicated storage functionality for user-specific persistence.
+
+Implemented services include:
+
+```text
+NotesStorageService.swift
+QuizStorageService.swift
+KeychainService.swift
+```
+
+User identifiers are normalized to provide consistent account-based storage.
 
 ---
 
-## 🌐 Online and Independent Learners
+# 📚 Smart Learning Workspace
 
-Self-directed learning environments often lack structured support systems.
+RecalllQ provides a centralized academic workspace where students can manage their learning content.
 
-### Impact:
+The current learning workflow includes:
 
-* Structured learning experiences
-* Improved self-learning efficiency
-* Personalized knowledge management
-* Consistent learning habits
+* Notes
+* Memories
+* Flashcards
+* Quizzes
+* Study sessions
+* Progress
+* Study recommendations
+
+The application is designed to transform individual notes into multiple learning resources.
 
 ---
 
-## 🚀 Long-Term User Impact
+# 📷 OCR Note Scanning
 
-RecalllQ aims to create a future where students spend:
+RecalllQ includes OCR-based academic note scanning using Apple's Vision framework.
 
-**Less time searching**
+Students can:
 
-**Less time remembering**
+1. Scan academic material.
+2. Extract text from the scanned content.
+3. Create a RecalllQ note from the extracted text.
+4. Continue through the normal Note → Memory workflow.
 
-**More time understanding**
+The OCR service is implemented through:
 
-**More time learning**
+```text
+OCRServices.swift
+```
+
+### OCR Workflow
+
+```text
+Academic Material
+        ↓
+Camera / Scan
+        ↓
+OCR Text Recognition
+        ↓
+RecalllQ Note
+        ↓
+AI Memory Generation
+        ↓
+Structured Memory
+```
+
+---
+
+# 🧠 Memories
+
+Memories are the core knowledge objects within RecalllQ.
+
+A memory can contain:
+
+* Summary
+* Tags
+* Confidence
+* Importance
+* Source
+* User ownership
+
+Memories provide the foundation for additional learning features such as Flashcards and Quizzes.
+
+---
+
+# 🃏 Flashcards
+
+RecalllQ allows students to create Flashcards from academic memories.
+
+The learning flow is:
+
+```text
+Note
+ ↓
+Memory
+ ↓
+Flashcard
+```
+
+Flashcards provide an additional way for students to review and reinforce academic knowledge.
+
+Flashcards are also associated with the appropriate user account through the application's user-specific data architecture.
+
+---
+
+# 📝 Quiz System
+
+RecalllQ includes an integrated quiz system for active learning and knowledge reinforcement.
+
+Implemented functionality includes:
+
+* Quiz generation
+* Memory-based quiz questions
+* Multiple-choice questions
+* Answer selection
+* Answer submission
+* Correct/incorrect result display
+* Score calculation
+* Next-question progression
+* Quiz completion
+* Quiz persistence
+
+### Quiz Learning Flow
+
+```text
+Memory
+      ↓
+Quiz Generation
+      ↓
+Quiz Questions
+      ↓
+Student Answers
+      ↓
+Score
+      ↓
+Study Progress
+```
+
+The quiz system is designed to help students actively recall information instead of only reading their notes.
+
+---
+
+# 🎯 Personalized Study Recommendations
+
+RecalllQ includes a personalized study recommendation system.
+
+Five recommendation categories were implemented to help students determine what to study next.
+
+Recommendations can encourage students to:
+
+* Review important memories
+* Focus on weaker learning areas
+* Continue unfinished activities
+* Practice using Flashcards
+* Reinforce knowledge through Quizzes
+
+### Recommendation Flow
+
+```text
+Student Learning Data
+        ↓
+RecalllQ Analysis
+        ↓
+Study Recommendations
+        ↓
+Personalized Learning Actions
+```
+
+---
+
+# 🔑 Secure Keychain Support
+
+RecalllQ includes `KeychainService.swift` to provide secure storage support for sensitive information.
+
+The Keychain service improves the application's security architecture by providing a secure mechanism for storing sensitive information rather than relying only on standard application preferences.
+
+---
+
+# 🏗 Application Architecture
+
+RecalllQ uses `AppState` as the central source of truth for application-wide state.
+
+The application architecture supports:
+
+* Authentication state
+* Guest state
+* Current user
+* Account switching
+* User-specific data
+* Notes
+* Memories
+* Flashcards
+* Quizzes
+* Study sessions
+* Learning progress
+* AI services
+* OCR services
+* Study recommendations
+
+### Architecture
+
+```text
+SwiftUI Views
+      ↓
+AppState / ViewModels
+      ↓
+Services
+      ↓
+ ┌───────────────┬────────────────┬───────────────┐
+ ↓               ↓                ↓
+AI Services   OCR Services    Storage Services
+ ↓               ↓                ↓
+AI Memory      OCR Notes       User Data
+Generation     Processing       Persistence
+      └───────────────┬────────────────┘
+                      ↓
+              RecalllQ Learning System
+```
+
+---
+
+# 🔄 Current Learning Flow
+
+```text
+                 ┌─────────────────┐
+                 │   Student/User  │
+                 └────────┬────────┘
+                          ↓
+              ┌───────────────────────┐
+              │ Login / Guest Mode    │
+              └───────────┬───────────┘
+                          ↓
+                    ┌───────────┐
+                    │   Notes   │
+                    └─────┬─────┘
+                          ↓
+                  ┌───────────────┐
+                  │ AI Memory     │
+                  │ Generation    │
+                  └───────┬───────┘
+                          ↓
+                    ┌───────────┐
+                    │  Memories │
+                    └─────┬─────┘
+                          ↓
+              ┌───────────┴───────────┐
+              ↓                       ↓
+        ┌────────────┐          ┌────────────┐
+        │ Flashcards │          │    Quiz    │
+        └─────┬──────┘          └──────┬─────┘
+              │                        │
+              └───────────┬────────────┘
+                          ↓
+                 ┌─────────────────┐
+                 │ Study Progress  │
+                 └────────┬────────┘
+                          ↓
+                ┌──────────────────┐
+                │ Recommendations  │
+                └──────────────────┘
+```
+
+---
+
+# 🧭 Application Navigation
+
+The current application provides access to the major learning areas through the main RecalllQ interface.
+
+```text
+Welcome
+   ↓
+Login / Register / Guest Mode
+   ↓
+Dashboard
+   │
+   ├── Notes
+   │     ├── Add Note
+   │     ├── Edit Note
+   │     ├── OCR Scan
+   │     └── Generate Memory
+   │
+   ├── Memories
+   │
+   ├── Flashcards
+   │
+   ├── Quiz
+   │
+   └── Settings
+```
+
+---
+
+# 🗂 Current Project Structure
+
+```text
+RecalllQ
+│
+├── Models
+│   ├── Note.swift
+│   ├── Memory.swift
+│   ├── Flashcard.swift
+│   ├── Quiz.swift
+│   ├── QuizQuestion.swift
+│   └── StudySession.swift
+│
+├── ViewModels
+│   ├── NotesViewModel.swift
+│   ├── MemoryViewModel.swift
+│   ├── FlashcardViewModel.swift
+│   ├── QuizViewModel.swift
+│   └── DashboardViewModel.swift
+│
+├── Views
+│   ├── Welcome
+│   ├── Dashboard
+│   ├── Notes
+│   ├── Memories
+│   ├── Flashcards
+│   ├── Quiz
+│   ├── Settings
+│   └── Components
+│
+├── Services
+│   ├── AIService.swift
+│   ├── OCRServices.swift
+│   ├── NotesStorageService.swift
+│   ├── QuizStorageService.swift
+│   └── PersistenceService.swift
+│
+├── AI
+│   └── MemoryEngine.swift
+│
+├── KeychainService.swift
+│
+├── AppState
+│
+└── RecalllQApp.swift
+```
 
 ---
 
@@ -232,73 +467,164 @@ RecalllQ aims to create a future where students spend:
 
 * Swift
 * SwiftUI
-* Figma
+* Xcode
 
 ## Artificial Intelligence
 
-* AI Memory Generation
-* Personalized Recommendation Systems
-* Context-Aware Retrieval Systems
+* AI-powered memory generation
+* FastAPI backend
+* `/api/memory` endpoint
+* Structured AI responses
+* Local AI processing fallback
+* Personalized study recommendations
 
-## Development Environment
+## Computer Vision
+
+* Apple Vision framework
+* OCR-based note scanning
+
+## Security
+
+* Apple Keychain services
+* User-specific data isolation
+* Account-aware persistence
+
+## Development & Version Control
 
 * Xcode
+* Git
 * GitHub
 
 ---
 
-# 🏗 System Architecture
+# 🧪 Testing & Verification
+
+The completed application was tested through the primary RecalllQ workflows.
+
+Testing included:
+
+* Guest access
+* User login
+* Account switching
+* Logout
+* User-specific notes
+* Memory generation
+* AI memory integration
+* OCR note scanning
+* Flashcard creation
+* Quiz generation
+* Quiz answering
+* Quiz scoring
+* Quiz progression
+* Study recommendations
+* Persistent data storage
+
+The project structure was also reviewed and cleaned before the final milestone commit.
+
+---
+
+# 🧹 Final Project Cleanup
+
+The project received a final structural cleanup.
+
+Completed cleanup included:
+
+* Removed unused `EditNoteViewswift`.
+* Corrected the OCR service filename:
 
 ```text
-User Input Layer
+0CRServices.swift
         ↓
-AI Processing Engine
-        ↓
-Academic Memory System
-        ↓
-Knowledge Storage Layer
-        ↓
-Recall & Recommendation Engine
-        ↓
-Student Dashboard
+OCRServices.swift
 ```
+
+* Corrected the AI folder name that contained an accidental trailing space.
+* Reviewed the project for stray or incorrectly named files.
+* Improved service organization.
+* Verified the final project structure.
+* Confirmed the working tree was clean before the final push.
+
+---
+
+# 📌 Version 1.2
+
+## Authentication, User Isolation & Study Recommendations
+
+Version 1.2 represents a major expansion of RecalllQ.
+
+The application now includes:
+
+* Guest Mode
+* Authentication
+* Account switching
+* User-specific data isolation
+* Persistent storage
+* AI Memory Generation
+* FastAPI integration
+* Local AI fallback
+* OCR note scanning
+* Flashcards
+* Quiz generation and scoring
+* Study recommendations
+* Keychain support
+* Improved project organization
+
+---
+
+# 📦 Final Git Commit
+
+```text
+Commit:
+abbd2ef
+
+Message:
+Complete authentication, user isolation, recommendations, and final cleanup
+```
+
+The completed milestone was successfully committed and pushed to GitHub.
 
 ---
 
 # 🎯 Project Objectives
 
-The objectives of RecalllQ are:
+The objectives of RecalllQ are to:
 
 * Improve knowledge retention
 * Reduce study friction
 * Increase academic productivity
+* Organize academic information
 * Create personalized learning experiences
-* Build intelligent memory systems for education
+* Use AI to transform academic content into structured knowledge
+* Support active learning through Flashcards and Quizzes
+* Help students identify what they should study next
 
 ---
 
 # 🔮 Future Roadmap
 
-## Phase 1
+The following features represent potential future development beyond the current implementation.
 
-* Academic Note Management
-* AI Memory Generation
-* Recall System
-* User Dashboard
+## Phase 1 — Academic Intelligence
 
-## Phase 2
+* Advanced academic note management
+* Enhanced AI memory generation
+* Improved recall systems
+* Expanded personalized recommendations
 
-* Voice Lecture Processing
+## Phase 2 — Advanced Learning
+
+* Voice lecture processing
 * AI Study Assistant
-* Smart Flashcards
-* Enhanced Search Systems
+* Advanced Flashcards
+* Enhanced academic search
+* More intelligent study planning
 
-## Phase 3
+## Phase 3 — Intelligent Learning Platform
 
-* Adaptive Learning Models
-* Cross Platform Synchronization
-* Collaborative Learning Spaces
-* Predictive Academic Support
+* Adaptive learning models
+* Cross-platform synchronization
+* Collaborative learning spaces
+* Advanced predictive academic support
 
 ---
 
@@ -306,11 +632,28 @@ The objectives of RecalllQ are:
 
 RecalllQ is designed for:
 
-* College Students
-* University Students
-* Online Learners
-* Lifelong Learners
-* Academic Professionals
+* College students
+* University students
+* Online learners
+* Independent learners
+* Lifelong learners
+* Academic users
+
+---
+
+# 🌟 Long-Term Vision
+
+RecalllQ aims to create an intelligent academic memory system that helps students spend:
+
+**Less time searching.**
+
+**Less time organizing.**
+
+**More time understanding.**
+
+**More time learning.**
+
+The long-term vision is to create an AI-powered academic companion that learns with students, grows with students, and helps them remember what matters most.
 
 ---
 
@@ -318,197 +661,20 @@ RecalllQ is designed for:
 
 **Fozia Akhtar**
 
-Capstone Project — iOS Development
+### Capstone Project
 
-Instructor: Doug Jasper
+**iOS Development**
 
----
+### Instructor
 
-# 🌟 Vision Statement
-
-*"RecalllQ aims to redefine learning by becoming an AI-powered academic memory companion that transforms information overload into intelligent, personalized, and meaningful learning experiences."*
+**Doug Jasper**
 
 ---
-RecalllQ
 
-Views
-│
-├── Welcome
-│   └── WelcomeView.swift
-│
-├── Dashboard
-│   └── DashboardView.swift
-│
-├── Notes
-│   ├── NotesView.swift
-│   ├── AddNoteView.swift
-│   └── EditNoteView.swift
-│
-├── Memories
-│   └── MemoriesView.swift
-│
-├── Search
-│   └── SearchView.swift
-│
-└── Settings
-    └── SettingsView.swift
+# 🧠 RecalllQ
 
-Models
-│
-└── Note.swift
+> **Recall Less. Learn More. Think Smarter.**
 
-ViewModels
-│
-└── NotesViewModel.swift
+RecalllQ transforms academic information into structured knowledge, reusable study resources, and personalized learning experiences.
 
-Services
-│
-└── PersistenceService.swift
-
-Assets
-
-RecalllQApp.swift
-
-Welcome Screen
-        │
-        ▼
-Dashboard
-        │
- ┌──────┼───────────────┐
- ▼      ▼               ▼
-Notes  Memories      Settings
- │
- ▼
-Add Note
- │
- ▼
-Edit Note
- │
- ▼
-Save Note
- │
- ▼
-Search Notes
- │
- ▼
-Generate AI Memory
-# ⚡ Recall Less. Learn More. Think Smarter.
-
-## RecalllQ
-│
-├── Models
-│   ├── Note.swift
-│   ├── Memory.swift
-│   ├── Course.swift
-│   ├── Reminder.swift
-│   └── StudySession.swift
-│
-├── ViewModels
-│   ├── NotesViewModel.swift
-│   ├── MemoryViewModel.swift
-│   ├── DashboardViewModel.swift
-│   ├── SearchViewModel.swift
-│   └── ReminderViewModel.swift
-│
-├── Views
-│   ├── Welcome
-│   ├── Dashboard
-│   ├── Notes
-│   ├── Memories
-│   ├── Search
-│   ├── Productivity
-│   ├── Settings
-│   └── Components
-│
-├── Services
-│   ├── PersistenceService.swift
-│   ├── NotificationService.swift
-│   ├── SearchService.swift
-│   ├── MemoryEngine.swift
-│   └── TaggingService.swift
-│
-├── Utilities
-│   ├── Constants.swift
-│   ├── DateHelper.swift
-│   └── Extensions.swift
-│
-└── Assets
-
-## Navigation Flow
-
-Welcome Screen
-      │
-      ▼
-Dashboard
-      │
- ┌────┼───────────────┐
- ▼    ▼        ▼      ▼
-Notes Memories Search Settings
- │
- ▼
-Add Note
- │
- ▼
-Save Note
- │
- ▼
-Memory Generated
- │
- ▼
-Dashboard Updates
-
-## Artitecture
-
-SwiftUI Views
-      │
-      ▼
-ViewModels
-      │
-      ▼
-Services
-      │
-      ▼
-SwiftData/Core Data
-
-## Final Structure
-
-RecalllQ
-│
-├── Models
-│   ├── Note.swift
-│   ├── Memory.swift
-│   ├── Assignment.swift
-│   ├── StudySession.swift
-│   └── Course.swift
-│
-├── ViewModels
-│   ├── DashboardViewModel.swift
-│   ├── NotesViewModel.swift
-│   ├── MemoryViewModel.swift
-│   ├── SearchViewModel.swift
-│   ├── ReminderViewModel.swift
-│   └── ProductivityViewModel.swift
-│
-├── Services
-│   ├── MemoryEngine.swift
-│   ├── SearchService.swift
-│   ├── TaggingService.swift
-│   ├── NotificationService.swift
-│   └── PersistenceService.swift
-│
-├── Views
-│   ├── Welcome
-│   ├── Dashboard
-│   ├── Notes
-│   ├── Memories
-│   ├── Search
-│   ├── Productivity
-│   ├── Settings
-│   └── Components
-│
-├── Assets
-│
-└── RecalllQApp.swift
-
-
-## RecalllQ
+**AI + Memory + Learning + Personalization**
