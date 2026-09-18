@@ -1,12 +1,12 @@
-# 🧠 RecalllQ-iOS-Capstone
+# RecalllQ-iOS-Capstone
 
-## AI-Powered Academic Memory Assistant for Students
+## 🧠 AI-Powered Academic Memory Assistant for Students
 
 > **"Recall Less. Learn More. Think Smarter."**
 
 RecalllQ is an AI-powered academic memory assistant designed to help students capture, organize, transform, and recall learning materials through personalized academic memory systems.
 
-The application combines **SwiftUI, AI-powered memory generation, OCR, personalized study recommendations, Flashcards, Quizzes, authentication, and user-specific data management** into one academic learning environment.
+The application combines **SwiftUI, AI-powered memory generation, OCR, personalized study recommendations, Flashcards, Quizzes, secure authentication, Apple Sign In, Google Sign-In, Guest Mode, and user-specific data management** into one academic learning environment.
 
 ---
 
@@ -62,10 +62,11 @@ Features include:
 * Confidence scoring
 * Importance scoring
 * Source information
+* User ownership
 * Local processing fallback
 * FastAPI AI integration
 
-The AI memory workflow is:
+### AI Memory Workflow
 
 ```text
 Student Note
@@ -81,24 +82,149 @@ RecalllQ Memory
 
 ---
 
-# 🔐 Authentication & Guest Mode
+# 🔐 Authentication, Social Sign-In & Guest Mode
 
-RecalllQ supports multiple ways for students to access the application.
+RecalllQ supports multiple authentication methods so students can securely access their academic learning environment.
 
-### Authentication
+## Authentication
 
 Users can:
 
 * Log in
-* Maintain their current account
+* Register an account
+* Maintain their current account session
 * Log out
 * Switch between accounts
+* Access user-specific academic data
 
-### Guest Mode
+---
+
+## 🍎 Sign in with Apple
+
+RecalllQ supports **Sign in with Apple** using Apple's native authentication framework.
+
+The Apple authentication flow is integrated with the RecalllQ account architecture and `AppState`.
+
+Features include:
+
+* Apple Sign-In authentication
+* Authentication state management
+* Account/session handling
+* Authentication cancellation handling
+* Authentication error handling
+* User-specific data integration
+* Logout/session management
+
+### Apple Sign-In Flow
+
+```text
+Student
+   ↓
+Sign in with Apple
+   ↓
+Apple Authentication
+   ↓
+Authenticated User
+   ↓
+AppState
+   ↓
+User Session
+   ↓
+User-Specific Academic Data
+```
+
+---
+
+## 🔵 Google Sign-In
+
+RecalllQ supports **Google Sign-In** using Google's iOS authentication SDK.
+
+Google authentication is configured using the RecalllQ iOS OAuth Client ID and the required reversed client ID URL scheme.
+
+### Google OAuth Configuration
+
+The configured iOS Client ID is:
+
+```text
+217697447867-bmushce04a9ovrp8da62dej1qo0titjj.apps.googleusercontent.com
+```
+
+The corresponding reversed URL scheme is:
+
+```text
+com.googleusercontent.apps.217697447867-bmushce04a9ovrp8da62dej1qo0titjj
+```
+
+The Google configuration is integrated into the RecalllQ target through the application's Information Property List.
+
+### Google Sign-In Features
+
+* Google Sign-In authentication
+* Google iOS OAuth configuration
+* OAuth client configuration
+* Google callback URL scheme
+* Authentication state management
+* Account/session handling
+* Authentication error handling
+* User-specific data integration
+* Logout/session management
+
+### Google Sign-In Flow
+
+```text
+Student
+   ↓
+Google Sign-In
+   ↓
+Google Authentication
+   ↓
+Google OAuth Callback
+   ↓
+Authenticated User
+   ↓
+AppState
+   ↓
+User Session
+   ↓
+User-Specific Academic Data
+```
+
+---
+
+## 👤 Guest Mode
 
 Students can also access RecalllQ through **Guest Mode** without creating a registered account.
 
-This provides a simple way to explore and use the application.
+Guest Mode provides a simple way to explore and use the application while keeping registered-user data separate from authenticated account data.
+
+---
+
+## 🔐 Authentication Architecture
+
+RecalllQ integrates multiple authentication options into the central application state.
+
+```text
+                    RecalllQ Authentication
+                              │
+              ┌───────────────┼───────────────┐
+              ↓               ↓               ↓
+       Email / Password   Sign in with     Google Sign-In
+                              Apple
+              │               │               │
+              └───────────────┼───────────────┘
+                              ↓
+                         AppState
+                              ↓
+                    Current User Session
+                              ↓
+                    User-Specific Data
+                              ↓
+       ┌──────────┬───────────┼───────────┬───────────┐
+       ↓          ↓           ↓           ↓           ↓
+     Notes     Memories   Flashcards    Quizzes   Progress
+```
+
+Authentication is connected to `AppState` so the active user determines which account-specific academic information is displayed and persisted.
 
 ---
 
@@ -119,7 +245,7 @@ User-specific data includes:
 
 This prevents information belonging to one student account from being displayed when another student is using the application.
 
-### Account-Aware Storage
+## Account-Aware Storage
 
 The application includes dedicated storage functionality for user-specific persistence.
 
@@ -132,6 +258,23 @@ KeychainService.swift
 ```
 
 User identifiers are normalized to provide consistent account-based storage.
+
+### User Data Flow
+
+```text
+Authenticated User
+        ↓
+AppState.currentUserEmail
+        ↓
+User-Specific Storage
+        ↓
+Notes
+Memories
+Flashcards
+Quizzes
+Study Sessions
+Progress
+```
 
 ---
 
@@ -170,7 +313,7 @@ The OCR service is implemented through:
 OCRServices.swift
 ```
 
-### OCR Workflow
+## OCR Workflow
 
 ```text
 Academic Material
@@ -241,8 +384,9 @@ Implemented functionality includes:
 * Next-question progression
 * Quiz completion
 * Quiz persistence
+* User-specific quiz storage
 
-### Quiz Learning Flow
+## Quiz Learning Flow
 
 ```text
 Memory
@@ -276,7 +420,7 @@ Recommendations can encourage students to:
 * Practice using Flashcards
 * Reinforce knowledge through Quizzes
 
-### Recommendation Flow
+## Recommendation Flow
 
 ```text
 Student Learning Data
@@ -296,6 +440,14 @@ RecalllQ includes `KeychainService.swift` to provide secure storage support for 
 
 The Keychain service improves the application's security architecture by providing a secure mechanism for storing sensitive information rather than relying only on standard application preferences.
 
+Security-related functionality includes:
+
+* Keychain storage
+* Secure authentication support
+* User session management
+* User-specific data isolation
+* Account-aware persistence
+
 ---
 
 # 🏗 Application Architecture
@@ -305,6 +457,8 @@ RecalllQ uses `AppState` as the central source of truth for application-wide sta
 The application architecture supports:
 
 * Authentication state
+* Apple Sign In
+* Google Sign-In
 * Guest state
 * Current user
 * Account switching
@@ -319,7 +473,7 @@ The application architecture supports:
 * OCR services
 * Study recommendations
 
-### Architecture
+## Architecture
 
 ```text
 SwiftUI Views
@@ -328,7 +482,7 @@ AppState / ViewModels
       ↓
 Services
       ↓
- ┌───────────────┬────────────────┬───────────────┐
+ ┌───────────────┬────────────────┬────────────────┐
  ↓               ↓                ↓
 AI Services   OCR Services    Storage Services
  ↓               ↓                ↓
@@ -348,9 +502,10 @@ Generation     Processing       Persistence
                  │   Student/User  │
                  └────────┬────────┘
                           ↓
-              ┌───────────────────────┐
-              │ Login / Guest Mode    │
-              └───────────┬───────────┘
+              ┌────────────────────────┐
+              │ Login / Apple / Google │
+              │     / Guest Mode       │
+              └───────────┬────────────┘
                           ↓
                     ┌───────────┐
                     │   Notes   │
@@ -391,7 +546,7 @@ The current application provides access to the major learning areas through the 
 ```text
 Welcome
    ↓
-Login / Register / Guest Mode
+Login / Register / Apple / Google / Guest Mode
    ↓
 Dashboard
    │
@@ -469,6 +624,15 @@ RecalllQ
 * SwiftUI
 * Xcode
 
+## Authentication
+
+* Sign in with Apple
+* Google Sign-In
+* iOS Authentication Services
+* Google iOS OAuth
+* Guest Mode
+* Account/session management
+
 ## Artificial Intelligence
 
 * AI-powered memory generation
@@ -486,12 +650,16 @@ RecalllQ
 ## Security
 
 * Apple Keychain services
+* `KeychainService.swift`
 * User-specific data isolation
 * Account-aware persistence
+* Secure authentication support
+* OAuth authentication configuration
 
 ## Development & Version Control
 
 * Xcode
+* Swift
 * Git
 * GitHub
 
@@ -501,12 +669,27 @@ RecalllQ
 
 The completed application was tested through the primary RecalllQ workflows.
 
+## Authentication Testing
+
 Testing included:
 
 * Guest access
-* User login
+* Email/password login
+* Account registration
 * Account switching
 * Logout
+* Sign in with Apple
+* Google Sign-In
+* Authentication state management
+* Authentication callback handling
+* Authentication cancellation handling
+* Authentication error handling
+* User-specific account access
+
+## Learning System Testing
+
+Testing also included:
+
 * User-specific notes
 * Memory generation
 * AI memory integration
@@ -518,6 +701,35 @@ Testing included:
 * Quiz progression
 * Study recommendations
 * Persistent data storage
+
+## Google Sign-In Configuration Testing
+
+Google Sign-In configuration was verified using:
+
+```text
+GIDClientID:
+217697447867-bmushce04a9ovrp8da62dej1qo0titjj.apps.googleusercontent.com
+```
+
+Google callback URL scheme:
+
+```text
+com.googleusercontent.apps.217697447867-bmushce04a9ovrp8da62dej1qo0titjj
+```
+
+## Apple Sign-In Testing
+
+Apple Sign-In functionality was tested as part of the RecalllQ authentication workflow.
+
+Testing included:
+
+* Authentication launch
+* Successful authentication
+* Authentication cancellation
+* Authentication error handling
+* Session management
+* Logout
+* User-specific account integration
 
 The project structure was also reviewed and cleaned before the final milestone commit.
 
@@ -552,7 +764,7 @@ OCRServices.swift
 
 Version 1.2 represents a major expansion of RecalllQ.
 
-The application now includes:
+The application includes:
 
 * Guest Mode
 * Authentication
@@ -571,17 +783,77 @@ The application now includes:
 
 ---
 
-# 📦 Final Git Commit
+# 📌 Version 1.3
+
+## 🍎 Apple Sign In, 🔵 Google Sign-In & Authentication Enhancement
+
+Version 1.3 expands RecalllQ's authentication system with additional authentication providers and improved account integration.
+
+### Added
+
+* 🍎 Sign in with Apple
+* 🔵 Google Sign-In
+* 🔐 Multi-provider authentication architecture
+* 🔑 Google iOS OAuth Client configuration
+* 🔗 Google reversed client ID URL scheme
+* 👤 Authentication integration with `AppState`
+* 🔒 User-specific authentication and data isolation
+* 🚪 Authentication session and logout handling
+* 🧪 Authentication testing and verification
+* 👥 Improved account/session management
+
+### Authentication Flow
 
 ```text
-Commit:
-abbd2ef
-
-Message:
-Complete authentication, user isolation, recommendations, and final cleanup
+Student
+   ↓
+RecalllQ Authentication
+   │
+   ├── Email / Password
+   │
+   ├── Sign in with Apple
+   │
+   ├── Google Sign-In
+   │
+   └── Guest Mode
+          ↓
+      AppState
+          ↓
+   Current User Session
+          ↓
+   User-Specific Data
+          ↓
+ Notes / Memories / Flashcards / Quizzes / Progress
 ```
 
-The completed milestone was successfully committed and pushed to GitHub.
+The authentication architecture provides students with multiple access options while maintaining separation of user-specific academic information.
+
+---
+
+# 📦 Git Version Control
+
+The RecalllQ project is maintained using Git and GitHub.
+
+The project uses the `main` branch for the current application version.
+
+### Repository
+
+**GitHub:** `FoziaAkhtar/RecalllQ-iOS-Capstone`
+
+### Current Git Status
+
+The latest changes have been committed and pushed to GitHub.
+
+The working tree has been verified as clean:
+
+```text
+On branch main
+Your branch is up to date with 'origin/main'.
+
+nothing to commit, working tree clean
+```
+
+The local project and GitHub repository are synchronized.
 
 ---
 
@@ -597,6 +869,8 @@ The objectives of RecalllQ are to:
 * Use AI to transform academic content into structured knowledge
 * Support active learning through Flashcards and Quizzes
 * Help students identify what they should study next
+* Provide secure and flexible authentication
+* Keep student academic information separated by account
 
 ---
 
@@ -661,11 +935,11 @@ The long-term vision is to create an AI-powered academic companion that learns w
 
 **Fozia Akhtar**
 
-### Capstone Project
+## Capstone Project
 
 **iOS Development**
 
-### Instructor
+## Instructor
 
 **Doug Jasper**
 
@@ -678,3 +952,36 @@ The long-term vision is to create an AI-powered academic companion that learns w
 RecalllQ transforms academic information into structured knowledge, reusable study resources, and personalized learning experiences.
 
 **AI + Memory + Learning + Personalization**
+
+---
+
+## 📱 Project Highlights
+
+RecalllQ combines:
+
+```text
+                    ┌──────────────────────┐
+                    │      RecalllQ        │
+                    │ AI Academic Memory   │
+                    │      Assistant       │
+                    └──────────┬───────────┘
+                               │
+       ┌───────────────────────┼───────────────────────┐
+       ↓                       ↓                       ↓
+ Authentication          AI Learning              Academic Tools
+       │                       │                       │
+ ┌─────┼─────┐          ┌──────┼──────┐        ┌──────┼──────┐
+ ↓     ↓     ↓          ↓      ↓      ↓        ↓      ↓      ↓
+Apple Google Email     Memory  OCR  Recommend Notes Flash Quiz
+ ↓     ↓     ↓          │      │      │
+ └─────┼─────┘          └──────┼──────┘
+       ↓                       ↓
+    AppState              Learning System
+       │                       │
+       └───────────┬───────────┘
+                   ↓
+          User-Specific Academic
+                 Experience
+```
+
+**Recall Less. Learn More. Think Smarter.**
