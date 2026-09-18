@@ -1,18 +1,24 @@
-
 import SwiftUI
 
 // =====================================================
+//
 // VIEW: LoginView
+//
 // =====================================================
+//
 // PURPOSE:
+//
 // RecalllQ user login screen.
 //
 // FEATURES:
+//
 // - Email login
 // - Password field
 // - Show / hide password
 // - Forgot password
 // - Create account navigation
+// - Sign in with Apple
+// - Sign in with Google
 // - Authentication validation
 // - Error messages
 // - Success messages
@@ -20,6 +26,8 @@ import SwiftUI
 // - Secure login flow
 //
 // AUTHENTICATION FLOW:
+//
+// Email Login:
 //
 // LoginView
 //      ↓
@@ -32,6 +40,42 @@ import SwiftUI
 // Check saved account
 //      ↓
 // Check password
+//      ↓
+// SUCCESS
+//      ↓
+// AppState.login()
+//      ↓
+// MainTabView
+//
+// Apple Login:
+//
+// LoginView
+//      ↓
+// AuthenticationViewModel.signInWithApple()
+//      ↓
+// AppleSignInManager
+//      ↓
+// Apple Authentication
+//      ↓
+// Find / Create Local RecalllQ Account
+//      ↓
+// SUCCESS
+//      ↓
+// AppState.login()
+//      ↓
+// MainTabView
+//
+// Google Login:
+//
+// LoginView
+//      ↓
+// AuthenticationViewModel.signInWithGoogle()
+//      ↓
+// GoogleSignInManager
+//      ↓
+// Google Authentication
+//      ↓
+// Find / Create Local RecalllQ Account
 //      ↓
 // SUCCESS
 //      ↓
@@ -61,7 +105,6 @@ struct LoginView: View {
     // =====================================================
 
     @State private var showCreateAccount = false
-
     @State private var showForgotPassword = false
 
     // =====================================================
@@ -245,6 +288,10 @@ struct LoginView: View {
             spacing: 18
         ) {
 
+            // =================================================
+            // TITLE
+            // =================================================
+
             Text("Sign In")
                 .font(.title2)
                 .bold()
@@ -425,7 +472,7 @@ struct LoginView: View {
             }
 
             // =================================================
-            // SIGN IN BUTTON
+            // EMAIL / PASSWORD SIGN IN BUTTON
             // =================================================
 
             Button {
@@ -441,6 +488,12 @@ struct LoginView: View {
                 print(
                     "========================================"
                 )
+
+                // -------------------------------------------------
+                // CLEAR OLD MESSAGES
+                // -------------------------------------------------
+
+                auth.clearMessages()
 
                 // -------------------------------------------------
                 // AUTHENTICATE
@@ -461,7 +514,11 @@ struct LoginView: View {
                     print(
                         "➡️ Updating AppState..."
                     )
-                    appState.login(email: auth.email)
+
+                    appState.login(
+                        email: auth.email
+                    )
+
                     print(
                         "✅ AppState.isAuthenticated = \(appState.isAuthenticated)"
                     )
@@ -548,6 +605,398 @@ struct LoginView: View {
             .disabled(
                 auth.isLoading
             )
+
+            // =================================================
+            // DIVIDER
+            // =================================================
+
+            HStack(spacing: 12) {
+
+                Rectangle()
+                    .fill(
+                        RecalllQTheme.secondaryText
+                            .opacity(0.20)
+                    )
+                    .frame(height: 1)
+
+                Text("OR")
+                    .font(
+                        .caption
+                    )
+                    .fontWeight(.semibold)
+                    .foregroundColor(
+                        RecalllQTheme.secondaryText
+                    )
+
+                Rectangle()
+                    .fill(
+                        RecalllQTheme.secondaryText
+                            .opacity(0.20)
+                    )
+                    .frame(height: 1)
+            }
+            .padding(.vertical, 2)
+
+            // =================================================
+            // SIGN IN WITH APPLE BUTTON
+            // =================================================
+
+            Button {
+
+                print(
+                    "========================================"
+                )
+
+                print(
+                    " SIGN IN WITH APPLE PRESSED"
+                )
+
+                print(
+                    "========================================"
+                )
+
+                // -------------------------------------------------
+                // CLEAR OLD MESSAGES
+                // -------------------------------------------------
+
+                auth.clearMessages()
+
+                // -------------------------------------------------
+                // START APPLE AUTHENTICATION
+                // -------------------------------------------------
+
+                Task {
+
+                    await auth.signInWithApple()
+
+                    // -------------------------------------------------
+                    // ONLY UPDATE GLOBAL APP STATE AFTER SUCCESS
+                    // -------------------------------------------------
+
+                    if auth.isAuthenticated {
+
+                        print(
+                            "✅ Apple authentication succeeded."
+                        )
+
+                        print(
+                            "📧 Apple account email: \(auth.currentUserEmail)"
+                        )
+
+                        print(
+                            "➡️ Updating AppState..."
+                        )
+
+                        appState.login(
+                            email: auth.currentUserEmail
+                        )
+
+                        print(
+                            "✅ AppState.isAuthenticated = \(appState.isAuthenticated)"
+                        )
+
+                        print(
+                            "➡️ MainTabView should now appear."
+                        )
+
+                    } else {
+
+                        print(
+                            "❌ Apple authentication did not complete."
+                        )
+
+                        if let error =
+                            auth.errorMessage {
+
+                            print(
+                                "Reason: \(error)"
+                            )
+
+                        } else {
+
+                            print(
+                                "Reason: User cancelled or authentication returned no session."
+                            )
+                        }
+                    }
+
+                    print(
+                        "========================================"
+                    )
+                }
+
+            } label: {
+
+                HStack(spacing: 10) {
+
+                    // -------------------------------------------------
+                    // APPLE SYMBOL
+                    // -------------------------------------------------
+
+                    Text("")
+                        .font(
+                            .system(
+                                size: 24,
+                                weight: .medium
+                            )
+                        )
+
+                    // -------------------------------------------------
+                    // BUTTON TEXT
+                    // -------------------------------------------------
+
+                    Text(
+                        auth.isLoading
+                        ? "Signing In..."
+                        : "Continue with Apple"
+                    )
+                    .font(.headline)
+
+                    Spacer()
+
+                    // -------------------------------------------------
+                    // LOADING INDICATOR
+                    // -------------------------------------------------
+
+                    if auth.isLoading {
+
+                        ProgressView()
+                            .tint(.white)
+
+                    } else {
+
+                        Image(
+                            systemName:
+                                "chevron.right"
+                        )
+                    }
+                }
+                .padding()
+                .frame(
+                    maxWidth: .infinity
+                )
+                .foregroundColor(.white)
+                .background(
+                    Color.black
+                )
+                .clipShape(
+                    RoundedRectangle(
+                        cornerRadius:
+                            RecalllQTheme.mediumRadius
+                    )
+                )
+            }
+            .disabled(
+                auth.isLoading
+            )
+
+            // =================================================
+            // APPLE SIGN-IN INFORMATION
+            // =================================================
+
+            Text(
+                "Continue with Apple to securely sign in using your Apple ID."
+            )
+            .font(.caption2)
+            .foregroundColor(
+                RecalllQTheme.secondaryText
+            )
+            .multilineTextAlignment(
+                .center
+            )
+            .frame(
+                maxWidth: .infinity
+            )
+
+            // =================================================
+            // SIGN IN WITH GOOGLE BUTTON
+            // =================================================
+
+            Button {
+
+                print(
+                    "========================================"
+                )
+
+                print(
+                    "🔵 SIGN IN WITH GOOGLE PRESSED"
+                )
+
+                print(
+                    "========================================"
+                )
+
+                // -------------------------------------------------
+                // CLEAR OLD MESSAGES
+                // -------------------------------------------------
+
+                auth.clearMessages()
+
+                // -------------------------------------------------
+                // START GOOGLE AUTHENTICATION
+                // -------------------------------------------------
+
+                Task {
+
+                    await auth.signInWithGoogle()
+
+                    // -------------------------------------------------
+                    // ONLY UPDATE GLOBAL APP STATE AFTER SUCCESS
+                    // -------------------------------------------------
+
+                    if auth.isAuthenticated {
+
+                        print(
+                            "✅ Google authentication succeeded."
+                        )
+
+                        print(
+                            "📧 Google account email: \(auth.currentUserEmail)"
+                        )
+
+                        print(
+                            "👤 Google account name: \(auth.currentUserName)"
+                        )
+
+                        print(
+                            "➡️ Updating AppState..."
+                        )
+
+                        appState.login(
+                            email: auth.currentUserEmail
+                        )
+
+                        print(
+                            "✅ AppState.isAuthenticated = \(appState.isAuthenticated)"
+                        )
+
+                        print(
+                            "➡️ MainTabView should now appear."
+                        )
+
+                    } else {
+
+                        print(
+                            "❌ Google authentication did not complete."
+                        )
+
+                        if let error =
+                            auth.errorMessage {
+
+                            print(
+                                "Reason: \(error)"
+                            )
+
+                        } else {
+
+                            print(
+                                "Reason: User cancelled or authentication returned no session."
+                            )
+                        }
+                    }
+
+                    print(
+                        "========================================"
+                    )
+                }
+
+            } label: {
+
+                HStack(spacing: 10) {
+
+                    // -------------------------------------------------
+                    // GOOGLE SYMBOL
+                    // -------------------------------------------------
+
+                    ZStack {
+
+                        Circle()
+                            .fill(
+                                Color.white
+                            )
+                            .frame(
+                                width: 28,
+                                height: 28
+                            )
+
+                        Text("G")
+                            .font(
+                                .system(
+                                    size: 18,
+                                    weight: .bold
+                                )
+                            )
+                            .foregroundColor(
+                                RecalllQTheme.primary
+                            )
+                    }
+
+                    // -------------------------------------------------
+                    // BUTTON TEXT
+                    // -------------------------------------------------
+
+                    Text(
+                        auth.isLoading
+                        ? "Signing In..."
+                        : "Continue with Google"
+                    )
+                    .font(.headline)
+
+                    Spacer()
+
+                    // -------------------------------------------------
+                    // LOADING INDICATOR
+                    // -------------------------------------------------
+
+                    if auth.isLoading {
+
+                        ProgressView()
+                            .tint(.white)
+
+                    } else {
+
+                        Image(
+                            systemName:
+                                "chevron.right"
+                        )
+                    }
+                }
+                .padding()
+                .frame(
+                    maxWidth: .infinity
+                )
+                .foregroundColor(.white)
+                .background(
+                    RecalllQTheme.primaryText
+                )
+                .clipShape(
+                    RoundedRectangle(
+                        cornerRadius:
+                            RecalllQTheme.mediumRadius
+                    )
+                )
+            }
+            .disabled(
+                auth.isLoading
+            )
+
+            // =================================================
+            // GOOGLE SIGN-IN INFORMATION
+            // =================================================
+
+            Text(
+                "Continue with Google to securely sign in using your Google account."
+            )
+            .font(.caption2)
+            .foregroundColor(
+                RecalllQTheme.secondaryText
+            )
+            .multilineTextAlignment(
+                .center
+            )
+            .frame(
+                maxWidth: .infinity
+            )
         }
 
         // =====================================================
@@ -557,7 +1006,6 @@ struct LoginView: View {
         .padding(
             RecalllQTheme.largePadding
         )
-
         .background(
             RoundedRectangle(
                 cornerRadius:
@@ -567,7 +1015,6 @@ struct LoginView: View {
                 RecalllQTheme.cardBackground
             )
         )
-
         .overlay(
             RoundedRectangle(
                 cornerRadius:
@@ -579,7 +1026,6 @@ struct LoginView: View {
                 lineWidth: 1
             )
         )
-
         .shadow(
             color:
                 Color.black.opacity(

@@ -8,6 +8,23 @@
 	<string>YES</string>
 	<key>Allows Local Networking</key>
 	<string>YES</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLIconFile</key>
+			<string>icon none</string>
+			<key>CFBundleURLName</key>
+			<string></string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.217697447867-bmushce04a9ovrp8da62dej1qo0titjj</string>
+			</array>
+		</dict>
+	</array>
+	<key>GIDClientID</key>
+	<string>217697447867-bmushce04a9ovrp8da62dej1qo0titjj.apps.googleusercontent.com</string>
 	<key>NSAppTransportSecurity</key>
 	<dict/>
 </dict>

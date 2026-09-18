@@ -3,40 +3,103 @@ import Foundation
 import Combine
 
 // =====================================================
+//
 // VIEWMODEL: AuthenticationViewModel
+//
 // =====================================================
+//
 // PURPOSE:
+//
 // Controls RecalllQ authentication.
 //
+// SUPPORTED AUTHENTICATION METHODS:
+//
+// - Email + Password
+// - Sign in with Apple
+// - Sign in with Google
+// - Guest Mode handled by the app authentication flow
+//
 // IMPORTANT:
-// Each account now has:
+//
+// Each account has:
+//
 // - Unique user ID
 // - Name
 // - Email
-// - Password
+//
+// Email/password accounts also have a password stored
+// securely in the iOS Keychain.
+//
+// Apple and Google accounts do not require a local
+// RecalllQ password.
 //
 // This allows RecalllQ to keep each user's:
+//
 // - Notes
 // - Memories
 // - Flashcards
 // - Quizzes
 // - Study sessions
+// - Progress
 //
 // completely separate.
 //
+// =====================================================
+//
 // SECURITY:
-// - Account passwords are stored securely in the iOS Keychain.
-// - UserDefaults stores only non-sensitive account information.
-// - Existing legacy passwords stored in UserDefaults are
-//   automatically migrated into the Keychain.
+//
+// - Account passwords are stored securely in the
+//   iOS Keychain.
+// - UserDefaults stores only non-sensitive account
+//   information.
+// - Existing legacy passwords stored in UserDefaults
+//   are automatically migrated into the Keychain.
+// - Google authentication is handled through the
+//   Google Sign-In SDK.
+// - Apple authentication is handled through
+//   AppleSignInManager.
+//
+// =====================================================
+//
+// APPLE SIGN-IN:
+//
+// Sign in with Apple uses AppleSignInManager.
+//
+// The Apple authentication result provides:
+//
+// - Apple user identifier
+// - Email
+// - Display name
+//
+// The Apple email is then connected to the same local
+// RecalllQ account system used by email/password login.
+//
+// =====================================================
+//
+// GOOGLE SIGN-IN:
+//
+// Sign in with Google uses GoogleSignInManager.
+//
+// The Google authentication result provides:
+//
+// - Google user identifier
+// - Email
+// - Display name
+//
+// The Google email is connected to the same local
+// RecalllQ account system.
+//
+// This means Apple, Google, and email/password users
+// all use the same user-specific data isolation system.
+//
+// =====================================================
 //
 // NOTE:
+//
 // This is still LOCAL DEVELOPMENT authentication.
 //
-// For a production application, use Firebase/Auth API
-// or another secure authentication backend with proper
-// password hashing, authentication tokens, and account
-// recovery.
+// For a production application, authentication tokens
+// should be securely validated through a backend service.
 //
 // =====================================================
 
@@ -84,15 +147,21 @@ final class AuthenticationViewModel: ObservableObject {
     // Passwords are NEVER stored in UserDefaults.
     // =====================================================
 
-    private let accountsKey = "recalllq_accounts"
-    private let currentUserIDKey = "recalllq_current_user_id"
-    private let loggedInKey = "recalllq_logged_in"
+    private let accountsKey =
+        "recalllq_accounts"
+
+    private let currentUserIDKey =
+        "recalllq_current_user_id"
+
+    private let loggedInKey =
+        "recalllq_logged_in"
 
     // =====================================================
     // PASSWORD KEYCHAIN PREFIX
     // =====================================================
 
-    // Each account gets its own Keychain password entry.
+    // Each email/password account gets its own Keychain
+    // password entry.
     //
     // Example:
     //
@@ -101,23 +170,47 @@ final class AuthenticationViewModel: ObservableObject {
     // This keeps passwords separated by user ID.
     // =====================================================
 
-    private let passwordKeyPrefix = "RECALLIQ_PASSWORD_"
+    private let passwordKeyPrefix =
+        "RECALLIQ_PASSWORD_"
 
     // =====================================================
     // ACCOUNT MODEL
     // =====================================================
 
     // IMPORTANT:
+    //
     // This model contains ONLY non-sensitive account data.
     //
     // Password is intentionally NOT part of this model.
+    //
+    // Apple and Google accounts can also use this same
+    // model.
     // =====================================================
 
     private struct LocalAccount: Codable {
 
+        // =================================================
+        // UNIQUE USER ID
+        // =================================================
+
         let id: UUID
+
+        // =================================================
+        // DISPLAY NAME
+        // =================================================
+
         let name: String
+
+        // =================================================
+        // EMAIL
+        // =================================================
+
         let email: String
+
+        // =================================================
+        // ACCOUNT CREATION DATE
+        // =================================================
+
         let createdAt: Date
     }
 
@@ -160,34 +253,43 @@ final class AuthenticationViewModel: ObservableObject {
         // RESTORE LOGIN STATE
         // =================================================
 
-        let loggedIn = UserDefaults.standard.bool(
-            forKey: loggedInKey
-        )
+        let loggedIn =
+            UserDefaults.standard.bool(
+                forKey: loggedInKey
+            )
 
-        isAuthenticated = loggedIn
+        isAuthenticated =
+            loggedIn
 
         // =================================================
         // RESTORE CURRENT USER
         // =================================================
 
         if loggedIn,
-           let savedUserID = UserDefaults.standard.string(
-                forKey: currentUserIDKey
-           ),
-           let uuid = UUID(uuidString: savedUserID) {
+           let savedUserID =
+                UserDefaults.standard.string(
+                    forKey: currentUserIDKey
+                ),
+           let uuid =
+                UUID(uuidString: savedUserID) {
 
-            currentUserID = uuid.uuidString
+            currentUserID =
+                uuid.uuidString
 
             // =================================================
             // LOAD CURRENT USER ACCOUNT
             // =================================================
 
-            if let account = findAccount(
-                userID: uuid.uuidString
-            ) {
+            if let account =
+                findAccount(
+                    userID: uuid.uuidString
+                ) {
 
-                currentUserName = account.name
-                currentUserEmail = account.email
+                currentUserName =
+                    account.name
+
+                currentUserEmail =
+                    account.email
 
             } else {
 
@@ -218,10 +320,11 @@ final class AuthenticationViewModel: ObservableObject {
             )
 
         let cleanEmail =
-            email.trimmingCharacters(
-                in: .whitespacesAndNewlines
-            )
-            .lowercased()
+            email
+                .trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                )
+                .lowercased()
 
         // =================================================
         // VALIDATE NAME
@@ -275,7 +378,8 @@ final class AuthenticationViewModel: ObservableObject {
         // LOAD EXISTING ACCOUNTS
         // =================================================
 
-        var accounts = loadAccounts()
+        var accounts =
+            loadAccounts()
 
         // =================================================
         // CHECK DUPLICATE EMAIL
@@ -301,14 +405,16 @@ final class AuthenticationViewModel: ObservableObject {
         // CREATE UNIQUE USER ID
         // =================================================
 
-        let newUserID = UUID()
+        let newUserID =
+            UUID()
 
-        let account = LocalAccount(
-            id: newUserID,
-            name: cleanName,
-            email: cleanEmail,
-            createdAt: Date()
-        )
+        let account =
+            LocalAccount(
+                id: newUserID,
+                name: cleanName,
+                email: cleanEmail,
+                createdAt: Date()
+            )
 
         // =================================================
         // SAVE PASSWORD SECURELY
@@ -332,9 +438,14 @@ final class AuthenticationViewModel: ObservableObject {
         // SAVE NON-SENSITIVE ACCOUNT INFORMATION
         // =================================================
 
-        accounts[newUserID.uuidString] = account
+        accounts[
+            newUserID.uuidString
+        ] =
+            account
 
-        saveAccounts(accounts)
+        saveAccounts(
+            accounts
+        )
 
         // =================================================
         // START USER SESSION
@@ -360,10 +471,6 @@ final class AuthenticationViewModel: ObservableObject {
 
         // =================================================
         // DEBUG INFORMATION
-        // =================================================
-
-        // IMPORTANT:
-        // Password is NEVER printed.
         // =================================================
 
         print(
@@ -407,17 +514,19 @@ final class AuthenticationViewModel: ObservableObject {
         // RESET AUTHENTICATION STATE
         // =================================================
 
-        isAuthenticated = false
+        isAuthenticated =
+            false
 
         // =================================================
         // CLEAN EMAIL
         // =================================================
 
         let cleanEmail =
-            email.trimmingCharacters(
-                in: .whitespacesAndNewlines
-            )
-            .lowercased()
+            email
+                .trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                )
+                .lowercased()
 
         // =================================================
         // VALIDATE EMAIL
@@ -455,7 +564,8 @@ final class AuthenticationViewModel: ObservableObject {
         // LOAD ALL ACCOUNTS
         // =================================================
 
-        let accounts = loadAccounts()
+        let accounts =
+            loadAccounts()
 
         // =================================================
         // FIND ACCOUNT BY EMAIL
@@ -514,13 +624,15 @@ final class AuthenticationViewModel: ObservableObject {
         // LOGIN SUCCESS
         // =================================================
 
-        isLoading = true
+        isLoading =
+            true
 
         setCurrentUser(
             account
         )
 
-        isLoading = false
+        isLoading =
+            false
 
         successMessage =
             "Welcome back to RecalllQ!"
@@ -534,10 +646,6 @@ final class AuthenticationViewModel: ObservableObject {
 
         // =================================================
         // DEBUG INFORMATION
-        // =================================================
-
-        // IMPORTANT:
-        // Password is NEVER printed.
         // =================================================
 
         print(
@@ -567,6 +675,573 @@ final class AuthenticationViewModel: ObservableObject {
         print(
             "========================================"
         )
+    }
+
+    // =====================================================
+    // SIGN IN WITH APPLE
+    // =====================================================
+
+    // PURPOSE:
+    //
+    // Connects Apple's authentication result to the existing
+    // RecalllQ local account system.
+    //
+    // IMPORTANT:
+    //
+    // This does NOT create a separate Apple-only data system.
+    //
+    // The Apple account is connected to the same:
+    //
+    // - Notes
+    // - Memories
+    // - Flashcards
+    // - Quizzes
+    // - Study sessions
+    // - Progress
+    //
+    // storage used by the existing RecalllQ account system.
+    // =====================================================
+
+    func signInWithApple() async {
+
+        clearMessages()
+
+        // =================================================
+        // START LOADING STATE
+        // =================================================
+
+        isLoading =
+            true
+
+        defer {
+            isLoading =
+                false
+        }
+
+        // =================================================
+        // START APPLE AUTHENTICATION
+        // =================================================
+
+        do {
+
+            let result =
+                try await AppleSignInManager.shared.signIn()
+
+            // =================================================
+            // CLEAN APPLE EMAIL
+            // =================================================
+
+            let cleanEmail =
+                result.email
+                    .trimmingCharacters(
+                        in: .whitespacesAndNewlines
+                    )
+                    .lowercased()
+
+            // =================================================
+            // VALIDATE APPLE EMAIL
+            // =================================================
+
+            guard isValidEmail(cleanEmail) else {
+
+                errorMessage =
+                    "Apple Sign In returned an invalid email address."
+
+                return
+            }
+
+            // =================================================
+            // LOAD EXISTING RECALLIQ ACCOUNTS
+            // =================================================
+
+            var accounts =
+                loadAccounts()
+
+            // =================================================
+            // CHECK FOR EXISTING RECALLIQ ACCOUNT
+            // =================================================
+
+            if let existingAccount =
+                accounts.values.first(
+                    where: {
+
+                        $0.email.localizedCaseInsensitiveCompare(
+                            cleanEmail
+                        ) == .orderedSame
+                    }
+                ) {
+
+                // =================================================
+                // EXISTING ACCOUNT FOUND
+                // =================================================
+
+                setCurrentUser(
+                    existingAccount
+                )
+
+                name =
+                    existingAccount.name
+
+                email =
+                    existingAccount.email
+
+                password = ""
+                confirmPassword = ""
+
+                successMessage =
+                    "Welcome back to RecalllQ!"
+
+                print(
+                    "========================================"
+                )
+
+                print(
+                    " RECALLIQ APPLE LOGIN SUCCESSFUL"
+                )
+
+                print(
+                    "Name: \(existingAccount.name)"
+                )
+
+                print(
+                    "Email: \(existingAccount.email)"
+                )
+
+                print(
+                    "User ID: \(existingAccount.id.uuidString)"
+                )
+
+                print(
+                    "Authentication: Sign in with Apple"
+                )
+
+                print(
+                    "========================================"
+                )
+
+                return
+            }
+
+            // =================================================
+            // CREATE NEW LOCAL RECALLIQ ACCOUNT
+            // =================================================
+
+            let newUserID =
+                UUID()
+
+            // =================================================
+            // DETERMINE DISPLAY NAME
+            // =================================================
+
+            let appleName =
+                result.name
+                    .trimmingCharacters(
+                        in: .whitespacesAndNewlines
+                    )
+
+            let finalName =
+                appleName.isEmpty
+                ? "RecalllQ Student"
+                : appleName
+
+            // =================================================
+            // CREATE ACCOUNT MODEL
+            // =================================================
+
+            let newAccount =
+                LocalAccount(
+                    id: newUserID,
+                    name: finalName,
+                    email: cleanEmail,
+                    createdAt: Date()
+                )
+
+            // =================================================
+            // SAVE ACCOUNT
+            // =================================================
+
+            accounts[
+                newUserID.uuidString
+            ] =
+                newAccount
+
+            saveAccounts(
+                accounts
+            )
+
+            // =================================================
+            // START NEW USER SESSION
+            // =================================================
+
+            setCurrentUser(
+                newAccount
+            )
+
+            // =================================================
+            // UPDATE FORM INFORMATION
+            // =================================================
+
+            name =
+                finalName
+
+            email =
+                cleanEmail
+
+            password = ""
+            confirmPassword = ""
+
+            // =================================================
+            // SUCCESS MESSAGE
+            // =================================================
+
+            successMessage =
+                "Welcome to RecalllQ!"
+
+            // =================================================
+            // DEBUG INFORMATION
+            // =================================================
+
+            print(
+                "========================================"
+            )
+
+            print(
+                " NEW RECALLIQ APPLE ACCOUNT CREATED"
+            )
+
+            print(
+                "Name: \(finalName)"
+            )
+
+            print(
+                "Email: \(cleanEmail)"
+            )
+
+            print(
+                "User ID: \(newUserID.uuidString)"
+            )
+
+            print(
+                "Authentication: Sign in with Apple"
+            )
+
+            print(
+                "Password: [NOT REQUIRED FOR APPLE SIGN IN]"
+            )
+
+            print(
+                "========================================"
+            )
+
+        } catch AppleSignInError.userCancelled {
+
+            // =================================================
+            // USER CANCELLED APPLE SIGN IN
+            // =================================================
+
+            errorMessage =
+                nil
+
+            successMessage =
+                nil
+
+        } catch {
+
+            // =================================================
+            // APPLE SIGN IN FAILED
+            // =================================================
+
+            errorMessage =
+                error.localizedDescription
+
+            print(
+                "❌ RecalllQ Apple Sign In failed: \(error.localizedDescription)"
+            )
+        }
+    }
+
+    // =====================================================
+    // SIGN IN WITH GOOGLE
+    // =====================================================
+
+    // PURPOSE:
+    //
+    // Connects Google's authentication result to the
+    // existing RecalllQ local account system.
+    //
+    // IMPORTANT:
+    //
+    // Google users use the SAME LocalAccount model as:
+    //
+    // - Email/password users
+    // - Apple users
+    //
+    // This means Google authentication does not create
+    // another data storage system.
+    //
+    // All user-specific data continues to use the same
+    // AppState and user-specific storage architecture.
+    //
+    // =====================================================
+
+    func signInWithGoogle() async {
+
+        clearMessages()
+
+        // =================================================
+        // START LOADING STATE
+        // =================================================
+
+        isLoading =
+            true
+
+        defer {
+            isLoading =
+                false
+        }
+
+        // =================================================
+        // START GOOGLE AUTHENTICATION
+        // =================================================
+
+        do {
+
+            let result =
+                try await GoogleSignInManager
+                    .shared
+                    .signIn()
+
+            // =================================================
+            // CLEAN GOOGLE EMAIL
+            // =================================================
+
+            let cleanEmail =
+                result.email
+                    .trimmingCharacters(
+                        in: .whitespacesAndNewlines
+                    )
+                    .lowercased()
+
+            // =================================================
+            // VALIDATE GOOGLE EMAIL
+            // =================================================
+
+            guard isValidEmail(cleanEmail) else {
+
+                errorMessage =
+                    "Google Sign In returned an invalid email address."
+
+                return
+            }
+
+            // =================================================
+            // LOAD EXISTING RECALLIQ ACCOUNTS
+            // =================================================
+
+            var accounts =
+                loadAccounts()
+
+            // =================================================
+            // CHECK FOR EXISTING RECALLIQ ACCOUNT
+            // =================================================
+
+            if let existingAccount =
+                accounts.values.first(
+                    where: {
+
+                        $0.email.localizedCaseInsensitiveCompare(
+                            cleanEmail
+                        ) == .orderedSame
+                    }
+                ) {
+
+                // =================================================
+                // EXISTING ACCOUNT FOUND
+                // =================================================
+
+                setCurrentUser(
+                    existingAccount
+                )
+
+                // =================================================
+                // UPDATE FORM INFORMATION
+                // =================================================
+
+                name =
+                    existingAccount.name
+
+                email =
+                    existingAccount.email
+
+                password = ""
+                confirmPassword = ""
+
+                // =================================================
+                // SUCCESS MESSAGE
+                // =================================================
+
+                successMessage =
+                    "Welcome back to RecalllQ!"
+
+                // =================================================
+                // DEBUG INFORMATION
+                // =================================================
+
+                print(
+                    "========================================"
+                )
+
+                print(
+                    "🔵 RECALLIQ GOOGLE LOGIN SUCCESSFUL"
+                )
+
+                print(
+                    "Name: \(existingAccount.name)"
+                )
+
+                print(
+                    "Email: \(existingAccount.email)"
+                )
+
+                print(
+                    "User ID: \(existingAccount.id.uuidString)"
+                )
+
+                print(
+                    "Authentication: Sign in with Google"
+                )
+
+                print(
+                    "========================================"
+                )
+
+                return
+            }
+
+            // =================================================
+            // CREATE NEW LOCAL RECALLIQ ACCOUNT
+            // =================================================
+
+            let newUserID =
+                UUID()
+
+            // =================================================
+            // DETERMINE DISPLAY NAME
+            // =================================================
+
+            let googleName =
+                result.name
+                    .trimmingCharacters(
+                        in: .whitespacesAndNewlines
+                    )
+
+            let finalName =
+                googleName.isEmpty
+                ? "RecalllQ Student"
+                : googleName
+
+            // =================================================
+            // CREATE ACCOUNT MODEL
+            // =================================================
+
+            let newAccount =
+                LocalAccount(
+                    id: newUserID,
+                    name: finalName,
+                    email: cleanEmail,
+                    createdAt: Date()
+                )
+
+            // =================================================
+            // SAVE ACCOUNT
+            // =================================================
+
+            accounts[
+                newUserID.uuidString
+            ] =
+                newAccount
+
+            saveAccounts(
+                accounts
+            )
+
+            // =================================================
+            // START NEW USER SESSION
+            // =================================================
+
+            setCurrentUser(
+                newAccount
+            )
+
+            // =================================================
+            // UPDATE FORM INFORMATION
+            // =================================================
+
+            name =
+                finalName
+
+            email =
+                cleanEmail
+
+            password = ""
+            confirmPassword = ""
+
+            // =================================================
+            // SUCCESS MESSAGE
+            // =================================================
+
+            successMessage =
+                "Welcome to RecalllQ!"
+
+            // =================================================
+            // DEBUG INFORMATION
+            // =================================================
+
+            print(
+                "========================================"
+            )
+
+            print(
+                "🔵 NEW RECALLIQ GOOGLE ACCOUNT CREATED"
+            )
+
+            print(
+                "Name: \(finalName)"
+            )
+
+            print(
+                "Email: \(cleanEmail)"
+            )
+
+            print(
+                "User ID: \(newUserID.uuidString)"
+            )
+
+            print(
+                "Authentication: Sign in with Google"
+            )
+
+            print(
+                "Password: [NOT REQUIRED FOR GOOGLE SIGN IN]"
+            )
+
+            print(
+                "========================================"
+            )
+
+        } catch {
+
+            // =================================================
+            // GOOGLE SIGN IN FAILED
+            // =================================================
+
+            errorMessage =
+                error.localizedDescription
+
+            print(
+                "❌ RecalllQ Google Sign In failed: \(error.localizedDescription)"
+            )
+        }
     }
 
     // =====================================================
@@ -622,10 +1297,11 @@ final class AuthenticationViewModel: ObservableObject {
         // =================================================
 
         let cleanEmail =
-            email.trimmingCharacters(
-                in: .whitespacesAndNewlines
-            )
-            .lowercased()
+            email
+                .trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                )
+                .lowercased()
 
         // =================================================
         // VALIDATE EMAIL
@@ -651,7 +1327,8 @@ final class AuthenticationViewModel: ObservableObject {
         // CHECK ACCOUNT
         // =================================================
 
-        let accounts = loadAccounts()
+        let accounts =
+            loadAccounts()
 
         guard accounts.values.contains(
             where: {
@@ -673,6 +1350,7 @@ final class AuthenticationViewModel: ObservableObject {
         // =================================================
 
         // IMPORTANT:
+        //
         // This is still a local-development placeholder.
         //
         // A real production password reset would send a
@@ -731,7 +1409,8 @@ final class AuthenticationViewModel: ObservableObject {
         // UPDATE AUTHENTICATION STATE
         // =================================================
 
-        isAuthenticated = true
+        isAuthenticated =
+            true
     }
 
     // =====================================================
@@ -740,9 +1419,14 @@ final class AuthenticationViewModel: ObservableObject {
 
     private func clearCurrentSession() {
 
-        currentUserID = nil
-        currentUserName = ""
-        currentUserEmail = ""
+        currentUserID =
+            nil
+
+        currentUserName =
+            ""
+
+        currentUserEmail =
+            ""
 
         // =================================================
         // CLEAR LOGIN STATE
@@ -761,7 +1445,8 @@ final class AuthenticationViewModel: ObservableObject {
         // UPDATE AUTHENTICATION STATE
         // =================================================
 
-        isAuthenticated = false
+        isAuthenticated =
+            false
     }
 
     // =====================================================
@@ -782,13 +1467,6 @@ final class AuthenticationViewModel: ObservableObject {
 
         // =================================================
         // TRY LEGACY FORMAT FIRST
-        // =================================================
-
-        // This is important because the legacy format
-        // contains the password.
-        //
-        // We need to detect and migrate it before decoding
-        // the new secure account format.
         // =================================================
 
         if let legacyAccounts =
@@ -823,14 +1501,19 @@ final class AuthenticationViewModel: ObservableObject {
                 into: [String: LocalAccount]()
             ) { result, item in
 
-                let legacyAccount = item.value
+                let legacyAccount =
+                    item.value
 
                 result[item.key] =
                     LocalAccount(
-                        id: legacyAccount.id,
-                        name: legacyAccount.name,
-                        email: legacyAccount.email,
-                        createdAt: legacyAccount.createdAt
+                        id:
+                            legacyAccount.id,
+                        name:
+                            legacyAccount.name,
+                        email:
+                            legacyAccount.email,
+                        createdAt:
+                            legacyAccount.createdAt
                     )
             }
         }
@@ -906,10 +1589,10 @@ final class AuthenticationViewModel: ObservableObject {
         }
 
         guard let legacyAccounts =
-            try? JSONDecoder().decode(
-                [String: LegacyLocalAccount].self,
-                from: data
-            )
+                try? JSONDecoder().decode(
+                    [String: LegacyLocalAccount].self,
+                    from: data
+                )
         else {
 
             // =================================================
@@ -943,14 +1626,19 @@ final class AuthenticationViewModel: ObservableObject {
                 into: [String: LocalAccount]()
             ) { result, item in
 
-                let legacyAccount = item.value
+                let legacyAccount =
+                    item.value
 
                 result[item.key] =
                     LocalAccount(
-                        id: legacyAccount.id,
-                        name: legacyAccount.name,
-                        email: legacyAccount.email,
-                        createdAt: legacyAccount.createdAt
+                        id:
+                            legacyAccount.id,
+                        name:
+                            legacyAccount.name,
+                        email:
+                            legacyAccount.email,
+                        createdAt:
+                            legacyAccount.createdAt
                     )
             }
 
@@ -972,7 +1660,8 @@ final class AuthenticationViewModel: ObservableObject {
     // =====================================================
 
     private func migrateLegacyAccounts(
-        _ legacyAccounts: [String: LegacyLocalAccount]
+        _ legacyAccounts:
+            [String: LegacyLocalAccount]
     ) -> Bool {
 
         // =================================================
@@ -987,7 +1676,7 @@ final class AuthenticationViewModel: ObservableObject {
                 )
 
             // =================================================
-            // DO NOT OVERWRITE AN EXISTING KEYCHAIN PASSWORD
+            // DO NOT OVERWRITE EXISTING KEYCHAIN PASSWORD
             // =================================================
 
             if KeychainService.shared.read(
@@ -1078,7 +1767,8 @@ final class AuthenticationViewModel: ObservableObject {
         userID: String
     ) -> LocalAccount? {
 
-        let accounts = loadAccounts()
+        let accounts =
+            loadAccounts()
 
         return accounts[userID]
     }
@@ -1106,7 +1796,11 @@ final class AuthenticationViewModel: ObservableObject {
 
     func clearMessages() {
 
-        errorMessage = nil
-        successMessage = nil
+        errorMessage =
+            nil
+
+        successMessage =
+            nil
     }
 }
+
