@@ -8,23 +8,27 @@ import SwiftUI
 // Central navigation hub for RecalllQ.
 //
 // FEATURES:
+//
 // - Dashboard navigation
 // - Notes navigation
 // - Memories navigation
 // - Flashcards navigation
 // - Quiz navigation
+// - AI Study Chat navigation
 // - Settings navigation
 // - Uses global AppState
 // - Uses RecalllQTheme for visual styling
 // - Resets Settings navigation when switching accounts
 //
 // TAB INDEX:
+//
 // 0 = Dashboard
 // 1 = Notes
 // 2 = Memories
 // 3 = Flashcards
 // 4 = Quiz
-// 5 = Settings
+// 5 = AI Chat
+// 6 = Settings
 // =====================================================
 
 struct MainTabView: View {
@@ -38,7 +42,6 @@ struct MainTabView: View {
     // =====================================================
     // SETTINGS NAVIGATION RESET
     // =====================================================
-
     //
     // WHY THIS EXISTS:
     //
@@ -50,7 +53,7 @@ struct MainTabView: View {
     //     ↓
     // Continue as Guest
     //
-    // When AppState changes selectedTab from 5 → 0,
+    // When AppState changes selectedTab from 6 → 0,
     // SwiftUI can sometimes keep the Settings NavigationStack
     // alive.
     //
@@ -79,7 +82,6 @@ struct MainTabView: View {
                 DashboardView()
                     .environmentObject(appState)
             }
-
             .tabItem {
 
                 Label(
@@ -87,7 +89,6 @@ struct MainTabView: View {
                     systemImage: "brain.head.profile"
                 )
             }
-
             .tag(0)
 
             // =================================================
@@ -99,7 +100,6 @@ struct MainTabView: View {
                 NotesView()
                     .environmentObject(appState)
             }
-
             .tabItem {
 
                 Label(
@@ -107,7 +107,6 @@ struct MainTabView: View {
                     systemImage: "note.text"
                 )
             }
-
             .tag(1)
 
             // =================================================
@@ -119,7 +118,6 @@ struct MainTabView: View {
                 MemoriesView()
                     .environmentObject(appState)
             }
-
             .tabItem {
 
                 Label(
@@ -127,7 +125,6 @@ struct MainTabView: View {
                     systemImage: "brain.head.profile"
                 )
             }
-
             .tag(2)
 
             // =================================================
@@ -157,7 +154,6 @@ struct MainTabView: View {
                 )
                 .environmentObject(appState)
             }
-
             .tabItem {
 
                 Label(
@@ -165,7 +161,6 @@ struct MainTabView: View {
                     systemImage: "rectangle.on.rectangle"
                 )
             }
-
             .tag(3)
 
             // =================================================
@@ -177,7 +172,6 @@ struct MainTabView: View {
                 QuizView()
                     .environmentObject(appState)
             }
-
             .tabItem {
 
                 Label(
@@ -185,8 +179,43 @@ struct MainTabView: View {
                     systemImage: "questionmark.circle.fill"
                 )
             }
-
             .tag(4)
+
+            // =================================================
+            // AI STUDY CHAT
+            // =================================================
+            //
+            // PURPOSE:
+            //
+            // Provides students with direct access to the
+            // RecalllQ AI Study Chat.
+            //
+            // The ChatView contains:
+            //
+            // - Student messages
+            // - AI messages
+            // - Chat input
+            // - Send button
+            // - Typing indicator
+            // - Clear chat
+            //
+            // The real AIService connection will be added
+            // in a later step.
+            // =================================================
+
+            NavigationStack {
+
+                ChatView()
+                    .environmentObject(appState)
+            }
+            .tabItem {
+
+                Label(
+                    "AI Chat",
+                    systemImage: "bubble.left.and.bubble.right.fill"
+                )
+            }
+            .tag(5)
 
             // =================================================
             // SETTINGS
@@ -201,7 +230,6 @@ struct MainTabView: View {
             // =================================================
             // SETTINGS NAVIGATION RESET
             // =================================================
-
             //
             // Every time selectedTab changes, this ID changes.
             //
@@ -219,14 +247,12 @@ struct MainTabView: View {
                     systemImage: "gearshape.fill"
                 )
             }
-
-            .tag(5)
+            .tag(6)
         }
 
         // =====================================================
         // WATCH FOR TAB CHANGES
         // =====================================================
-
         //
         // When the app moves away from Settings, reset the
         // Settings NavigationStack.
@@ -250,7 +276,7 @@ struct MainTabView: View {
 
         .onChange(of: appState.selectedTab) { _, newTab in
 
-            if newTab != 5 {
+            if newTab != 6 {
 
                 settingsNavigationID = UUID()
             }
@@ -273,3 +299,4 @@ struct MainTabView: View {
     MainTabView()
         .environmentObject(AppState())
 }
+

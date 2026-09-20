@@ -33,6 +33,7 @@
 		A4A02AF9305CF00A008A674A /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = A4A02AF8305CF00A008A674A /* GoogleSignIn */; };
 		A4A02AFB305CF00A008A674A /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = A4A02AFA305CF00A008A674A /* GoogleSignInSwift */; };
 		A4A02AFF305D00BF008A674A /* RecalllQ-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = A496EC533034BB59005C604F /* RecalllQ-Info.plist */; };
+		A4E7DA63305F9C8800F5F623 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4E7DA62305F9C7D00F5F623 /* ChatView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -62,6 +63,7 @@
 		A49E31852FEF07CE00483750 /* ReminderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderView.swift; sourceTree = "<group>"; };
 		A4A02AB1305CE7F5008A674A /* RecalllQ.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RecalllQ.entitlements; sourceTree = "<group>"; };
 		A4A02AF5305CEC6E008A674A /* AccountSwitchView 2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AccountSwitchView 2.swift"; sourceTree = "<group>"; };
+		A4E7DA62305F9C7D00F5F623 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -107,6 +109,7 @@
 		A40E9D212FEDA71800869607 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				A4E7DA62305F9C7D00F5F623 /* ChatView.swift */,
 				A4A02AF5305CEC6E008A674A /* AccountSwitchView 2.swift */,
 				A496EC5D3034C501005C604F /* ForgotPasswordView.swift */,
 				A496EC5B3034C4C3005C604F /* CreateAccountView.swift */,
@@ -230,6 +233,7 @@
 				A496EC5E3034C514005C604F /* ForgotPasswordView.swift in Sources */,
 				A40E9D312FEDAB5100869607 /* SettingsView.swift in Sources */,
 				A49E31622FEEAD5700483750 /* EditNoteView.swift in Sources */,
+				A4E7DA63305F9C8800F5F623 /* ChatView.swift in Sources */,
 				A496EBC0302F54CE005C604F /* DocumentScannerView.swift in Sources */,
 				A496EC5C3034C4CD005C604F /* CreateAccountView.swift in Sources */,
 				A496EC523034B341005C604F /* APIKeySettingsView.swift in Sources */,
