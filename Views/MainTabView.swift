@@ -1,4 +1,3 @@
-
 import SwiftUI
 
 // =====================================================
@@ -13,14 +12,30 @@ import SwiftUI
 // - Notes navigation
 // - Memories navigation
 // - Flashcards navigation
-// - Quiz navigation
-// - AI Study Chat navigation
-// - Settings navigation
+// - Custom More navigation
 // - Uses global AppState
 // - Uses RecalllQTheme for visual styling
-// - Resets Settings navigation when switching accounts
+// - Resets More navigation when switching tabs
 //
 // TAB INDEX:
+//
+// 0 = Dashboard
+// 1 = Notes
+// 2 = Memories
+// 3 = Flashcards
+// 4 = More
+//
+// MORE SCREEN:
+//
+// More
+//    ↓
+// Quiz
+// AI Study Chat
+// Settings
+//
+// IMPORTANT:
+//
+// Previously RecalllQ had seven separate tabs:
 //
 // 0 = Dashboard
 // 1 = Notes
@@ -29,6 +44,14 @@ import SwiftUI
 // 4 = Quiz
 // 5 = AI Chat
 // 6 = Settings
+//
+// Because there were more than five tabs, SwiftUI automatically
+// created its own system "More" screen.
+//
+// That automatic More screen did not use RecalllQTheme.background.
+//
+// We now use a custom MoreView so RecalllQ controls the complete
+// appearance and navigation of the More screen.
 // =====================================================
 
 struct MainTabView: View {
@@ -40,28 +63,33 @@ struct MainTabView: View {
     @EnvironmentObject var appState: AppState
 
     // =====================================================
-    // SETTINGS NAVIGATION RESET
+    // MORE NAVIGATION RESET
     // =====================================================
     //
     // WHY THIS EXISTS:
     //
-    // Settings contains additional NavigationLinks such as:
+    // The custom More screen contains navigation to:
     //
+    // More
+    //     ↓
+    // Quiz
+    //
+    // More
+    //     ↓
+    // AI Study Chat
+    //
+    // More
+    //     ↓
     // Settings
-    //     ↓
-    // Switch Account
-    //     ↓
-    // Continue as Guest
     //
-    // When AppState changes selectedTab from 6 → 0,
-    // SwiftUI can sometimes keep the Settings NavigationStack
-    // alive.
+    // When the user switches away from More, SwiftUI can
+    // sometimes keep the navigation hierarchy alive.
     //
-    // This ID forces the Settings NavigationStack to be
-    // recreated whenever the selected tab changes.
+    // This ID forces the More navigation hierarchy to be
+    // recreated when the user leaves the More tab.
     // =====================================================
 
-    @State private var settingsNavigationID = UUID()
+    @State private var moreNavigationID = UUID()
 
     // =====================================================
     // BODY
@@ -81,6 +109,7 @@ struct MainTabView: View {
 
                 DashboardView()
                     .environmentObject(appState)
+
             }
             .tabItem {
 
@@ -88,6 +117,7 @@ struct MainTabView: View {
                     "Dashboard",
                     systemImage: "brain.head.profile"
                 )
+
             }
             .tag(0)
 
@@ -99,6 +129,7 @@ struct MainTabView: View {
 
                 NotesView()
                     .environmentObject(appState)
+
             }
             .tabItem {
 
@@ -106,6 +137,7 @@ struct MainTabView: View {
                     "Notes",
                     systemImage: "note.text"
                 )
+
             }
             .tag(1)
 
@@ -117,6 +149,7 @@ struct MainTabView: View {
 
                 MemoriesView()
                     .environmentObject(appState)
+
             }
             .tabItem {
 
@@ -124,6 +157,7 @@ struct MainTabView: View {
                     "Memories",
                     systemImage: "brain.head.profile"
                 )
+
             }
             .tag(2)
 
@@ -135,7 +169,8 @@ struct MainTabView: View {
 
                 // =================================================
                 // IMPORTANT:
-                // FlashcardsView now observes FlashcardViewModel
+                //
+                // FlashcardsView observes FlashcardViewModel
                 // directly.
                 //
                 // This allows SwiftUI to detect changes to:
@@ -153,6 +188,7 @@ struct MainTabView: View {
                     viewModel: appState.flashcardViewModel
                 )
                 .environmentObject(appState)
+
             }
             .tabItem {
 
@@ -160,106 +196,67 @@ struct MainTabView: View {
                     "Flashcards",
                     systemImage: "rectangle.on.rectangle"
                 )
+
             }
             .tag(3)
 
             // =================================================
-            // QUIZ
-            // =================================================
-
-            NavigationStack {
-
-                QuizView()
-                    .environmentObject(appState)
-            }
-            .tabItem {
-
-                Label(
-                    "Quiz",
-                    systemImage: "questionmark.circle.fill"
-                )
-            }
-            .tag(4)
-
-            // =================================================
-            // AI STUDY CHAT
+            // MORE
             // =================================================
             //
             // PURPOSE:
             //
-            // Provides students with direct access to the
-            // RecalllQ AI Study Chat.
+            // Provides access to secondary RecalllQ features.
             //
-            // The ChatView contains:
+            // The custom MoreView contains:
             //
-            // - Student messages
-            // - AI messages
-            // - Chat input
-            // - Send button
-            // - Typing indicator
-            // - Clear chat
+            // - Quiz
+            // - AI Study Chat
+            // - Settings
             //
-            // The real AIService connection will be added
-            // in a later step.
+            // This replaces the automatic SwiftUI More screen.
             // =================================================
 
             NavigationStack {
 
-                ChatView()
+                MoreView()
                     .environmentObject(appState)
+
             }
-            .tabItem {
-
-                Label(
-                    "AI Chat",
-                    systemImage: "bubble.left.and.bubble.right.fill"
-                )
-            }
-            .tag(5)
-
             // =================================================
-            // SETTINGS
-            // =================================================
-
-            NavigationStack {
-
-                SettingsView()
-                    .environmentObject(appState)
-            }
-
-            // =================================================
-            // SETTINGS NAVIGATION RESET
+            // MORE NAVIGATION RESET
             // =================================================
             //
-            // Every time selectedTab changes, this ID changes.
+            // Every time the user leaves the More tab,
+            // moreNavigationID changes.
             //
-            // If the user was deep inside Settings and switches
-            // to another tab, SwiftUI receives a fresh Settings
-            // NavigationStack the next time Settings is opened.
+            // This causes the More NavigationStack to be
+            // recreated the next time More is opened.
             // =================================================
 
-            .id(settingsNavigationID)
+            .id(moreNavigationID)
 
             .tabItem {
 
                 Label(
-                    "Settings",
-                    systemImage: "gearshape.fill"
+                    "More",
+                    systemImage: "ellipsis.circle.fill"
                 )
+
             }
-            .tag(6)
+            .tag(4)
         }
 
         // =====================================================
         // WATCH FOR TAB CHANGES
         // =====================================================
         //
-        // When the app moves away from Settings, reset the
-        // Settings NavigationStack.
+        // When the user moves away from More, reset the
+        // More NavigationStack.
         //
-        // This is especially important for:
+        // Example:
         //
-        // Account A
+        // More
         //     ↓
         // Settings
         //     ↓
@@ -269,16 +266,19 @@ struct MainTabView: View {
         //     ↓
         // Dashboard
         //
-        // The Dashboard tab will now become the visible root
-        // screen instead of leaving the Settings navigation
-        // hierarchy on screen.
+        // When the user returns to More later, the More screen
+        // starts from its root instead of keeping the previous
+        // navigation hierarchy.
         // =====================================================
 
-        .onChange(of: appState.selectedTab) { _, newTab in
+        .onChange(
+            of: appState.selectedTab
+        ) { _, newTab in
 
-            if newTab != 6 {
+            if newTab != 4 {
 
-                settingsNavigationID = UUID()
+                moreNavigationID = UUID()
+
             }
         }
 
@@ -286,7 +286,9 @@ struct MainTabView: View {
         // TAB BAR APPEARANCE
         // =====================================================
 
-        .tint(RecalllQTheme.primary)
+        .tint(
+            RecalllQTheme.primary
+        )
     }
 }
 
@@ -297,6 +299,7 @@ struct MainTabView: View {
 #Preview {
 
     MainTabView()
-        .environmentObject(AppState())
+        .environmentObject(
+            AppState()
+        )
 }
-
