@@ -6,7 +6,7 @@
 
 RecalllQ is an AI-powered academic memory assistant designed to help students capture, organize, transform, and recall learning materials through personalized academic memory systems.
 
-The application combines **SwiftUI, AI-powered memory generation, OCR, personalized study recommendations, Flashcards, Quizzes, secure authentication, Apple Sign In, Google Sign-In, Guest Mode, and user-specific data management** into one academic learning environment.
+The application combines **SwiftUI, AI-powered memory generation, local AI Study Chat, Ollama, Llama 3.2 3B, OCR, personalized study recommendations, Flashcards, Quizzes, secure authentication, Apple Sign In, Google Sign-In, Guest Mode, and user-specific data management** into one academic learning environment.
 
 ---
 
@@ -27,7 +27,7 @@ The challenge is no longer simply accessing information.
 
 RecalllQ is designed to create an intelligent academic memory layer that helps students transform learning materials into structured knowledge and reusable study resources.
 
-Instead of manually managing every piece of information, RecalllQ helps students organize academic content and convert it into memories, flashcards, quizzes, and personalized study recommendations.
+Instead of manually managing every piece of information, RecalllQ helps students organize academic content and convert it into memories, flashcards, quizzes, personalized study recommendations, and AI-powered study conversations.
 
 ---
 
@@ -79,6 +79,132 @@ AI-Generated Memory
      ↓
 RecalllQ Memory
 ```
+
+---
+
+# 💬 AI Study Chat
+
+RecalllQ includes an AI-powered Study Chat that allows students to ask academic questions and receive dynamically generated answers and explanations.
+
+The feature is integrated directly into the RecalllQ SwiftUI application and communicates with the RecalllQ FastAPI backend.
+
+The current implementation uses **Ollama with the Llama 3.2 3B model** to generate AI responses locally.
+
+This allows the core AI Study Chat functionality to operate without requiring OpenAI API credits.
+
+## AI Study Chat Features
+
+* 💬 Academic question and answer chat
+* 🧠 Dynamic AI-generated responses
+* 📚 Student-friendly explanations
+* 📖 Definitions
+* 📝 Summaries
+* 🃏 Flashcard assistance
+* 📝 Quiz assistance
+* 🎯 Study guidance
+* 🔄 Conversation history
+* 🏷 Response type detection
+* 🔎 Topic detection
+* 📊 Visualization metadata
+* ⚡ Local AI processing
+* 🚫 No OpenAI API credits required
+
+## AI Study Chat Architecture
+
+```text
+RecalllQ iOS
+      ↓
+ChatView
+      ↓
+ChatViewModel
+      ↓
+FastAPI /api/chat
+      ↓
+Ollama
+      ↓
+Llama 3.2 3B
+      ↓
+AI-Generated Response
+      ↓
+RecalllQ AI Study Chat
+```
+
+## Local AI Architecture
+
+The RecalllQ Study Chat uses Ollama to run the AI model locally.
+
+```text
+Student Question
+       ↓
+RecalllQ
+       ↓
+ChatViewModel
+       ↓
+FastAPI Backend
+       ↓
+Ollama
+       ↓
+Llama 3.2 3B
+       ↓
+Generated Response
+       ↓
+RecalllQ
+```
+
+The local AI architecture removes the requirement for OpenAI API credits for the Study Chat feature.
+
+## Conversation History
+
+RecalllQ supports conversation history for follow-up questions.
+
+```text
+Student Question
+       ↓
+AI Response
+       ↓
+Conversation History
+       ↓
+Follow-Up Question
+       ↓
+FastAPI /api/chat
+       ↓
+Ollama
+       ↓
+Context-Aware AI Response
+```
+
+## AI Study Chat Testing
+
+The AI Study Chat was tested with multiple academic topics.
+
+### Database Normalization
+
+The system successfully generated a detailed explanation of database normalization for a college student.
+
+### Photosynthesis
+
+The system successfully generated a detailed explanation of photosynthesis in simple terms.
+
+### Conversation History
+
+Follow-up requests successfully sent previous conversation history to the backend.
+
+Backend verification confirmed successful requests:
+
+```text
+POST /api/chat HTTP/1.1
+200 OK
+```
+
+Ollama successfully generated responses using:
+
+```text
+llama3.2:3b
+```
+
+### AI Study Chat Status
+
+**Completed and tested.** ✅
 
 ---
 
@@ -291,8 +417,9 @@ The current learning workflow includes:
 * Study sessions
 * Progress
 * Study recommendations
+* AI Study Chat
 
-The application is designed to transform individual notes into multiple learning resources.
+The application is designed to transform individual notes into multiple learning resources while also providing direct AI-powered study assistance.
 
 ---
 
@@ -447,6 +574,7 @@ Security-related functionality includes:
 * User session management
 * User-specific data isolation
 * Account-aware persistence
+* OAuth authentication support
 
 ---
 
@@ -470,6 +598,7 @@ The application architecture supports:
 * Study sessions
 * Learning progress
 * AI services
+* AI Study Chat
 * OCR services
 * Study recommendations
 
@@ -488,6 +617,14 @@ AI Services   OCR Services    Storage Services
  ↓               ↓                ↓
 AI Memory      OCR Notes       User Data
 Generation     Processing       Persistence
+ ↓
+AI Study Chat
+ ↓
+FastAPI
+ ↓
+Ollama
+ ↓
+Llama 3.2 3B
       └───────────────┬────────────────┘
                       ↓
               RecalllQ Learning System
@@ -535,6 +672,14 @@ Generation     Processing       Persistence
                 ┌──────────────────┐
                 │ Recommendations  │
                 └──────────────────┘
+
+                 ┌──────────────────┐
+                 │   AI Study Chat  │
+                 └────────┬─────────┘
+                          ↓
+                       Ollama
+                          ↓
+                    Llama 3.2 3B
 ```
 
 ---
@@ -561,6 +706,8 @@ Dashboard
    ├── Flashcards
    │
    ├── Quiz
+   │
+   ├── AI Chat
    │
    └── Settings
 ```
@@ -594,6 +741,7 @@ RecalllQ
 │   ├── Memories
 │   ├── Flashcards
 │   ├── Quiz
+│   ├── Chat
 │   ├── Settings
 │   └── Components
 │
@@ -606,6 +754,11 @@ RecalllQ
 │
 ├── AI
 │   └── MemoryEngine.swift
+│
+├── Chat
+│   ├── ChatMessage.swift
+│   ├── ChatViewModel.swift
+│   └── ChatView.swift
 │
 ├── KeychainService.swift
 │
@@ -635,12 +788,40 @@ RecalllQ
 
 ## Artificial Intelligence
 
+RecalllQ uses AI throughout the academic learning workflow.
+
+Implemented AI functionality includes:
+
 * AI-powered memory generation
-* FastAPI backend
+* AI Study Chat
+* FastAPI backend integration
 * `/api/memory` endpoint
+* `/api/chat` endpoint
 * Structured AI responses
-* Local AI processing fallback
+* Ollama local AI processing
+* Llama 3.2 3B model
+* Conversation history
+* Topic detection
+* Response type detection
 * Personalized study recommendations
+
+### AI Architecture
+
+```text
+RecalllQ iOS
+      │
+      ├── AI Memory Generation
+      │       ↓
+      │   FastAPI /api/memory
+      │
+      └── AI Study Chat
+              ↓
+          FastAPI /api/chat
+              ↓
+            Ollama
+              ↓
+         Llama 3.2 3B
+```
 
 ## Computer Vision
 
@@ -662,6 +843,9 @@ RecalllQ
 * Swift
 * Git
 * GitHub
+* FastAPI
+* Python
+* Ollama
 
 ---
 
@@ -701,6 +885,49 @@ Testing also included:
 * Quiz progression
 * Study recommendations
 * Persistent data storage
+
+## AI Study Chat Testing
+
+The AI Study Chat was independently tested through the FastAPI backend and the RecalllQ application.
+
+Tested academic questions included:
+
+```text
+What is database normalization?
+Explain it in simple terms for a college student.
+```
+
+and:
+
+```text
+Explain how photosynthesis works in simple terms.
+```
+
+The backend successfully generated dynamic AI responses.
+
+### Backend Verification
+
+```text
+POST /api/chat HTTP/1.1
+200 OK
+```
+
+### Ollama Verification
+
+```text
+Model: llama3.2:3b
+🧠 OLLAMA RESPONSE GENERATED
+```
+
+### Conversation History Verification
+
+Follow-up requests successfully included previous conversation history:
+
+```text
+Conversation history messages: 1
+```
+
+The local AI Study Chat was confirmed to communicate successfully between the iOS application, FastAPI backend, Ollama, and Llama 3.2 3B.
 
 ## Google Sign-In Configuration Testing
 
@@ -830,17 +1057,90 @@ The authentication architecture provides students with multiple access options w
 
 ---
 
+# 📌 Version 1.4
+
+## 💬 AI Study Chat & Local AI Integration
+
+Version 1.4 introduces the completed RecalllQ AI Study Chat feature and local AI processing architecture.
+
+### Added
+
+* 💬 AI Study Chat
+* 🧠 Dynamic AI-generated academic responses
+* 🦙 Ollama local AI integration
+* 🤖 Llama 3.2 3B model
+* 🔗 FastAPI `/api/chat` endpoint
+* 🔄 Conversation history
+* 📚 Academic explanations
+* 📖 Definitions
+* 📝 Summaries
+* 🃏 Flashcard assistance
+* 📝 Quiz assistance
+* 🎯 Study guidance
+* 🏷 Response type detection
+* 🔎 Topic detection
+* 📊 Visualization metadata
+* 🚫 No OpenAI API credits required
+
+### AI Study Chat Flow
+
+```text
+Student
+   ↓
+RecalllQ AI Chat
+   ↓
+ChatViewModel
+   ↓
+FastAPI /api/chat
+   ↓
+Ollama
+   ↓
+Llama 3.2 3B
+   ↓
+AI Response
+   ↓
+RecalllQ
+```
+
+### Testing
+
+The AI Study Chat was tested with different academic questions, including:
+
+* Database normalization
+* Photosynthesis
+* Follow-up questions using conversation history
+
+The backend successfully returned:
+
+```text
+HTTP 200 OK
+```
+
+and Ollama successfully generated responses using:
+
+```text
+llama3.2:3b
+```
+
+### Status
+
+**Completed and tested.** ✅
+
+The core AI Study Chat feature is integrated into RecalllQ and the latest changes have been pushed to the GitHub `main` branch.
+
+---
+
 # 📦 Git Version Control
 
 The RecalllQ project is maintained using Git and GitHub.
 
 The project uses the `main` branch for the current application version.
 
-### Repository
+## Repository
 
 **GitHub:** `FoziaAkhtar/RecalllQ-iOS-Capstone`
 
-### Current Git Status
+## Current Git Status
 
 The latest changes have been committed and pushed to GitHub.
 
@@ -868,6 +1168,7 @@ The objectives of RecalllQ are to:
 * Create personalized learning experiences
 * Use AI to transform academic content into structured knowledge
 * Support active learning through Flashcards and Quizzes
+* Provide AI-powered academic study assistance
 * Help students identify what they should study next
 * Provide secure and flexible authentication
 * Keep student academic information separated by account
@@ -888,7 +1189,7 @@ The following features represent potential future development beyond the current
 ## Phase 2 — Advanced Learning
 
 * Voice lecture processing
-* AI Study Assistant
+* Advanced AI Study Chat capabilities
 * Advanced Flashcards
 * Enhanced academic search
 * More intelligent study planning
@@ -949,7 +1250,7 @@ The long-term vision is to create an AI-powered academic companion that learns w
 
 > **Recall Less. Learn More. Think Smarter.**
 
-RecalllQ transforms academic information into structured knowledge, reusable study resources, and personalized learning experiences.
+RecalllQ transforms academic information into structured knowledge, reusable study resources, AI-powered study assistance, and personalized learning experiences.
 
 **AI + Memory + Learning + Personalization**
 
@@ -982,6 +1283,15 @@ Apple Google Email     Memory  OCR  Recommend Notes Flash Quiz
                    ↓
           User-Specific Academic
                  Experience
+                   │
+                   ↓
+             AI Study Chat
+                   │
+                   ↓
+                Ollama
+                   │
+                   ↓
+            Llama 3.2 3B
 ```
 
 **Recall Less. Learn More. Think Smarter.**
